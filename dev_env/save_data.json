@@ -1,0 +1,25 @@
+{
+    "inventory": [
+        {
+            "id": "61da16a9-652f-45a0-ab51-6f0b420e5ac1",
+            "species": "pikachu",
+            "level": 1,
+            "xp": 0
+        },
+        {
+            "id": "aff6eba4-b175-4255-8c8f-62e4790b98c0",
+            "species": "regieleki",
+            "level": 2,
+            "xp": 10
+        },
+        {
+            "id": "6f958c12-2a87-4ed5-81fc-c5e607df6167",
+            "species": "treecko",
+            "level": 3,
+            "xp": 0
+        }
+    ],
+    "active_pets": [
+        "aff6eba4-b175-4255-8c8f-62e4790b98c0"
+    ]
+}

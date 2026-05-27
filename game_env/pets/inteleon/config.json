@@ -1,0 +1,35 @@
+{
+    "display_name": "Inteleon",
+    "physics": {
+        "size": 80,
+        "movement_speed": 4,
+        "is_flying": false,
+        "offset_y": 5
+    },
+    "images": {
+        "idle_is_animated": true,
+        "idle_prefix": "idle_",
+        "idle_frames": 4,
+        "idle_suffix": ".png",
+        "directional_walk": true,
+        "walk_right_prefix": "walk_r_",
+        "walk_right_frames": 4,
+        "walk_left_prefix": "walk_l_",
+        "walk_left_frames": 4,
+        "walk_suffix": ".png",
+        "frame_rate_active": 120,
+        "frame_rate_idle": 200,
+        "fix_idle_direction": true,
+        "invert_x_axis": false
+    },
+    "rpg_data": {
+        "evolves_to": [
+            "none"
+        ],
+        "evolution_level": 99,
+        "spawn_rate": 0.176,
+        "spawn_conditions": [
+            "day"
+        ]
+    }
+}
