@@ -22,7 +22,7 @@ class SaveManager:
         
         self.default_data = {
             "inventory": [
-                {"id": str(uuid.uuid4()), "species": "pikachu", "level": 1, "xp": 0, "is_shiny": False}
+                {"id": str(uuid.uuid4()), "species": "pikachu", "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1}
             ],
             "active_pets": [] 
         }
@@ -37,11 +37,16 @@ class SaveManager:
                     if "pc_inventory" in data:
                         new_inv = []
                         for sp in data["pc_inventory"]:
-                            new_inv.append({"id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, "is_shiny": False})
+                            new_inv.append({"id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1})
                         data["inventory"] = new_inv
                         del data["pc_inventory"]
                         data["active_pets"] = [] 
-                        
+                    
+                    # SCRIPT DE MIGRACIÓN: Inyección retroactiva del Período de Gracia
+                    for p in data.get("inventory", []):
+                        if "last_evolution_level" not in p:
+                            p["last_evolution_level"] = p["level"]
+                            
                     if "active_pets" not in data: data["active_pets"] = []
                     return data
             except json.JSONDecodeError:
@@ -58,11 +63,10 @@ class SaveManager:
 
     def reset_save(self, starter_species):
         """Purga total de la base de datos e inyección del nuevo inicial con cálculo genético."""
-        # [SHINY PATCH]: Probabilidad 1% al reiniciar partida
         is_shiny_roll = random.randint(1, 100) == 1
         
         self.data = {
-            "inventory": [{"id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, "is_shiny": is_shiny_roll}],
+            "inventory": [{"id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": 1}],
             "active_pets": []
         }
         self.save_data()
@@ -125,7 +129,7 @@ class DesktopPetAnimator:
             print(f"Error cargando assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms):
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0):
         if state == 'exiting': return
 
         current_time = time.time()
@@ -143,7 +147,8 @@ class DesktopPetAnimator:
         disable_mirror = False
         raw_image = None  
 
-        render_state = 'idle' if state == 'falling' else state
+        # Congela la animación estática al evolucionar
+        render_state = 'idle' if state in ['falling', 'evolving_start', 'evolving_finish'] else state
 
         if render_state == 'walking':
             if self.directional_walk:
@@ -170,12 +175,18 @@ class DesktopPetAnimator:
             should_mirror = effective_dir if self.invert_x_axis else (not effective_dir)
             processed_image = ImageOps.mirror(raw_image) if should_mirror else raw_image
 
+        # NÚCLEO MATEMÁTICO: Fusión alfa para el destello evolutivo
+        if blend_factor > 0.0:
+            white_layer = Image.new("RGBA", processed_image.size, (255, 255, 255, 255))
+            white_layer.putalpha(processed_image.split()[3]) 
+            processed_image = Image.blend(processed_image, white_layer, blend_factor)
+
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
 
 # --- ENTIDAD FÍSICA ---
 class DesktopPet:
-    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None):
+    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
         self.is_wild = is_wild
@@ -221,7 +232,6 @@ class DesktopPet:
         self.canvas.pack()
         self.canvas_image_id = self.canvas.create_image(self.size_w//2, self.size_h//2, anchor=tk.CENTER)
         
-        # [SHINY PATCH]: Enrutamiento dinámico de carpeta
         self.is_shiny = self.pet_data.get("is_shiny", False)
         animator_dir = os.path.join(self.pet_dir, "shiny") if self.is_shiny else self.pet_dir
         
@@ -241,11 +251,17 @@ class DesktopPet:
         self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
         
         if spawn_coords:
-            self.x, self.y = spawn_coords
-            self.current_state = 'idle'
+            self.x = spawn_coords[0]
+            # BARRERA GEOMÉTRICA: Sobrescribe siempre la Y anclándola al suelo
+            self.y = self.floor_y 
+            
+            if is_mid_evo:
+                self.current_state = 'evolving_finish'
+                self.finish_evolution_vfx(step=0)
+            else:
+                self.current_state = 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
-            
             if self.is_wild:
                 self.y = self.floor_y
                 self.current_state = 'spawning_wild'
@@ -269,8 +285,34 @@ class DesktopPet:
         self.animate_loop()
         self.physics_loop()
 
+    def start_evolution_vfx(self, target_species, step=0):
+        """Fase 1: 3s Transición a Blanco. Fase 2: 2s Mantenimiento."""
+        self.current_state = 'evolving_start'
+        if step <= 60:
+            self.evo_blend = step / 60.0
+        elif step <= 100:
+            self.evo_blend = 1.0
+        else:
+            self.on_evolve(self, target_species, is_mid_evo=True)
+            return
+
+        self.window.after(50, lambda: self.start_evolution_vfx(target_species, step+1))
+
+    def finish_evolution_vfx(self, step=0):
+        """Fase 3: 2s Mantenimiento Blanco en nueva forma. Fase 4: 3s Regreso a color."""
+        if step <= 40:
+            self.evo_blend = 1.0
+        elif step <= 100:
+            progress = (step - 40) / 60.0
+            self.evo_blend = 1.0 - progress
+        else:
+            self.evo_blend = 0.0
+            self.current_state = 'idle'
+            return
+
+        self.window.after(50, lambda: self.finish_evolution_vfx(step+1))
+
     def gain_xp(self, amount):
-        # BARRERA 1: Si la entidad ya alcanzó el tope, aborta el proceso para ahorrar ciclos de CPU
         if self.pet_data["level"] >= 100:
             self.pet_data["xp"] = 0
             return
@@ -283,10 +325,9 @@ class DesktopPet:
             self.pet_data["xp"] -= xp_needed
             self.pet_data["level"] += 1
             
-            # BARRERA 2: Freno estructural por si una ganancia masiva de XP provoca un salto de varios niveles
             if self.pet_data["level"] >= 100:
                 self.pet_data["level"] = 100
-                self.pet_data["xp"] = 0  # Purga el remanente de experiencia inútil
+                self.pet_data["xp"] = 0 
                 leveled_up = True
                 break
                 
@@ -313,10 +354,11 @@ class DesktopPet:
         evo_level = rpg.get("evolution_level", 99)
         evolves_to = rpg.get("evolves_to", [])
 
-        if self.pet_data["level"] >= evo_level and evolves_to and evolves_to[0] != "none":
-            self.current_state = 'exiting'
+        last_evo = self.pet_data.get("last_evolution_level", 1)
+        
+        if self.pet_data["level"] >= evo_level and (self.pet_data["level"] - last_evo) >= 5 and evolves_to and evolves_to[0] != "none":
             target_species = random.choice(evolves_to)
-            self.on_evolve(self, target_species)
+            self.start_evolution_vfx(target_species, step=0)
 
     def keep_on_top(self):
         if self.current_state != 'exiting':
@@ -468,7 +510,8 @@ class DesktopPet:
         self.window.after(30, lambda: self.animate_owned_spawn(step + 1))
 
     def handle_right_click(self, event):
-        if self.current_state != 'exiting':
+        # Bloquea interacciones durante la metamorfosis
+        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish']:
             if self.is_wild:
                 self.on_catch(self)
                 self.animate_vfx("catch")
@@ -477,7 +520,7 @@ class DesktopPet:
                 self.animate_vfx("return")
 
     def handle_double_click(self, event):
-        if self.current_state != 'exiting':
+        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish']:
             self.on_open_pc()
 
     def update_position(self):
@@ -486,11 +529,16 @@ class DesktopPet:
     def animate_loop(self):
         if self.current_state == 'exiting': return 
         target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling'] else self.frame_rate_idle
-        self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms)
+        
+        # Propagación continua del factor de brillo al motor gráfico
+        blend = getattr(self, 'evo_blend', 0.0)
+        self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
-        if self.current_state == 'exiting': return
+        # Inhabilita la locomoción y gravedad para garantizar enfoque visual
+        if self.current_state in ['exiting', 'evolving_start', 'evolving_finish']: return
+        
         if self.current_state == 'spawning_wild':
             self.window.after(50, self.physics_loop)
             return
@@ -676,7 +724,7 @@ class GameController:
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False) 
         
-        tk.Label(header_frame, text="💻 Bill's PC", font=("Segoe UI", 9, "bold"), bg=bg_header, fg=fg_header).pack(side=tk.LEFT, padx=10)
+        tk.Label(header_frame, text="Bill's PC", font=("Segoe UI", 9, "bold"), bg=bg_header, fg=fg_header).pack(side=tk.LEFT, padx=10)
         
         btn_power = tk.Button(header_frame, text="X", font=("Segoe UI", 8, "bold"), bg="#C0392B", fg="white", bd=0, width=3, command=self.exit_game)
         btn_power.pack(side=tk.RIGHT, padx=(0,0))
@@ -820,13 +868,13 @@ class GameController:
                 self.root.after(delay, lambda pd=pet_data: self.spawn_entity(pd, is_wild=False))
                 spawn_index += 1
 
-    def spawn_entity(self, pet_data, is_wild, coords=None):
+    def spawn_entity(self, pet_data, is_wild, coords=None, is_mid_evo=False):
         pet_dir = os.path.join(self.pets_directory, pet_data["species"])
         if not os.path.exists(os.path.join(pet_dir, "config.json")):
             print(f"Error: No existen assets para {pet_data['species']}")
             return
             
-        pet = DesktopPet(self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, self.show_pc_ui, self.on_pet_evolve, coords)
+        pet = DesktopPet(self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo)
         
         if is_wild: self.wild_instances.append(pet)
         else: 
@@ -847,7 +895,8 @@ class GameController:
                     
                     # [SHINY PATCH]: Probabilidad 1% inyectada durante la creación en la naturaleza
                     is_shiny_roll = random.randint(1, 100) == 1
-                    wild_data = {"id": str(uuid.uuid4()), "species": target, "level": random.randint(1, 10), "xp": 0, "is_shiny": is_shiny_roll}
+                    lvl = random.randint(1, 10)
+                    wild_data = {"id": str(uuid.uuid4()), "species": target, "level": lvl, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": lvl}
                     self.spawn_entity(wild_data, is_wild=True)
                     
         self.root.after(60000, self.wild_spawner_loop)
@@ -861,8 +910,9 @@ class GameController:
         self.update_pc_ui() 
         self.root.after(10000, self.xp_tick_loop)
 
-    def on_pet_evolve(self, pet_instance, new_species):
+    def on_pet_evolve(self, pet_instance, new_species, is_mid_evo=False):
         pet_instance.pet_data["species"] = new_species
+        pet_instance.pet_data["last_evolution_level"] = pet_instance.pet_data["level"]
         self.save_mgr.save_data()
 
         target_coords = (pet_instance.x, pet_instance.y)
@@ -870,7 +920,7 @@ class GameController:
             self.active_instances.remove(pet_instance)
         pet_instance.window.destroy()
 
-        self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords)
+        self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo)
         self.update_pc_ui()
 
     def on_pet_removed(self, pet_instance):
