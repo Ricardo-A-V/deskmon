@@ -270,6 +270,11 @@ class DesktopPet:
         self.physics_loop()
 
     def gain_xp(self, amount):
+        # BARRERA 1: Si la entidad ya alcanzó el tope, aborta el proceso para ahorrar ciclos de CPU
+        if self.pet_data["level"] >= 100:
+            self.pet_data["xp"] = 0
+            return
+
         self.pet_data["xp"] += amount
         xp_needed = self.pet_data["level"] * 30 
         
@@ -277,6 +282,14 @@ class DesktopPet:
         while self.pet_data["xp"] >= xp_needed:
             self.pet_data["xp"] -= xp_needed
             self.pet_data["level"] += 1
+            
+            # BARRERA 2: Freno estructural por si una ganancia masiva de XP provoca un salto de varios niveles
+            if self.pet_data["level"] >= 100:
+                self.pet_data["level"] = 100
+                self.pet_data["xp"] = 0  # Purga el remanente de experiencia inútil
+                leveled_up = True
+                break
+                
             xp_needed = self.pet_data["level"] * 30
             leveled_up = True
             
