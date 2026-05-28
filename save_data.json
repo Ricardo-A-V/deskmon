@@ -4,7 +4,7 @@
             "id": "53d42aca-c13c-47bd-8299-af5ac8164f30",
             "species": "ivysaur",
             "level": 30,
-            "xp": 125
+            "xp": 485
         },
         {
             "id": "920e3277-0567-4045-a693-f5108efb79ef",
@@ -33,20 +33,20 @@
         {
             "id": "b01c8f42-0beb-498f-9a7e-3c29af14dd79",
             "species": "tinkatuff",
-            "level": 29,
-            "xp": 700
+            "level": 30,
+            "xp": 190
         },
         {
             "id": "62685523-b773-464b-a8db-ac222c3cc5ec",
             "species": "spheal",
             "level": 28,
-            "xp": 250
+            "xp": 610
         },
         {
             "id": "c7d579b9-0268-4a38-8495-2af727f1302a",
             "species": "duskull",
             "level": 28,
-            "xp": 380
+            "xp": 740
         },
         {
             "id": "8500f9d9-7f23-4d12-b794-07a84b2e5f8e",
@@ -58,7 +58,7 @@
             "id": "860483ca-718f-4f9f-95d3-35061d9835b2",
             "species": "trapinch",
             "level": 27,
-            "xp": 385
+            "xp": 745
         },
         {
             "id": "d2c82287-5dd0-43fb-8ca5-77e4317a8344",
@@ -135,7 +135,7 @@
         {
             "id": "c6f03d1a-ae9d-4636-aef7-b891906991b3",
             "species": "piloswine",
-            "level": 12,
+            "level": 13,
             "xp": 100
         },
         {
