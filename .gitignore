@@ -1,0 +1,24 @@
+# Entornos virtuales
+venv/
+env/
+
+# Archivos compilados y cachés de Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Base de datos local (Aislamiento de partidas)
+save_data.json
+
+# Residuos de compilación de PyInstaller y Binarios
+build/
+dist/
+*.spec
+main.exe
+
+# Archivos temporales de scripts (VBS)
+temp_shortcut.vbs
+
+# Herramientas de desarrollo y procesamiento crudo
+dev_env/
+raw_shinys/

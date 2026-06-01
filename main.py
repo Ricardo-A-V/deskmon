@@ -15,15 +15,12 @@ from PIL import Image, ImageTk, ImageOps
 
 # --- GESTOR DE DATOS (SAVE MANAGER) ---
 class SaveManager:
-    """Arquitectura de datos compleja (Soporta XP, Niveles e Instancias Únicas)"""
     def __init__(self, save_file="save_data.json"):
         base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         self.save_file = os.path.join(base_dir, save_file)
         
         self.default_data = {
-            "inventory": [
-                {"id": str(uuid.uuid4()), "species": "pikachu", "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1}
-            ],
+            "inventory": [],
             "active_pets": [] 
         }
         self.data = self.load_save()
@@ -37,7 +34,7 @@ class SaveManager:
                     if "pc_inventory" in data:
                         new_inv = []
                         for sp in data["pc_inventory"]:
-                            new_inv.append({"id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1})
+                            new_inv.append({"id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1, "everstone": False})
                         data["inventory"] = new_inv
                         del data["pc_inventory"]
                         data["active_pets"] = [] 
@@ -63,7 +60,7 @@ class SaveManager:
     def reset_save(self, starter_species):
         is_shiny_roll = random.randint(1, 100) == 1
         self.data = {
-            "inventory": [{"id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": 1}],
+            "inventory": [{"id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": 1, "everstone": False}],
             "active_pets": []
         }
         self.save_data()
@@ -185,6 +182,7 @@ class DesktopPet:
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
         self.is_wild = is_wild
+        self.is_egg = self.pet_data.get("is_egg", False)
         
         self.on_remove = on_remove_callback
         self.on_catch = on_catch_callback
@@ -198,6 +196,7 @@ class DesktopPet:
         
         self.window = tk.Toplevel(parent_root)
         wild_tag = "(SALVAJE)" if is_wild else f"Lv.{self.pet_data['level']}"
+        if self.is_egg: wild_tag = "(HUEVO)"
         self.window.title(f"{self.config.get('display_name', 'Pokemon')} {wild_tag}")
         self.window.overrideredirect(True)
         self.window.attributes('-topmost', True)
@@ -234,8 +233,7 @@ class DesktopPet:
             print(f"[!] Faltan assets shiny para {self.pet_name}. Usando normales.")
             animator_dir = self.pet_dir
 
-        img_cfg = self.config.get("images", {})
-        self.animator = DesktopPetAnimator(self.canvas, img_cfg, (self.size_w, self.size_h), (self.size_w, self.size_h), animator_dir)
+        self.animator = DesktopPetAnimator(self.canvas, self.config.get("images", {}), (self.size_w, self.size_h), (self.size_w, self.size_h), animator_dir)
 
         user32 = ctypes.windll.user32
         self.v_x = user32.GetSystemMetrics(76) 
@@ -244,6 +242,21 @@ class DesktopPet:
         self.v_height = user32.GetSystemMetrics(79)
 
         self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
+        
+        if self.is_egg:
+            egg_path = os.path.join(self.base_dir, "game_env", "ui", "egg.png")
+            try:
+                raw_egg = Image.open(egg_path).convert("RGBA")
+                r, g, b, a = raw_egg.split()
+                a = a.point(lambda p: 255 if p > 127 else 0)
+                self.egg_base_img = Image.merge("RGBA", (r, g, b, a)).resize((self.size_w, self.size_h), Image.Resampling.NEAREST)
+                self.egg_tk = ImageTk.PhotoImage(self.egg_base_img)
+                self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
+            except:
+                print("[!] Falta game_env/ui/egg.png")
+                
+            hatch_time = random.randint(900000, 1800000) 
+            self.window.after(hatch_time, self.hatch_egg)
         
         if spawn_coords:
             self.x = spawn_coords[0]
@@ -254,10 +267,14 @@ class DesktopPet:
                 self.current_state = 'evolving_finish'
                 self.finish_evolution_vfx(step=0)
             else:
-                self.current_state = 'idle'
+                self.current_state = 'egg_idle' if self.is_egg else 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
-            if self.is_wild:
+            if self.is_egg:
+                self.y = self.floor_y
+                self.current_state = 'egg_idle'
+                self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            elif self.is_wild:
                 self.y = self.floor_y
                 self.current_state = 'spawning_wild'
                 self.canvas.itemconfig(self.canvas_image_id, state='hidden')
@@ -270,18 +287,21 @@ class DesktopPet:
 
         self.window.geometry(f"{self.size_w}x{self.size_h}+{self.x}+{self.y}")
         self.is_facing_right = random.choice([True, False])
-        self.frame_rate_active = img_cfg.get("frame_rate_active", 120)
-        self.frame_rate_idle = img_cfg.get("frame_rate_idle", 200)
+        self.frame_rate_active = self.config.get("images", {}).get("frame_rate_active", 120)
+        self.frame_rate_idle = self.config.get("images", {}).get("frame_rate_idle", 200)
 
         self.canvas.bind("<ButtonRelease-3>", self.handle_right_click)
         self.canvas.bind("<Double-Button-1>", self.handle_double_click)
         
+        if self.is_wild and not self.is_egg:
+            despawn_time = random.randint(120000, 300000) 
+            self.despawn_timer = self.window.after(despawn_time, self.start_wild_despawn)
+            
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
 
     def play_shiny_sound(self):
-        """Inyección de audio exclusiva y estricta para genotipos variocolor."""
         if not self.is_shiny: return
         try:
             snd_path = os.path.join(self.base_dir, "game_env", "sounds", "shiny.wav")
@@ -330,7 +350,6 @@ class DesktopPet:
                     s.play()
             except: pass
             
-            # Detonador de revelación shiny post-evolución
             self.play_shiny_sound()
 
         if step <= 40:
@@ -345,8 +364,12 @@ class DesktopPet:
 
         self.window.after(50, lambda: self.finish_evolution_vfx(step+1))
 
+    def hatch_egg(self):
+        if self.current_state == 'exiting': return
+        self.start_evolution_vfx(self.pet_data["species"], step=0)
+
     def gain_xp(self, amount):
-        if self.pet_data["level"] >= 100:
+        if self.is_egg or self.pet_data["level"] >= 100:
             self.pet_data["xp"] = 0
             return
 
@@ -383,6 +406,8 @@ class DesktopPet:
         float_up(0)
 
     def check_evolution(self):
+        if self.pet_data.get("everstone", False): return
+
         rpg = self.config.get("rpg_data", {})
         evo_level = rpg.get("evolution_level", 99)
         evolves_to = rpg.get("evolves_to", [])
@@ -424,7 +449,6 @@ class DesktopPet:
             except Exception: pass 
 
             try:
-                # NÚCLEO: Escaneo y selección escalar de modelo de Pokéball
                 pb_dir = os.path.join(self.base_dir, "game_env", "ui")
                 available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
                 pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
@@ -470,6 +494,53 @@ class DesktopPet:
         else:
             self.window.after(100, self.window.destroy)
 
+    def start_wild_despawn(self):
+        if self.current_state in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']: return
+        self.current_state = 'despawning_wild'
+        self.animate_wild_despawn(step=0)
+
+    def animate_wild_despawn(self, step):
+        frames_up = 15
+        pause = 10
+        frames_down = 15
+        
+        if step == 0:
+            try:
+                asset_name = "cloud.png" if self.is_flying else "tallGrass.png"
+                vfx_path = os.path.join(self.base_dir, "game_env", "ui", asset_name)
+                self.spawn_vfx_raw = Image.open(vfx_path).convert("RGBA")
+            except Exception:
+                self.spawn_vfx_raw = None
+
+        if not getattr(self, 'spawn_vfx_raw', None):
+            self.on_remove(self)
+            return
+
+        w, h = self.size_w, self.size_h
+        total_steps = frames_up + pause + frames_down
+        
+        if step <= frames_up:
+            progress = step / frames_up
+            offset_y = h - int((h/1.5) * progress) 
+        elif step <= frames_up + pause:
+            offset_y = h - int(h/1.5)
+            if step == frames_up + (pause // 2):
+                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+        elif step <= total_steps:
+            progress = (step - frames_up - pause) / frames_down
+            offset_y = (h - int(h/1.5)) + int((h/1.5) * progress) 
+        else:
+            self.canvas.delete("spawn_vfx")
+            self.on_remove(self)
+            return
+
+        resized = self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST)
+        self.vfx_tk = ImageTk.PhotoImage(resized)
+        self.canvas.delete("spawn_vfx")
+        self.canvas.create_image(w//2, offset_y, image=self.vfx_tk, anchor=tk.N, tags="spawn_vfx")
+        
+        self.window.after(30, lambda: self.animate_wild_despawn(step + 1))
+
     def animate_wild_spawn(self, step):
         frames_up = 15
         pause = 10
@@ -500,8 +571,6 @@ class DesktopPet:
             if step == frames_up + (pause // 2):
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 self.canvas.tag_lower(self.canvas_image_id, "spawn_vfx")
-                
-                # Detonador de revelación shiny en entorno salvaje
                 self.play_shiny_sound()
                 
         elif step <= total_steps:
@@ -525,7 +594,6 @@ class DesktopPet:
 
         if step == 0:
             try:
-                # NÚCLEO: Escaneo dinámico asimilado en la orden de spawn
                 pb_dir = os.path.join(self.base_dir, "game_env", "ui")
                 available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
                 pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
@@ -556,7 +624,8 @@ class DesktopPet:
         self.window.after(30, lambda: self.animate_owned_spawn(step + 1))
 
     def handle_right_click(self, event):
-        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish']:
+        if self.is_egg: return
+        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
             if self.is_wild:
                 self.on_catch(self)
                 self.animate_vfx("catch")
@@ -565,7 +634,8 @@ class DesktopPet:
                 self.animate_vfx("return")
 
     def handle_double_click(self, event):
-        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish']:
+        if self.is_egg: return
+        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
             self.on_open_pc(self.pet_data)
 
     def update_position(self):
@@ -573,16 +643,26 @@ class DesktopPet:
 
     def animate_loop(self):
         if self.current_state == 'exiting': return 
-        target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling'] else self.frame_rate_idle
         
         blend = getattr(self, 'evo_blend', 0.0)
-        self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
+        
+        if self.is_egg:
+            if blend > 0.0 and getattr(self, 'egg_base_img', None):
+                white_layer = Image.new("RGBA", self.egg_base_img.size, (255, 255, 255, 255))
+                white_layer.putalpha(self.egg_base_img.split()[3]) 
+                blended = Image.blend(self.egg_base_img, white_layer, blend)
+                self.egg_tk = ImageTk.PhotoImage(blended)
+                self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
+        else:
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling'] else self.frame_rate_idle
+            self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
+            
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
-        if self.current_state == 'exiting': return
+        if self.current_state == 'exiting' or self.is_egg: return
         
-        if self.current_state in ['evolving_start', 'evolving_finish']:
+        if self.current_state in ['evolving_start', 'evolving_finish', 'despawning_wild']:
             self.window.after(50, self.physics_loop)
             return
         
@@ -598,7 +678,6 @@ class DesktopPet:
                 self.canvas.delete("spawn_pb")
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 
-                # Detonador de revelación shiny en spawn del usuario
                 self.play_shiny_sound()
                 
                 try:
@@ -761,7 +840,7 @@ class GameController:
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         
-        w, h = 280, 95 
+        w, h = 280, 115 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
 
@@ -791,8 +870,13 @@ class GameController:
         
         self.combo_var = tk.StringVar()
         self.combo = ttk.Combobox(top_row, textvariable=self.combo_var, state="readonly", justify="center")
-        self.update_pc_ui()
         self.combo.pack(fill=tk.X, expand=True)
+
+        mid_row = tk.Frame(content_frame, bg=bg_main)
+        mid_row.pack(fill=tk.X, padx=10, pady=(0, 4))
+        self.everstone_var = tk.BooleanVar()
+        self.chk_everstone = tk.Checkbutton(mid_row, text="Everstone", font=("Segoe UI", 8), variable=self.everstone_var, bg=bg_main, command=self.on_everstone_toggle)
+        self.chk_everstone.pack(anchor=tk.CENTER)
 
         bottom_row = tk.Frame(content_frame, bg=bg_main)
         bottom_row.pack(fill=tk.X, padx=10, pady=(0, 5))
@@ -800,19 +884,24 @@ class GameController:
         btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
         btn_spawn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
 
-        btn_reset = tk.Button(bottom_row, text="Formatear Sistema", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
+        btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
+        self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
+
+        self.update_pc_ui()
         self.restore_active_pets()
         self.build_spawn_pool()
         
         self.root.after(15000, self.wild_spawner_loop)
         self.root.after(10000, self.xp_tick_loop)
+        self.root.after(600000, self.egg_laying_loop) 
         self.root.mainloop()
 
     def build_spawn_pool(self):
         self.spawn_pool_species = []
         self.spawn_pool_weights = []
+        self.evo_parents = {}
         
         all_available = [d for d in os.listdir(self.pets_directory) if os.path.isdir(os.path.join(self.pets_directory, d))]
         
@@ -827,8 +916,22 @@ class GameController:
                 
                 self.spawn_pool_species.append(species)
                 self.spawn_pool_weights.append(weight)
+
+                evolves_to = rpg_data.get("evolves_to", [])
+                if evolves_to and evolves_to[0] != "none":
+                    for evo in evolves_to:
+                        self.evo_parents[evo] = species
+
             except Exception as e:
-                print(f"[!] Error leyendo spawn_rate de {species}: {e}")
+                print(f"[!] Error leyendo config de {species}: {e}")
+
+    def get_base_form(self, species):
+        current = species
+        visited = set()
+        while current in self.evo_parents and current not in visited:
+            visited.add(current)
+            current = self.evo_parents[current]
+        return current
 
     def hide_pc_ui(self):
         if len(self.active_instances) == 0 and len(self.wild_instances) == 0:
@@ -847,7 +950,50 @@ class GameController:
             for idx, val in enumerate(self.combo['values']):
                 if val.startswith(target_str):
                     self.combo.current(idx)
+                    self.on_combo_select()
                     break
+
+    def get_selected_pet(self):
+        selection = self.combo_var.get()
+        if selection == "(Vacio)" or not selection: return None
+        base_str = selection.split(" (x")[0]
+        parts = base_str.split(" - lvl.")
+        raw_species = parts[0]
+        is_shiny_spawn = "★" in raw_species
+        target_species = raw_species.replace(" ★", "").lower()
+        target_level = int(parts[1])
+        
+        matches = [p for p in self.save_mgr.data["inventory"] if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False)]
+        return matches[0] if matches else None
+
+    def on_combo_select(self, event=None):
+        pet = self.get_selected_pet()
+        if pet:
+            self.everstone_var.set(pet.get("everstone", False))
+        else:
+            self.everstone_var.set(False)
+
+    def on_everstone_toggle(self):
+        pet = self.get_selected_pet()
+        if pet:
+            selection = self.combo_var.get()
+            base_str = selection.split(" (x")[0]
+            parts = base_str.split(" - lvl.")
+            raw_species = parts[0]
+            is_shiny_spawn = "★" in raw_species
+            target_species = raw_species.replace(" ★", "").lower()
+            target_level = int(parts[1])
+            new_state = self.everstone_var.get()
+            
+            for p in self.save_mgr.data["inventory"]:
+                if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False):
+                    p["everstone"] = new_state
+            self.save_mgr.save_data()
+            
+            if not new_state:
+                for active_pet in self.active_instances:
+                    if active_pet.pet_data["species"] == target_species and active_pet.pet_data["level"] == target_level and active_pet.pet_data.get("is_shiny", False) == is_shiny_spawn:
+                        active_pet.check_evolution()
 
     def confirm_reset(self):
         if messagebox.askyesno("Reinicio", "ALERTA: Esto borrará todos tus Pokémon y restablecerá los datos de fábrica.\n\n¿Proceder?"):
@@ -866,15 +1012,27 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
+        # Memoria de estado inyectada para prevenir el borrado de selección
+        current_selection = self.combo_var.get()
+        
         if not self.save_mgr.data["inventory"]:
             self.combo['values'] = ["(Vacio)"]
             self.combo.current(0)
+            self.on_combo_select()
         else:
             formatted_list = []
             for p in self.save_mgr.data["inventory"]:
+                if p.get("is_egg", False): continue
+                
                 shiny_tag = " ★" if p.get("is_shiny", False) else ""
                 formatted_list.append(f"{p['species'].capitalize()}{shiny_tag} - lvl.{p['level']}")
             
+            if not formatted_list:
+                self.combo['values'] = ["(Vacio)"]
+                self.combo.current(0)
+                self.on_combo_select()
+                return
+
             unique_owned = sorted(list(set(formatted_list)))
             display_list = []
             
@@ -886,13 +1044,21 @@ class GameController:
                     display_list.append(p_str)
                     
             self.combo['values'] = display_list
-            self.combo.current(0)
+            
+            # Restaurador de estado dinámico
+            if current_selection in display_list:
+                self.combo.set(current_selection)
+            else:
+                self.combo.current(0)
+                
+            self.on_combo_select()
 
     def spawn_from_pc(self):
         selection = self.combo_var.get()
         if selection == "(Vacio)" or not selection: return
         
-        if len(self.active_instances) >= 6:
+        active_pets_only = len([p for p in self.active_instances if not getattr(p, 'is_egg', False)])
+        if active_pets_only >= 6:
             import tkinter.messagebox as mb
             mb.showwarning("Límite de Equipo", "No puedes tener más de 6 Pokémon fuera del PC al mismo tiempo.")
             return
@@ -905,7 +1071,7 @@ class GameController:
         target_species = raw_species.replace(" ★", "").lower()
         target_level = int(parts[1])
         
-        owned_matches = [p for p in self.save_mgr.data["inventory"] if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn]
+        owned_matches = [p for p in self.save_mgr.data["inventory"] if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False)]
         active_ids = [pet.pet_data["id"] for pet in self.active_instances]
         
         available_pet = next((p for p in owned_matches if p["id"] not in active_ids), None)
@@ -956,7 +1122,8 @@ class GameController:
                     wild_data = {"id": str(uuid.uuid4()), "species": target, "level": lvl, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": lvl}
                     self.spawn_entity(wild_data, is_wild=True)
                     
-        self.root.after(60000, self.wild_spawner_loop)
+        next_interval = random.randint(45000, 75000)
+        self.root.after(next_interval, self.wild_spawner_loop)
 
     def xp_tick_loop(self):
         for pet in self.active_instances:
@@ -967,7 +1134,77 @@ class GameController:
         self.update_pc_ui() 
         self.root.after(10000, self.xp_tick_loop)
 
+    def egg_laying_loop(self):
+        has_egg = any(getattr(p, 'is_egg', False) for p in self.active_instances)
+        
+        if not has_egg:
+            fully_evolved_pets = []
+            for pet in self.active_instances:
+                if not pet.is_wild and not getattr(pet, 'is_egg', False):
+                    rpg = pet.config.get("rpg_data", {})
+                    evos = rpg.get("evolves_to", [])
+                    if not evos or evos[0] == "none":
+                        fully_evolved_pets.append(pet)
+            
+            for pet in fully_evolved_pets:
+                if random.randint(1, 100) <= 5: 
+                    base_form = self.get_base_form(pet.pet_name)
+                    egg_data = {
+                        "id": str(uuid.uuid4()), 
+                        "species": base_form, 
+                        "level": 1, 
+                        "xp": 0, 
+                        "is_shiny": random.randint(1, 100) <= 20, 
+                        "last_evolution_level": 1,
+                        "is_egg": True,
+                        "everstone": False
+                    }
+                    self.save_mgr.data["inventory"].append(egg_data)
+                    self.save_mgr.save_data()
+                    self.spawn_entity(egg_data, is_wild=False)
+                    break
+
+        self.root.after(600000, self.egg_laying_loop)
+
     def on_pet_evolve(self, pet_instance, new_species, is_mid_evo=False, evo_channel=None):
+        if getattr(pet_instance, 'is_egg', False):
+            pet_instance.pet_data["is_egg"] = False
+            self.save_mgr.save_data()
+            
+            active_count = len([p for p in self.active_instances if not getattr(p, 'is_egg', False) and p != pet_instance])
+            
+            target_coords = (pet_instance.x, pet_instance.y)
+            if pet_instance in self.active_instances:
+                self.active_instances.remove(pet_instance)
+            pet_instance.window.destroy()
+
+            if active_count >= 6:
+                try:
+                    snd_path = os.path.join(pet_instance.base_dir, "game_env", "sounds", "evolved.wav")
+                    if os.path.exists(snd_path):
+                        import pygame
+                        s = pygame.mixer.Sound(snd_path)
+                        s.set_volume(0.03)
+                        s.play()
+                except: pass
+                
+                if pet_instance.is_shiny:
+                    try:
+                        snd_path = os.path.join(pet_instance.base_dir, "game_env", "sounds", "shiny.wav")
+                        if os.path.exists(snd_path):
+                            import pygame
+                            s = pygame.mixer.Sound(snd_path)
+                            s.set_volume(0.05)
+                            s.play()
+                    except: pass
+                    
+                self.save_mgr.save_data()
+                self.update_pc_ui()
+            else:
+                self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel)
+                self.update_pc_ui()
+            return
+
         pet_instance.pet_data["species"] = new_species
         pet_instance.pet_data["last_evolution_level"] = pet_instance.pet_data["level"]
         self.save_mgr.save_data()
@@ -984,6 +1221,10 @@ class GameController:
         if pet_instance in self.active_instances:
             self.active_instances.remove(pet_instance)
             self.sync_save_state()
+            if len(self.active_instances) == 0 and len(self.wild_instances) == 0:
+                self.show_pc_ui()
+        elif pet_instance in self.wild_instances:
+            self.wild_instances.remove(pet_instance)
             if len(self.active_instances) == 0 and len(self.wild_instances) == 0:
                 self.show_pc_ui()
 

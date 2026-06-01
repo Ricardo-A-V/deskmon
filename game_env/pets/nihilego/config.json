@@ -3,7 +3,7 @@
     "physics": {
         "size": 64,
         "movement_speed": 3,
-        "is_flying": false,
+        "is_flying": true,
         "offset_y": 5
     },
     "images": {
