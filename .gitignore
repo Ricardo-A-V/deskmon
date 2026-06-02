@@ -22,3 +22,6 @@ temp_shortcut.vbs
 # Herramientas de desarrollo y procesamiento crudo
 dev_env/
 raw_shinys/
+
+# Releases empaquetados
+releases/
