@@ -217,10 +217,21 @@ class DesktopPet:
         self.speed = max(1, int(base_speed * multiplicador_velocidad))
         self.is_flying = physics.get("is_flying", False)
         
-        if self.is_flying: self.offset_y = 32
-        else: self.offset_y = -6 
+        # --- NÚCLEO GEOMÉTRICO (CONTROL DE GRAVEDAD ESTRICTO) ---
+        if self.is_egg:
+            self.is_flying = False  # Supresión genética: Un huevo no puede volar
             
-        self.fly_amplitude = 0 
+            # Un Pokémon normal usa offset -6, pero su lienzo tiene ~16px de aire transparente debajo.
+            # Como al huevo le hemos recortado la transparencia a cero, un offset de 10 
+            # alineará la base de la cáscara matemáticamente con los pies de un Pokémon terrestre.
+            self.offset_y = 0      
+            
+        elif self.is_flying: 
+            self.offset_y = 32
+        else: 
+            self.offset_y = -6 
+            
+        self.fly_amplitude = 0
         
         self.canvas = tk.Canvas(self.window, width=self.size_w, height=self.size_h, bg=CHROMA_KEY, highlightthickness=0)
         self.canvas.pack()
@@ -244,19 +255,44 @@ class DesktopPet:
         self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
         
         if self.is_egg:
+            self.canvas.coords(self.canvas_image_id, self.size_w // 2, self.size_h)
+            self.canvas.itemconfig(self.canvas_image_id, anchor=tk.S)
+            
             egg_path = os.path.join(self.base_dir, "game_env", "ui", "egg.png")
             try:
                 raw_egg = Image.open(egg_path).convert("RGBA")
                 r, g, b, a = raw_egg.split()
                 a = a.point(lambda p: 255 if p > 127 else 0)
-                self.egg_base_img = Image.merge("RGBA", (r, g, b, a)).resize((self.size_w, self.size_h), Image.Resampling.NEAREST)
+                raw_egg.putalpha(a)
+                
+                # RECORTE ESTRICTO POR CANAL ALFA
+                bbox = a.getbbox()
+                if bbox:
+                    raw_egg = raw_egg.crop(bbox)
+                
+                # MOTOR DE ESCALADO FORZADO (Abandono de thumbnail en favor de resize estructurado)
+                target_w = max(1, int(self.size_w * 0.35)) # Ajusta este porcentaje si deseas más o menos escala.
+                target_h = max(1, int(self.size_h * 0.35))
+                
+                aspect = raw_egg.width / raw_egg.height
+                if aspect > 1:
+                    new_w = target_w
+                    new_h = int(target_w / aspect)
+                else:
+                    new_h = target_h
+                    new_w = int(target_h * aspect)
+                    
+                # Resize obliga a expandir la matriz si el recorte es pequeño.
+                self.egg_base_img = raw_egg.resize((new_w, new_h), Image.Resampling.NEAREST)
                 self.egg_tk = ImageTk.PhotoImage(self.egg_base_img)
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
-            except:
-                print("[!] Falta game_env/ui/egg.png")
+                
+            except Exception as e:
+                print(f"[!] Error crítico cargando huevo desde '{egg_path}': {e}")
                 
             hatch_time = random.randint(900000, 1800000) 
             self.window.after(hatch_time, self.hatch_egg)
+            self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
         
         if spawn_coords:
             self.x = spawn_coords[0]
@@ -270,10 +306,12 @@ class DesktopPet:
                 self.current_state = 'egg_idle' if self.is_egg else 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
+            
             if self.is_egg:
-                self.y = self.floor_y
-                self.current_state = 'egg_idle'
-                self.canvas.itemconfig(self.canvas_image_id, state='normal')
+                self.y = self.v_y - self.size_h
+                self.current_state = 'falling_egg'
+                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+                self.animate_egg_spawn(step=0)
             elif self.is_wild:
                 self.y = self.floor_y
                 self.current_state = 'spawning_wild'
@@ -300,6 +338,34 @@ class DesktopPet:
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
+
+    def egg_wiggle_loop(self):
+        if not getattr(self, 'is_egg', False) or self.current_state == 'exiting': return
+        
+        if self.current_state == 'egg_idle':
+            self.current_state = 'egg_wiggle'
+            self.animate_egg_wiggle(step=0)
+        else:
+            self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
+
+    def animate_egg_wiggle(self, step=0):
+        if self.current_state != 'egg_wiggle': return
+        
+        frames = [15, -15, 10, -10, 5, -5, 0]
+        
+        if step >= len(frames):
+            self.current_state = 'egg_idle'
+            if getattr(self, 'egg_tk', None):
+                self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
+            self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
+            return
+            
+        angle = frames[step]
+        rotated = self.egg_base_img.rotate(angle, expand=True, resample=Image.NEAREST)
+        self.egg_tk_wiggle = ImageTk.PhotoImage(rotated)
+        self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk_wiggle)
+        
+        self.window.after(80, lambda: self.animate_egg_wiggle(step + 1))
 
     def play_shiny_sound(self):
         if not self.is_shiny: return
@@ -431,6 +497,26 @@ class DesktopPet:
         except Exception as e:
             print(f"Error crítico en {self.pet_dir}: {e}")
             sys.exit(1)
+
+    def animate_egg_spawn(self, step):
+        if self.current_state != 'falling_egg':
+            return 
+
+        if not getattr(self, 'egg_base_img', None):
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            self.current_state = 'egg_idle'
+            return
+
+        w, h = self.size_w, self.size_h
+        rotation = step * -15 
+        rotated = self.egg_base_img.rotate(rotation, expand=True, resample=Image.NEAREST)
+        
+        self.egg_tk_falling = ImageTk.PhotoImage(rotated)
+        self.canvas.delete("spawn_egg")
+        
+        self.canvas.create_image(w//2, h, image=self.egg_tk_falling, anchor=tk.S, tags="spawn_egg")
+        
+        self.window.after(30, lambda: self.animate_egg_spawn(step + 1))
 
     def animate_vfx(self, action_type, step=0):
         frames = 15 
@@ -634,9 +720,11 @@ class DesktopPet:
                 self.animate_vfx("return")
 
     def handle_double_click(self, event):
-        if self.is_egg: return
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
-            self.on_open_pc(self.pet_data)
+            if getattr(self, 'is_egg', False):
+                self.on_open_pc(None) 
+            else:
+                self.on_open_pc(self.pet_data)
 
     def update_position(self):
         self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
@@ -653,6 +741,8 @@ class DesktopPet:
                 blended = Image.blend(self.egg_base_img, white_layer, blend)
                 self.egg_tk = ImageTk.PhotoImage(blended)
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
+            elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
+                self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
             target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling'] else self.frame_rate_idle
             self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
@@ -660,7 +750,7 @@ class DesktopPet:
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
-        if self.current_state == 'exiting' or self.is_egg: return
+        if self.current_state in ['exiting', 'egg_idle', 'egg_wiggle']: return
         
         if self.current_state in ['evolving_start', 'evolving_finish', 'despawning_wild']:
             self.window.after(50, self.physics_loop)
@@ -668,6 +758,17 @@ class DesktopPet:
         
         if self.current_state == 'spawning_wild':
             self.window.after(50, self.physics_loop)
+            return
+            
+        if self.current_state == 'falling_egg':
+            self.y += 10
+            if self.y >= self.floor_y:
+                self.y = self.floor_y
+                self.current_state = 'egg_idle'
+                self.canvas.delete("spawn_egg")
+                self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            self.update_position()
+            self.window.after(20, self.physics_loop)
             return
 
         if self.current_state == 'falling_pokeball':
@@ -884,7 +985,7 @@ class GameController:
         btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
         btn_spawn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
 
-        btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
+        btn_reset = tk.Button(bottom_row, text="Restart System", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
@@ -1012,7 +1113,6 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
-        # Memoria de estado inyectada para prevenir el borrado de selección
         current_selection = self.combo_var.get()
         
         if not self.save_mgr.data["inventory"]:
@@ -1045,7 +1145,6 @@ class GameController:
                     
             self.combo['values'] = display_list
             
-            # Restaurador de estado dinámico
             if current_selection in display_list:
                 self.combo.set(current_selection)
             else:
@@ -1161,7 +1260,8 @@ class GameController:
                     }
                     self.save_mgr.data["inventory"].append(egg_data)
                     self.save_mgr.save_data()
-                    self.spawn_entity(egg_data, is_wild=False)
+                    
+                    self.spawn_entity(egg_data, is_wild=False, coords=(pet.x, pet.y))
                     break
 
         self.root.after(600000, self.egg_laying_loop)
