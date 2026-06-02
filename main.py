@@ -985,7 +985,11 @@ class GameController:
         btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
         btn_spawn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
 
-        btn_reset = tk.Button(bottom_row, text="Restart System", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
+        # INYECCIÓN: Botón de purga de datos
+        btn_release = tk.Button(bottom_row, text="Release", font=("Segoe UI", 8, "bold"), bg="#8E44AD", fg="white", bd=0, pady=2, command=self.release_from_pc)
+        btn_release.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+
+        btn_reset = tk.Button(bottom_row, text="Format PC", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
@@ -1180,6 +1184,27 @@ class GameController:
         else:
             print(f"[!] Ya tienes todos tus {target_species} (lvl.{target_level}) en pantalla.")
 
+    def release_from_pc(self):
+        pet_to_release = self.get_selected_pet()
+        if not pet_to_release: return
+        
+        # Filtro de seguridad: No puedes liberar un Pokémon que esté caminando por el escritorio
+        active_ids = [pet.pet_data["id"] for pet in self.active_instances]
+        if pet_to_release["id"] in active_ids:
+            import tkinter.messagebox as mb
+            mb.showwarning("Operación Denegada", "Debes guardar a este Pokémon en el PC antes de liberarlo.")
+            return
+
+        species_name = pet_to_release['species'].capitalize()
+        if messagebox.askyesno("Liberar Entidad", f"¿Estás seguro de que quieres liberar a este {species_name}?\nEsta acción destruirá sus datos para siempre."):
+            
+            # Purga matemática del inventario
+            self.save_mgr.data["inventory"] = [p for p in self.save_mgr.data["inventory"] if p["id"] != pet_to_release["id"]]
+            self.save_mgr.save_data()
+            self.update_pc_ui()
+            
+            print(f"[+] Entidad {species_name} eliminada de la base de datos local.")
+
     def restore_active_pets(self):
         active_ids = self.save_mgr.data.get("active_pets", [])
         spawn_index = 0 
@@ -1246,14 +1271,14 @@ class GameController:
                         fully_evolved_pets.append(pet)
             
             for pet in fully_evolved_pets:
-                if random.randint(1, 100) <= 5: 
+                if random.randint(1, 100) <= 12: 
                     base_form = self.get_base_form(pet.pet_name)
                     egg_data = {
                         "id": str(uuid.uuid4()), 
                         "species": base_form, 
                         "level": 1, 
                         "xp": 0, 
-                        "is_shiny": random.randint(1, 100) <= 20, 
+                        "is_shiny": random.randint(1, 100) <= 25, 
                         "last_evolution_level": 1,
                         "is_egg": True,
                         "everstone": False
