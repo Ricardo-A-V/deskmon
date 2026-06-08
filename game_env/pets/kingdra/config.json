@@ -3,8 +3,8 @@
     "physics": {
         "size": 80,
         "movement_speed": 3,
-        "is_flying": false,
-        "offset_y": 5
+        "is_flying": true,
+        "offset_y": 40
     },
     "images": {
         "idle_is_animated": true,

@@ -6,12 +6,12 @@ import sys
 # --- RUTAS ESTRUCTURALES ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_SCRIPT = os.path.join(BASE_DIR, "main.py")
-SPEC_FILE = os.path.join(BASE_DIR, "main.spec")
+SPEC_FILE = os.path.join(BASE_DIR, "Deskmon.spec")
 BUILD_DIR = os.path.join(BASE_DIR, "build")
 DIST_DIR = os.path.join(BASE_DIR, "dist")
 
-EXE_SOURCE = os.path.join(DIST_DIR, "main.exe")
-EXE_DESTINATION = os.path.join(BASE_DIR, "main.exe")
+EXE_SOURCE = os.path.join(DIST_DIR, "Deskmon.exe")
+EXE_DESTINATION = os.path.join(BASE_DIR, "Deskmon.exe")
 
 # [NUEVO] RUTA ESTRICTA DEL ICONO
 ICON_PATH = os.path.join(BASE_DIR, "game_env", "ui", "icon.ico")
@@ -52,7 +52,8 @@ def compile_and_clean():
 
     print("[+] Fase 1: Iniciando compilación estricta (PyInstaller)...")
     
-    command = [sys.executable, "-m", "PyInstaller", "--windowed", "--onefile", "--clean"]
+    # Forzamos el nombre de salida a 'Deskmon'
+    command = [sys.executable, "-m", "PyInstaller", "--windowed", "--onefile", "--clean", "--name=Deskmon"]
     
     # Inyección estructural del icono en el binario
     if os.path.exists(ICON_PATH):
@@ -71,7 +72,7 @@ def compile_and_clean():
 
     print("\n[+] Fase 2: Verificando integridad del artefacto...")
     if not os.path.exists(EXE_SOURCE):
-        print("[!] Error: Compilación finalizada, pero no se generó el binario 'main.exe'.")
+        print("[!] Error: Compilación finalizada, pero no se generó el binario 'Deskmon.exe'.")
         sys.exit(1)
 
     print("[+] Fase 3: Extrayendo ejecutable al directorio raíz...")
@@ -89,7 +90,7 @@ def compile_and_clean():
         create_desktop_shortcut(EXE_DESTINATION, ICON_PATH)
 
     print("-" * 50)
-    print("[+] OPERACIÓN EXITOSA: 'main.exe' generado y entorno purgado.")
+    print("[+] OPERACIÓN EXITOSA: 'Deskmon.exe' generado y entorno purgado.")
 
 if __name__ == "__main__":
     compile_and_clean()

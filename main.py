@@ -142,6 +142,9 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = 'idle' if state in ['falling', 'evolving_start', 'evolving_finish'] else state
+        
+        # Mapeo del estado overflow a animación de caminata
+        if render_state == 'walking_away': render_state = 'walking'
 
         if render_state == 'walking':
             if self.directional_walk:
@@ -178,11 +181,12 @@ class DesktopPetAnimator:
 
 # --- ENTIDAD FÍSICA ---
 class DesktopPet:
-    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None):
+    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
         self.is_wild = is_wild
         self.is_egg = self.pet_data.get("is_egg", False)
+        self.is_overflow = is_overflow
         
         self.on_remove = on_remove_callback
         self.on_catch = on_catch_callback
@@ -201,7 +205,8 @@ class DesktopPet:
         self.window.overrideredirect(True)
         self.window.attributes('-topmost', True)
 
-        CHROMA_KEY = '#FF00FF'
+        # PARCHE DE TRANSPARENCIA: Chroma magenta modificado para no comerse los píxeles puros
+        CHROMA_KEY = '#FE01FE'
         self.window.config(bg=CHROMA_KEY)
         try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
         except tk.TclError: pass 
@@ -217,15 +222,9 @@ class DesktopPet:
         self.speed = max(1, int(base_speed * multiplicador_velocidad))
         self.is_flying = physics.get("is_flying", False)
         
-        # --- NÚCLEO GEOMÉTRICO (CONTROL DE GRAVEDAD ESTRICTO) ---
         if self.is_egg:
-            self.is_flying = False  # Supresión genética: Un huevo no puede volar
-            
-            # Un Pokémon normal usa offset -6, pero su lienzo tiene ~16px de aire transparente debajo.
-            # Como al huevo le hemos recortado la transparencia a cero, un offset de 10 
-            # alineará la base de la cáscara matemáticamente con los pies de un Pokémon terrestre.
+            self.is_flying = False  
             self.offset_y = 0      
-            
         elif self.is_flying: 
             self.offset_y = 32
         else: 
@@ -255,6 +254,10 @@ class DesktopPet:
         self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
         
         if self.is_egg:
+            # INTEGRACIÓN: Memoria de tiempo persistente
+            if "hatch_time_remaining" not in self.pet_data:
+                self.pet_data["hatch_time_remaining"] = random.randint(900000, 1800000)
+
             self.canvas.coords(self.canvas_image_id, self.size_w // 2, self.size_h)
             self.canvas.itemconfig(self.canvas_image_id, anchor=tk.S)
             
@@ -265,13 +268,11 @@ class DesktopPet:
                 a = a.point(lambda p: 255 if p > 127 else 0)
                 raw_egg.putalpha(a)
                 
-                # RECORTE ESTRICTO POR CANAL ALFA
                 bbox = a.getbbox()
                 if bbox:
                     raw_egg = raw_egg.crop(bbox)
                 
-                # MOTOR DE ESCALADO FORZADO (Abandono de thumbnail en favor de resize estructurado)
-                target_w = max(1, int(self.size_w * 0.35)) # Ajusta este porcentaje si deseas más o menos escala.
+                target_w = max(1, int(self.size_w * 0.35))
                 target_h = max(1, int(self.size_h * 0.35))
                 
                 aspect = raw_egg.width / raw_egg.height
@@ -282,7 +283,6 @@ class DesktopPet:
                     new_h = target_h
                     new_w = int(target_h * aspect)
                     
-                # Resize obliga a expandir la matriz si el recorte es pequeño.
                 self.egg_base_img = raw_egg.resize((new_w, new_h), Image.Resampling.NEAREST)
                 self.egg_tk = ImageTk.PhotoImage(self.egg_base_img)
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
@@ -290,8 +290,6 @@ class DesktopPet:
             except Exception as e:
                 print(f"[!] Error crítico cargando huevo desde '{egg_path}': {e}")
                 
-            hatch_time = random.randint(900000, 1800000) 
-            self.window.after(hatch_time, self.hatch_egg)
             self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
         
         if spawn_coords:
@@ -425,7 +423,13 @@ class DesktopPet:
             self.evo_blend = 1.0 - progress
         else:
             self.evo_blend = 0.0
-            self.current_state = 'idle'
+            
+            # CONTROL DE OVERFLOW: Si la cadena manda caminar lejos, altera el estado final
+            if getattr(self, 'is_overflow', False):
+                self.current_state = 'walking_away'
+                self.is_facing_right = True
+            else:
+                self.current_state = 'idle'
             return
 
         self.window.after(50, lambda: self.finish_evolution_vfx(step+1))
@@ -744,7 +748,7 @@ class DesktopPet:
             elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling'] else self.frame_rate_idle
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away'] else self.frame_rate_idle
             self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
             
         self.window.after(16, self.animate_loop)
@@ -760,6 +764,21 @@ class DesktopPet:
             self.window.after(50, self.physics_loop)
             return
             
+        # CONTROL DE OVERFLOW: Caminar hasta salir de la pantalla
+        if self.current_state == 'walking_away':
+            self.x += self.speed
+            if self.x > self.v_x + self.v_width:
+                self.on_remove(self)
+                self.window.destroy()
+                return
+            if self.is_flying:
+                self.fly_amplitude += 0.2
+                onda = math.sin(self.fly_amplitude) * 10
+                self.y = self.floor_y + onda
+            self.update_position()
+            self.window.after(50, self.physics_loop)
+            return
+
         if self.current_state == 'falling_egg':
             self.y += 10
             if self.y >= self.floor_y:
@@ -932,6 +951,7 @@ class GameController:
         self.save_mgr = SaveManager()
         self.active_instances = [] 
         self.wild_instances = []
+        self.overflow_instances = [] # INYECCIÓN: Registro fantasma para los Pokémon que se van caminando
         
         base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         self.pets_directory = os.path.join(base_dir, "game_env", "pets")
@@ -985,7 +1005,6 @@ class GameController:
         btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
         btn_spawn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
 
-        # INYECCIÓN: Botón de purga de datos
         btn_release = tk.Button(bottom_row, text="Release", font=("Segoe UI", 8, "bold"), bg="#8E44AD", fg="white", bd=0, pady=2, command=self.release_from_pc)
         btn_release.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
 
@@ -1188,7 +1207,6 @@ class GameController:
         pet_to_release = self.get_selected_pet()
         if not pet_to_release: return
         
-        # Filtro de seguridad: No puedes liberar un Pokémon que esté caminando por el escritorio
         active_ids = [pet.pet_data["id"] for pet in self.active_instances]
         if pet_to_release["id"] in active_ids:
             import tkinter.messagebox as mb
@@ -1197,34 +1215,42 @@ class GameController:
 
         species_name = pet_to_release['species'].capitalize()
         if messagebox.askyesno("Liberar Entidad", f"¿Estás seguro de que quieres liberar a este {species_name}?\nEsta acción destruirá sus datos para siempre."):
-            
-            # Purga matemática del inventario
             self.save_mgr.data["inventory"] = [p for p in self.save_mgr.data["inventory"] if p["id"] != pet_to_release["id"]]
             self.save_mgr.save_data()
             self.update_pc_ui()
-            
             print(f"[+] Entidad {species_name} eliminada de la base de datos local.")
 
     def restore_active_pets(self):
         active_ids = self.save_mgr.data.get("active_pets", [])
-        spawn_index = 0 
+        active_pets_data = []
         
         for pid in active_ids:
             pet_data = next((p for p in self.save_mgr.data["inventory"] if p["id"] == pid), None)
             if pet_data:
-                delay = 100 + (spawn_index * 500)
-                self.root.after(delay, lambda pd=pet_data: self.spawn_entity(pd, is_wild=False))
-                spawn_index += 1
+                active_pets_data.append(pet_data)
+                
+        # ORDEN DE DESPLIEGUE: Coloca estúpidamente a los huevos al final de la cola
+        active_pets_data.sort(key=lambda x: x.get("is_egg", False))
+        
+        spawn_index = 0 
+        for pd in active_pets_data:
+            # RETARDO ESTRICTO: 500 milisegundos reales (0.5s) de diferencia por entidad
+            delay = 100 + (spawn_index * 500)
+            self.root.after(delay, lambda p=pd: self.spawn_entity(p, is_wild=False))
+            spawn_index += 1
 
-    def spawn_entity(self, pet_data, is_wild, coords=None, is_mid_evo=False, evo_channel=None):
+    def spawn_entity(self, pet_data, is_wild, coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False):
         pet_dir = os.path.join(self.pets_directory, pet_data["species"])
         if not os.path.exists(os.path.join(pet_dir, "config.json")):
             print(f"Error: No existen assets para {pet_data['species']}")
             return
             
-        pet = DesktopPet(self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo, evo_channel)
+        pet = DesktopPet(self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo, evo_channel, is_overflow=is_overflow)
         
-        if is_wild: self.wild_instances.append(pet)
+        if is_wild: 
+            self.wild_instances.append(pet)
+        elif is_overflow: 
+            self.overflow_instances.append(pet)
         else: 
             self.active_instances.append(pet)
             self.sync_save_state()
@@ -1252,7 +1278,17 @@ class GameController:
     def xp_tick_loop(self):
         for pet in self.active_instances:
             if not pet.is_wild:
-                pet.gain_xp(20) 
+                # CONTROL CENTRALIZADO DEL HUEVO: Su tiempo se procesa y guarda desde aquí.
+                if getattr(pet, 'is_egg', False):
+                    rem = pet.pet_data.get("hatch_time_remaining", random.randint(900000, 1800000))
+                    rem -= 10000 
+                    pet.pet_data["hatch_time_remaining"] = rem
+                    
+                    if rem <= 0 and pet.current_state not in ['evolving_start', 'evolving_finish', 'exiting']:
+                        pet.pet_data["hatch_time_remaining"] = 0
+                        pet.hatch_egg()
+                else:
+                    pet.gain_xp(20) 
                 
         self.save_mgr.save_data()
         self.update_pc_ui() 
@@ -1281,7 +1317,8 @@ class GameController:
                         "is_shiny": random.randint(1, 100) <= 25, 
                         "last_evolution_level": 1,
                         "is_egg": True,
-                        "everstone": False
+                        "everstone": False,
+                        "hatch_time_remaining": random.randint(900000, 1800000)
                     }
                     self.save_mgr.data["inventory"].append(egg_data)
                     self.save_mgr.save_data()
@@ -1304,26 +1341,8 @@ class GameController:
             pet_instance.window.destroy()
 
             if active_count >= 6:
-                try:
-                    snd_path = os.path.join(pet_instance.base_dir, "game_env", "sounds", "evolved.wav")
-                    if os.path.exists(snd_path):
-                        import pygame
-                        s = pygame.mixer.Sound(snd_path)
-                        s.set_volume(0.03)
-                        s.play()
-                except: pass
-                
-                if pet_instance.is_shiny:
-                    try:
-                        snd_path = os.path.join(pet_instance.base_dir, "game_env", "sounds", "shiny.wav")
-                        if os.path.exists(snd_path):
-                            import pygame
-                            s = pygame.mixer.Sound(snd_path)
-                            s.set_volume(0.05)
-                            s.play()
-                    except: pass
-                    
-                self.save_mgr.save_data()
+                # SE DISPARA EL OVERFLOW (Equipo Lleno)
+                self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel, is_overflow=True)
                 self.update_pc_ui()
             else:
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel)
@@ -1352,6 +1371,8 @@ class GameController:
             self.wild_instances.remove(pet_instance)
             if len(self.active_instances) == 0 and len(self.wild_instances) == 0:
                 self.show_pc_ui()
+        elif pet_instance in getattr(self, 'overflow_instances', []):
+            self.overflow_instances.remove(pet_instance)
 
     def on_pet_caught(self, pet_instance):
         if pet_instance in self.wild_instances:

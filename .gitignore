@@ -14,7 +14,7 @@ save_data.json
 build/
 dist/
 *.spec
-main.exe
+Deskmon.exe
 
 # Archivos temporales de scripts (VBS)
 temp_shortcut.vbs
