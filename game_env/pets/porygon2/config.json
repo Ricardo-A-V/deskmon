@@ -24,7 +24,7 @@
     },
     "rpg_data": {
         "evolves_to": [
-            "porygon-z"
+            "porygonz"
         ],
         "evolution_level": 35,
         "spawn_rate": 0.176,

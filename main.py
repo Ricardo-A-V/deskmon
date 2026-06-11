@@ -21,7 +21,11 @@ class SaveManager:
         
         self.default_data = {
             "inventory": [],
-            "active_pets": [] 
+            "active_pets": [],
+            "settings": {
+                "allow_wild": True,
+                "allow_breeding": True
+            }
         }
         self.data = self.load_save()
 
@@ -34,7 +38,11 @@ class SaveManager:
                     if "pc_inventory" in data:
                         new_inv = []
                         for sp in data["pc_inventory"]:
-                            new_inv.append({"id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, "is_shiny": False, "last_evolution_level": 1, "everstone": False})
+                            new_inv.append({
+                                "id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, 
+                                "is_shiny": False, "last_evolution_level": 1, "everstone": False,
+                                "flying_height_pct": 3.0
+                            })
                         data["inventory"] = new_inv
                         del data["pc_inventory"]
                         data["active_pets"] = [] 
@@ -42,8 +50,17 @@ class SaveManager:
                     for p in data.get("inventory", []):
                         if "last_evolution_level" not in p:
                             p["last_evolution_level"] = p["level"]
+                        if "flying_height_pct" not in p:
+                            p["flying_height_pct"] = 3.0
                             
                     if "active_pets" not in data: data["active_pets"] = []
+                    
+                    if "settings" not in data:
+                        data["settings"] = {"allow_wild": True, "allow_breeding": True}
+                        
+                    if "flying_height_pct" in data["settings"]:
+                        del data["settings"]["flying_height_pct"]
+                        
                     return data
             except json.JSONDecodeError:
                 messagebox.showerror("Error Crítico", "save_data.json corrupto. Creando nueva partida.")
@@ -60,8 +77,13 @@ class SaveManager:
     def reset_save(self, starter_species):
         is_shiny_roll = random.randint(1, 100) == 1
         self.data = {
-            "inventory": [{"id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": 1, "everstone": False}],
-            "active_pets": []
+            "inventory": [{
+                "id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, 
+                "is_shiny": is_shiny_roll, "last_evolution_level": 1, "everstone": False,
+                "flying_height_pct": 3.0
+            }],
+            "active_pets": [],
+            "settings": {"allow_wild": True, "allow_breeding": True}
         }
         self.save_data()
 
@@ -143,7 +165,6 @@ class DesktopPetAnimator:
 
         render_state = 'idle' if state in ['falling', 'evolving_start', 'evolving_finish'] else state
         
-        # Mapeo del estado overflow a animación de caminata
         if render_state == 'walking_away': render_state = 'walking'
 
         if render_state == 'walking':
@@ -205,8 +226,7 @@ class DesktopPet:
         self.window.overrideredirect(True)
         self.window.attributes('-topmost', True)
 
-        # PARCHE DE TRANSPARENCIA: Chroma magenta modificado para no comerse los píxeles puros
-        CHROMA_KEY = '#FE01FE'
+        CHROMA_KEY = '#00FF00'
         self.window.config(bg=CHROMA_KEY)
         try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
         except tk.TclError: pass 
@@ -222,16 +242,38 @@ class DesktopPet:
         self.speed = max(1, int(base_speed * multiplicador_velocidad))
         self.is_flying = physics.get("is_flying", False)
         
+        user32 = ctypes.windll.user32
+        self.v_x = user32.GetSystemMetrics(76) 
+        self.v_y = user32.GetSystemMetrics(77)
+        self.v_width = user32.GetSystemMetrics(78)
+        self.v_height = user32.GetSystemMetrics(79)
+        
         if self.is_egg:
             self.is_flying = False  
             self.offset_y = 0      
         elif self.is_flying: 
-            self.offset_y = 32
+            fly_height_pct = self.pet_data.get("flying_height_pct", 3.0)
+            max_offset = self.v_height - self.size_h
+            
+            # Anclamos la altura destino
+            self.target_offset_y = int(max_offset * (fly_height_pct / 100.0))
+            self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
+            
+            # Si proviene del PC o es un huevo eclosionado, lo forzamos a spawnear en la base para que luego suba
+            if not self.is_wild and not spawn_coords:
+                self.offset_y = int(max_offset * (3.0 / 100.0))
+            else:
+                self.offset_y = self.target_offset_y
         else: 
             self.offset_y = -6 
             
         self.fly_amplitude = 0
+        self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
         
+        # Paracaídas de seguridad para entidades no voladoras
+        if not hasattr(self, 'target_floor_y'):
+            self.target_floor_y = self.floor_y
+            
         self.canvas = tk.Canvas(self.window, width=self.size_w, height=self.size_h, bg=CHROMA_KEY, highlightthickness=0)
         self.canvas.pack()
         self.canvas_image_id = self.canvas.create_image(self.size_w//2, self.size_h//2, anchor=tk.CENTER)
@@ -244,17 +286,8 @@ class DesktopPet:
             animator_dir = self.pet_dir
 
         self.animator = DesktopPetAnimator(self.canvas, self.config.get("images", {}), (self.size_w, self.size_h), (self.size_w, self.size_h), animator_dir)
-
-        user32 = ctypes.windll.user32
-        self.v_x = user32.GetSystemMetrics(76) 
-        self.v_y = user32.GetSystemMetrics(77)
-        self.v_width = user32.GetSystemMetrics(78)
-        self.v_height = user32.GetSystemMetrics(79)
-
-        self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
         
         if self.is_egg:
-            # INTEGRACIÓN: Memoria de tiempo persistente
             if "hatch_time_remaining" not in self.pet_data:
                 self.pet_data["hatch_time_remaining"] = random.randint(900000, 1800000)
 
@@ -336,6 +369,13 @@ class DesktopPet:
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
+
+    def recalculate_floor(self, pct):
+        """Altera la gravedad paramétrica del vuelo, dejando que el bucle de físicas haga el trabajo sucio."""
+        if self.is_flying and not getattr(self, 'is_egg', False):
+            max_offset = self.v_height - self.size_h
+            self.target_offset_y = int(max_offset * (pct / 100.0))
+            self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
 
     def egg_wiggle_loop(self):
         if not getattr(self, 'is_egg', False) or self.current_state == 'exiting': return
@@ -424,7 +464,6 @@ class DesktopPet:
         else:
             self.evo_blend = 0.0
             
-            # CONTROL DE OVERFLOW: Si la cadena manda caminar lejos, altera el estado final
             if getattr(self, 'is_overflow', False):
                 self.current_state = 'walking_away'
                 self.is_facing_right = True
@@ -764,7 +803,18 @@ class DesktopPet:
             self.window.after(50, self.physics_loop)
             return
             
-        # CONTROL DE OVERFLOW: Caminar hasta salir de la pantalla
+        # --- INYECCIÓN ARQUITECTÓNICA: Altimetría Dinámica en Segundo Plano ---
+        # Permite ascender/descender de forma fluida mientras el Pokémon camina o se queda quieto.
+        if self.is_flying and not getattr(self, 'is_egg', False) and self.current_state in ['idle', 'walking', 'walking_away']:
+            if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y -= 5
+                if self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
+                    self.floor_y = self.target_floor_y
+            elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y += 5
+                if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
+                    self.floor_y = self.target_floor_y
+            
         if self.current_state == 'walking_away':
             self.x += self.speed
             if self.x > self.v_x + self.v_width:
@@ -839,7 +889,7 @@ class DesktopPet:
                     self.x = (self.v_x + self.v_width) - self.size_w
                     self.is_facing_right = False
         
-        if self.is_flying and self.current_state != 'falling':
+        if self.is_flying and self.current_state not in ['falling', 'falling_pokeball', 'falling_egg', 'exiting']:
             self.fly_amplitude += 0.2
             onda = math.sin(self.fly_amplitude) * 10
             self.y = self.floor_y + onda
@@ -951,7 +1001,7 @@ class GameController:
         self.save_mgr = SaveManager()
         self.active_instances = [] 
         self.wild_instances = []
-        self.overflow_instances = [] # INYECCIÓN: Registro fantasma para los Pokémon que se van caminando
+        self.overflow_instances = [] 
         
         base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         self.pets_directory = os.path.join(base_dir, "game_env", "pets")
@@ -961,7 +1011,7 @@ class GameController:
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         
-        w, h = 280, 115 
+        w, h = 280, 175 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
 
@@ -994,10 +1044,37 @@ class GameController:
         self.combo.pack(fill=tk.X, expand=True)
 
         mid_row = tk.Frame(content_frame, bg=bg_main)
-        mid_row.pack(fill=tk.X, padx=10, pady=(0, 4))
+        mid_row.pack(fill=tk.X, padx=10, pady=(0, 2))
+        
         self.everstone_var = tk.BooleanVar()
         self.chk_everstone = tk.Checkbutton(mid_row, text="Everstone", font=("Segoe UI", 8), variable=self.everstone_var, bg=bg_main, command=self.on_everstone_toggle)
         self.chk_everstone.pack(anchor=tk.CENTER)
+
+        settings_row = tk.Frame(content_frame, bg=bg_main)
+        settings_row.pack(fill=tk.X, padx=10, pady=(0, 4))
+        
+        self.allow_wild_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_wild"])
+        self.allow_breed_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_breeding"])
+        
+        chk_wild = tk.Checkbutton(settings_row, text="Salvajes", font=("Segoe UI", 8), variable=self.allow_wild_var, bg=bg_main, command=self.sync_settings)
+        chk_wild.pack(side=tk.LEFT, expand=True)
+        
+        chk_breed = tk.Checkbutton(settings_row, text="Crianza", font=("Segoe UI", 8), variable=self.allow_breed_var, bg=bg_main, command=self.sync_settings)
+        chk_breed.pack(side=tk.RIGHT, expand=True)
+
+        # INYECCIÓN: Wrapper estructural. Mantiene el espacio sin alterar el orden del empaquetado.
+        self.fly_wrapper = tk.Frame(content_frame, bg=bg_main)
+        self.fly_wrapper.pack(fill=tk.X, padx=10, pady=(0, 4))
+        
+        self.fly_row = tk.Frame(self.fly_wrapper, bg=bg_main)
+        tk.Label(self.fly_row, text="Alt. Vuelo", font=("Segoe UI", 8), bg=bg_main).pack(side=tk.LEFT)
+        
+        self.fly_height_var = tk.DoubleVar(value=3.0)
+        self.slider_fly = ttk.Scale(self.fly_row, from_=0, to=100, variable=self.fly_height_var, orient=tk.HORIZONTAL, command=self.sync_fly_height)
+        self.slider_fly.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 5))
+        
+        btn_reset_fly = tk.Button(self.fly_row, text="R", font=("Segoe UI", 7, "bold"), bg="#95A5A6", fg="white", bd=0, width=2, command=self.reset_fly_height)
+        btn_reset_fly.pack(side=tk.RIGHT)
 
         bottom_row = tk.Frame(content_frame, bg=bg_main)
         bottom_row.pack(fill=tk.X, padx=10, pady=(0, 5))
@@ -1011,21 +1088,49 @@ class GameController:
         btn_reset = tk.Button(bottom_row, text="Format PC", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
+        # El orden aquí es crítico: primero construir el diccionario de físicas, luego inyectar la UI.
+        self.build_spawn_pool()
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
-
         self.update_pc_ui()
         self.restore_active_pets()
-        self.build_spawn_pool()
         
         self.root.after(15000, self.wild_spawner_loop)
         self.root.after(10000, self.xp_tick_loop)
         self.root.after(600000, self.egg_laying_loop) 
         self.root.mainloop()
 
+    def sync_settings(self):
+        self.save_mgr.data["settings"]["allow_wild"] = self.allow_wild_var.get()
+        self.save_mgr.data["settings"]["allow_breeding"] = self.allow_breed_var.get()
+        self.save_mgr.save_data()
+
+    def sync_fly_height(self, event=None):
+        pet = self.get_selected_pet()
+        if not pet: return
+        
+        pct = self.fly_height_var.get()
+        
+        pet["flying_height_pct"] = pct
+        for p in self.save_mgr.data["inventory"]:
+            if p["id"] == pet["id"]:
+                p["flying_height_pct"] = pct
+                break
+        self.save_mgr.save_data()
+        
+        for instance in self.active_instances + getattr(self, 'overflow_instances', []):
+            if instance.pet_data["id"] == pet["id"]:
+                instance.recalculate_floor(pct)
+                break
+
+    def reset_fly_height(self):
+        self.fly_height_var.set(3.0)
+        self.sync_fly_height()
+
     def build_spawn_pool(self):
         self.spawn_pool_species = []
         self.spawn_pool_weights = []
         self.evo_parents = {}
+        self.species_flying_status = {} # Mapa global de genética voladora
         
         all_available = [d for d in os.listdir(self.pets_directory) if os.path.isdir(os.path.join(self.pets_directory, d))]
         
@@ -1034,6 +1139,9 @@ class GameController:
             try:
                 with open(config_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
+                
+                physics = cfg.get("physics", {})
+                self.species_flying_status[species] = physics.get("is_flying", False)
                 
                 rpg_data = cfg.get("rpg_data", {})
                 weight = rpg_data.get("spawn_rate", 10)
@@ -1094,8 +1202,17 @@ class GameController:
         pet = self.get_selected_pet()
         if pet:
             self.everstone_var.set(pet.get("everstone", False))
+            
+            # INYECCIÓN: Si no vuela, el bloque visual del slider se esfuma.
+            is_fly = self.species_flying_status.get(pet["species"], False)
+            if is_fly:
+                self.fly_row.pack(fill=tk.X)
+                self.fly_height_var.set(pet.get("flying_height_pct", 3.0))
+            else:
+                self.fly_row.pack_forget()
         else:
             self.everstone_var.set(False)
+            self.fly_row.pack_forget()
 
     def on_everstone_toggle(self):
         pet = self.get_selected_pet()
@@ -1229,15 +1346,15 @@ class GameController:
             if pet_data:
                 active_pets_data.append(pet_data)
                 
-        # ORDEN DE DESPLIEGUE: Coloca estúpidamente a los huevos al final de la cola
         active_pets_data.sort(key=lambda x: x.get("is_egg", False))
-        
-        spawn_index = 0 
-        for pd in active_pets_data:
-            # RETARDO ESTRICTO: 500 milisegundos reales (0.5s) de diferencia por entidad
-            delay = 100 + (spawn_index * 500)
-            self.root.after(delay, lambda p=pd: self.spawn_entity(p, is_wild=False))
-            spawn_index += 1
+        self._chain_spawn(active_pets_data, 0)
+
+    def _chain_spawn(self, pet_list, current_index):
+        if current_index >= len(pet_list):
+            return
+            
+        self.spawn_entity(pet_list[current_index], is_wild=False)
+        self.root.after(500, lambda: self._chain_spawn(pet_list, current_index + 1))
 
     def spawn_entity(self, pet_data, is_wild, coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False):
         pet_dir = os.path.join(self.pets_directory, pet_data["species"])
@@ -1245,7 +1362,11 @@ class GameController:
             print(f"Error: No existen assets para {pet_data['species']}")
             return
             
-        pet = DesktopPet(self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo, evo_channel, is_overflow=is_overflow)
+        pet = DesktopPet(
+            self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, 
+            self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo, evo_channel, 
+            is_overflow=is_overflow
+        )
         
         if is_wild: 
             self.wild_instances.append(pet)
@@ -1256,29 +1377,34 @@ class GameController:
             self.sync_save_state()
 
     def wild_spawner_loop(self):
-        if len(self.wild_instances) < 4:
-            probabilidad_spawn = random.randint(1, 100)
-            
-            if probabilidad_spawn <= 20:
-                if self.spawn_pool_species:
-                    target = random.choices(
-                        population=self.spawn_pool_species, 
-                        weights=self.spawn_pool_weights, 
-                        k=1
-                    )[0]
-                    
-                    is_shiny_roll = random.randint(1, 100) == 1
-                    lvl = random.randint(1, 10)
-                    wild_data = {"id": str(uuid.uuid4()), "species": target, "level": lvl, "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": lvl}
-                    self.spawn_entity(wild_data, is_wild=True)
-                    
+        if self.save_mgr.data.get("settings", {}).get("allow_wild", True):
+            if len(self.wild_instances) < 4:
+                probabilidad_spawn = random.randint(1, 100)
+                
+                if probabilidad_spawn <= 20:
+                    if self.spawn_pool_species:
+                        target = random.choices(
+                            population=self.spawn_pool_species, 
+                            weights=self.spawn_pool_weights, 
+                            k=1
+                        )[0]
+                        
+                        is_shiny_roll = random.randint(1, 100) == 1
+                        lvl = random.randint(1, 10)
+                        
+                        wild_data = {
+                            "id": str(uuid.uuid4()), "species": target, "level": lvl, 
+                            "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": lvl,
+                            "flying_height_pct": 3.0
+                        }
+                        self.spawn_entity(wild_data, is_wild=True)
+                        
         next_interval = random.randint(45000, 75000)
         self.root.after(next_interval, self.wild_spawner_loop)
 
     def xp_tick_loop(self):
         for pet in self.active_instances:
             if not pet.is_wild:
-                # CONTROL CENTRALIZADO DEL HUEVO: Su tiempo se procesa y guarda desde aquí.
                 if getattr(pet, 'is_egg', False):
                     rem = pet.pet_data.get("hatch_time_remaining", random.randint(900000, 1800000))
                     rem -= 10000 
@@ -1295,36 +1421,38 @@ class GameController:
         self.root.after(10000, self.xp_tick_loop)
 
     def egg_laying_loop(self):
-        has_egg = any(getattr(p, 'is_egg', False) for p in self.active_instances)
-        
-        if not has_egg:
-            fully_evolved_pets = []
-            for pet in self.active_instances:
-                if not pet.is_wild and not getattr(pet, 'is_egg', False):
-                    rpg = pet.config.get("rpg_data", {})
-                    evos = rpg.get("evolves_to", [])
-                    if not evos or evos[0] == "none":
-                        fully_evolved_pets.append(pet)
+        if self.save_mgr.data.get("settings", {}).get("allow_breeding", True):
+            has_egg = any(getattr(p, 'is_egg', False) for p in self.active_instances)
             
-            for pet in fully_evolved_pets:
-                if random.randint(1, 100) <= 12: 
-                    base_form = self.get_base_form(pet.pet_name)
-                    egg_data = {
-                        "id": str(uuid.uuid4()), 
-                        "species": base_form, 
-                        "level": 1, 
-                        "xp": 0, 
-                        "is_shiny": random.randint(1, 100) <= 25, 
-                        "last_evolution_level": 1,
-                        "is_egg": True,
-                        "everstone": False,
-                        "hatch_time_remaining": random.randint(900000, 1800000)
-                    }
-                    self.save_mgr.data["inventory"].append(egg_data)
-                    self.save_mgr.save_data()
-                    
-                    self.spawn_entity(egg_data, is_wild=False, coords=(pet.x, pet.y))
-                    break
+            if not has_egg:
+                fully_evolved_pets = []
+                for pet in self.active_instances:
+                    if not pet.is_wild and not getattr(pet, 'is_egg', False):
+                        rpg = pet.config.get("rpg_data", {})
+                        evos = rpg.get("evolves_to", [])
+                        if not evos or evos[0] == "none":
+                            fully_evolved_pets.append(pet)
+                
+                for pet in fully_evolved_pets:
+                    if random.randint(1, 100) <= 12: 
+                        base_form = self.get_base_form(pet.pet_name)
+                        egg_data = {
+                            "id": str(uuid.uuid4()), 
+                            "species": base_form, 
+                            "level": 1, 
+                            "xp": 0, 
+                            "is_shiny": random.randint(1, 100) <= 25, 
+                            "last_evolution_level": 1,
+                            "is_egg": True,
+                            "everstone": False,
+                            "flying_height_pct": 3.0,
+                            "hatch_time_remaining": random.randint(900000, 1800000)
+                        }
+                        self.save_mgr.data["inventory"].append(egg_data)
+                        self.save_mgr.save_data()
+                        
+                        self.spawn_entity(egg_data, is_wild=False, coords=(pet.x, pet.y))
+                        break
 
         self.root.after(600000, self.egg_laying_loop)
 
@@ -1341,7 +1469,6 @@ class GameController:
             pet_instance.window.destroy()
 
             if active_count >= 6:
-                # SE DISPARA EL OVERFLOW (Equipo Lleno)
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel, is_overflow=True)
                 self.update_pc_ui()
             else:
