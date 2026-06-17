@@ -2273,7 +2273,7 @@ class GameController:
 
     def berry_spawner_loop(self):
         self.active_berries = [b for b in self.active_berries if b.current_state != 'exiting']
-        if random.randint(1, 100) <= 20: 
+        if random.randint(1, 100) <= 25: 
             base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
             def remove_berry(b):
                 if b in self.active_berries: self.active_berries.remove(b)
