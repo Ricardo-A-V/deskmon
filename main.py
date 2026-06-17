@@ -8,6 +8,16 @@ import math
 import time
 import uuid 
 
+try:
+    import win32gui
+    import win32con
+    import win32process
+    import win32api
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+    print("[!] Advertencia: Falta la librería 'pywin32'. Ejecuta 'pip install pywin32'.")
+
 # --- SUPRESIÓN ESTRICTA DE LA TERMINAL DE PYGAME ---
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 
@@ -41,25 +51,20 @@ class SaveManager:
                             new_inv.append({
                                 "id": str(uuid.uuid4()), "species": sp, "level": 1, "xp": 0, 
                                 "is_shiny": False, "last_evolution_level": 1, "everstone": False,
-                                "flying_height_pct": 3.0
+                                "flying_height_pct": 3.0, "xp_boost_expiry": 0
                             })
                         data["inventory"] = new_inv
                         del data["pc_inventory"]
                         data["active_pets"] = [] 
                     
                     for p in data.get("inventory", []):
-                        if "last_evolution_level" not in p:
-                            p["last_evolution_level"] = p["level"]
-                        if "flying_height_pct" not in p:
-                            p["flying_height_pct"] = 3.0
+                        if "last_evolution_level" not in p: p["last_evolution_level"] = p["level"]
+                        if "flying_height_pct" not in p: p["flying_height_pct"] = 3.0
+                        if "xp_boost_expiry" not in p: p["xp_boost_expiry"] = 0
                             
                     if "active_pets" not in data: data["active_pets"] = []
-                    
-                    if "settings" not in data:
-                        data["settings"] = {"allow_wild": True, "allow_breeding": True}
-                        
-                    if "flying_height_pct" in data["settings"]:
-                        del data["settings"]["flying_height_pct"]
+                    if "settings" not in data: data["settings"] = {"allow_wild": True, "allow_breeding": True}
+                    if "flying_height_pct" in data["settings"]: del data["settings"]["flying_height_pct"]
                         
                     return data
             except json.JSONDecodeError:
@@ -80,14 +85,13 @@ class SaveManager:
             "inventory": [{
                 "id": str(uuid.uuid4()), "species": starter_species, "level": 1, "xp": 0, 
                 "is_shiny": is_shiny_roll, "last_evolution_level": 1, "everstone": False,
-                "flying_height_pct": 3.0
+                "flying_height_pct": 3.0, "xp_boost_expiry": 0
             }],
             "active_pets": [],
             "settings": {"allow_wild": True, "allow_breeding": True}
         }
         self.save_data()
 
-# --- CONFIGURACIÓN DPI DE WINDOWS ---
 try:
     import ctypes
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -145,7 +149,7 @@ class DesktopPetAnimator:
             print(f"Error cargando assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0):
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0):
         if state == 'exiting': return
 
         current_time = time.time()
@@ -163,9 +167,11 @@ class DesktopPetAnimator:
         disable_mirror = False
         raw_image = None  
 
-        render_state = 'idle' if state in ['falling', 'evolving_start', 'evolving_finish'] else state
-        
-        if render_state == 'walking_away': render_state = 'walking'
+        render_state = state
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing']:
+            render_state = 'idle'
+        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'eating']:
+            render_state = 'walking'
 
         if render_state == 'walking':
             if self.directional_walk:
@@ -188,9 +194,12 @@ class DesktopPetAnimator:
         if disable_mirror:
             processed_image = raw_image
         else:
-            effective_dir = True if (render_state == 'idle' and self.fix_idle_direction) else facing_right
+            effective_dir = True if (render_state == 'idle' and self.fix_idle_direction and state not in ['socializing', 'attacking', 'eating']) else facing_right
             should_mirror = effective_dir if self.invert_x_axis else (not effective_dir)
             processed_image = ImageOps.mirror(raw_image) if should_mirror else raw_image
+
+        if rotation_angle != 0:
+            processed_image = processed_image.rotate(rotation_angle, expand=False, resample=Image.NEAREST)
 
         if blend_factor > 0.0:
             white_layer = Image.new("RGBA", processed_image.size, (255, 255, 255, 255))
@@ -200,14 +209,28 @@ class DesktopPetAnimator:
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
 
-# --- ENTIDAD FÍSICA ---
+# --- ENTIDAD FÍSICA (REFACCIONADA A MÁQUINA DE ESTADOS) ---
 class DesktopPet:
-    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False):
+    def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
         self.is_wild = is_wild
         self.is_egg = self.pet_data.get("is_egg", False)
         self.is_overflow = is_overflow
+        self.game_controller = game_controller_ref
+        
+        # CONFIGURADOR DE ESCALADA
+        self.climb_offset_x = 0  
+        self.climb_offset_y = 0  
+
+        self.get_all_pets = get_all_pets_callback
+        self.social_cooldown = 0
+        self.social_timer = 0
+        self.attack_cooldown = 0
+        self.attack_timer = 0
+        self.eating_timer = 0
+        self.jump_cooldown = 0 
+        self.interaction_target = None
         
         self.on_remove = on_remove_callback
         self.on_catch = on_catch_callback
@@ -219,6 +242,23 @@ class DesktopPet:
         
         self.config = self.load_config()
         
+        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "").replace(" ", "")
+        
+        LEGENDARY_MATRIX = {
+            "articuno", "zapdos", "moltres", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
+            "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
+            "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
+            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "keldeo", "meloetta", "genesect",
+            "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
+            "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
+            "zacian", "zamazenta", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus",
+            "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt"
+        }
+        
+        rpg_data = self.config.get("rpg_data", {})
+        rarity_str = rpg_data.get("rarity", "").lower()
+        self.is_legendary = (normalized_name in LEGENDARY_MATRIX) or rpg_data.get("is_legendary", False) or (rarity_str in ["legendary", "mythical", "legendario", "singular"])
+
         self.window = tk.Toplevel(parent_root)
         wild_tag = "(SALVAJE)" if is_wild else f"Lv.{self.pet_data['level']}"
         if self.is_egg: wild_tag = "(HUEVO)"
@@ -232,6 +272,9 @@ class DesktopPet:
         except tk.TclError: pass 
 
         multiplicador_tamaño = 1.55
+        if self.is_legendary:
+            multiplicador_tamaño *= 1.2 
+
         multiplicador_velocidad = 2
         physics = self.config.get("physics", {})
         
@@ -241,6 +284,9 @@ class DesktopPet:
         base_speed = physics.get("movement_speed", 2)
         self.speed = max(1, int(base_speed * multiplicador_velocidad))
         self.is_flying = physics.get("is_flying", False)
+        self.is_climbing = physics.get("is_climbing", False) and not self.is_flying 
+        self.climbing_surface = 'floor' 
+        self.surface_angle = 0
         
         user32 = ctypes.windll.user32
         self.v_x = user32.GetSystemMetrics(76) 
@@ -248,29 +294,28 @@ class DesktopPet:
         self.v_width = user32.GetSystemMetrics(78)
         self.v_height = user32.GetSystemMetrics(79)
         
+        self.v_x_velocity = 0.0
+        self.v_y_velocity = 0.0
+        
         if self.is_egg:
             self.is_flying = False  
             self.offset_y = 0      
         elif self.is_flying: 
+            if self.is_wild and getattr(self, 'is_legendary', False):
+                self.pet_data["flying_height_pct"] = 100.0
+                
             fly_height_pct = self.pet_data.get("flying_height_pct", 3.0)
             max_offset = self.v_height - self.size_h
-            
-            # Anclamos la altura destino
             self.target_offset_y = int(max_offset * (fly_height_pct / 100.0))
             self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
-            
-            # Si proviene del PC o es un huevo eclosionado, lo forzamos a spawnear en la base para que luego suba
-            if not self.is_wild and not spawn_coords:
-                self.offset_y = int(max_offset * (3.0 / 100.0))
-            else:
-                self.offset_y = self.target_offset_y
+            self.offset_y = -6 
         else: 
             self.offset_y = -6 
             
         self.fly_amplitude = 0
-        self.floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
+        self.default_floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
+        self.floor_y = self.default_floor_y
         
-        # Paracaídas de seguridad para entidades no voladoras
         if not hasattr(self, 'target_floor_y'):
             self.target_floor_y = self.floor_y
             
@@ -280,9 +325,7 @@ class DesktopPet:
         
         self.is_shiny = self.pet_data.get("is_shiny", False)
         animator_dir = os.path.join(self.pet_dir, "shiny") if self.is_shiny else self.pet_dir
-        
         if self.is_shiny and not os.path.exists(animator_dir):
-            print(f"[!] Faltan assets shiny para {self.pet_name}. Usando normales.")
             animator_dir = self.pet_dir
 
         self.animator = DesktopPetAnimator(self.canvas, self.config.get("images", {}), (self.size_w, self.size_h), (self.size_w, self.size_h), animator_dir)
@@ -300,14 +343,11 @@ class DesktopPet:
                 r, g, b, a = raw_egg.split()
                 a = a.point(lambda p: 255 if p > 127 else 0)
                 raw_egg.putalpha(a)
-                
                 bbox = a.getbbox()
-                if bbox:
-                    raw_egg = raw_egg.crop(bbox)
+                if bbox: raw_egg = raw_egg.crop(bbox)
                 
                 target_w = max(1, int(self.size_w * 0.35))
                 target_h = max(1, int(self.size_h * 0.35))
-                
                 aspect = raw_egg.width / raw_egg.height
                 if aspect > 1:
                     new_w = target_w
@@ -319,16 +359,12 @@ class DesktopPet:
                 self.egg_base_img = raw_egg.resize((new_w, new_h), Image.Resampling.NEAREST)
                 self.egg_tk = ImageTk.PhotoImage(self.egg_base_img)
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
-                
-            except Exception as e:
-                print(f"[!] Error crítico cargando huevo desde '{egg_path}': {e}")
-                
+            except: pass
             self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
         
         if spawn_coords:
             self.x = spawn_coords[0]
             self.y = self.floor_y 
-            
             if is_mid_evo:
                 self.evo_channel = evo_channel
                 self.current_state = 'evolving_finish'
@@ -337,17 +373,25 @@ class DesktopPet:
                 self.current_state = 'egg_idle' if self.is_egg else 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
-            
             if self.is_egg:
                 self.y = self.v_y - self.size_h
                 self.current_state = 'falling_egg'
                 self.canvas.itemconfig(self.canvas_image_id, state='hidden')
                 self.animate_egg_spawn(step=0)
             elif self.is_wild:
-                self.y = self.floor_y
-                self.current_state = 'spawning_wild'
-                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
-                self.animate_wild_spawn(step=0)
+                if self.is_legendary and not self.is_flying:
+                    self.y = self.v_y - self.size_h
+                    self.current_state = 'falling_legendary'
+                elif self.is_legendary and self.is_flying:
+                    self.y = self.v_y - self.size_h
+                    self.floor_y = self.y 
+                    self.current_state = 'ascending' 
+                    self.play_shiny_sound() 
+                else:
+                    self.y = self.floor_y
+                    self.current_state = 'spawning_wild'
+                    self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+                    self.animate_wild_spawn(step=0)
             else:
                 self.y = self.v_y - self.size_h 
                 self.current_state = 'falling_pokeball'
@@ -359,6 +403,9 @@ class DesktopPet:
         self.frame_rate_active = self.config.get("images", {}).get("frame_rate_active", 120)
         self.frame_rate_idle = self.config.get("images", {}).get("frame_rate_idle", 200)
 
+        self.canvas.bind("<ButtonPress-1>", self.on_drag_start)
+        self.canvas.bind("<B1-Motion>", self.on_drag_motion)
+        self.canvas.bind("<ButtonRelease-1>", self.on_drag_release)
         self.canvas.bind("<ButtonRelease-3>", self.handle_right_click)
         self.canvas.bind("<Double-Button-1>", self.handle_double_click)
         
@@ -366,20 +413,192 @@ class DesktopPet:
             despawn_time = random.randint(120000, 300000) 
             self.despawn_timer = self.window.after(despawn_time, self.start_wild_despawn)
             
+        # DICCIONARIO FSM (Finite State Machine)
+        self.fsm = {
+            'exiting': self._fsm_exiting,
+            'egg_idle': self._fsm_wait,
+            'egg_wiggle': self._fsm_wait,
+            'dragged': self._fsm_wait,
+            'evolving_start': self._fsm_wait,
+            'evolving_finish': self._fsm_wait,
+            'despawning_wild': self._fsm_wait,
+            'spawning_wild': self._fsm_wait,
+            'thrown': self._fsm_thrown,
+            'legendary_bounce': self._fsm_legendary_bounce,
+            'jumping_arc': self._fsm_jumping_arc,
+            'ascending': self._fsm_ascending,
+            'walking_away': self._fsm_walking_away,
+            'falling': self._fsm_falling,
+            'falling_egg': self._fsm_falling,
+            'falling_pokeball': self._fsm_falling,
+            'falling_legendary': self._fsm_falling,
+            'socializing': self._fsm_socializing,
+            'attacking': self._fsm_attacking,
+            'eating': self._fsm_eating,
+            'idle': self._fsm_active,
+            'walking': self._fsm_active,
+            'climbing': self._fsm_active
+        }
+            
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
 
+    def keep_on_top(self):
+        if self.current_state != 'exiting':
+            try: self.window.attributes('-topmost', True)
+            except: pass
+            self.window.after(2000, self.keep_on_top)
+
+    def on_drag_start(self, event):
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
+        self.drag_offset_x = event.x
+        self.drag_offset_y = event.y
+        self.drag_start_x = self.window.winfo_pointerx()
+        self.drag_start_y = self.window.winfo_pointery()
+        self.is_dragging = False
+
+    def on_drag_motion(self, event):
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
+        pointer_x = self.window.winfo_pointerx()
+        pointer_y = self.window.winfo_pointery()
+
+        if not getattr(self, 'is_dragging', False):
+            if abs(pointer_x - getattr(self, 'drag_start_x', pointer_x)) > 5 or \
+               abs(pointer_y - getattr(self, 'drag_start_y', pointer_y)) > 5:
+                self.is_dragging = True
+                self.current_state = 'dragged'
+                self.v_x_velocity = 0.0
+                self.v_y_velocity = 0.0
+                self.climbing_surface = 'floor'
+                self.surface_angle = 0
+                self.last_drag_time = time.time()
+                self.last_mouse_x = pointer_x
+                self.last_mouse_y = pointer_y
+            else:
+                return
+
+        self.x = pointer_x - self.drag_offset_x
+        self.y = pointer_y - self.drag_offset_y
+        self.update_position()
+
+        current_time = time.time()
+        dt = current_time - getattr(self, 'last_drag_time', current_time)
+        if dt > 0:
+            self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
+            self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
+        
+        self.last_mouse_x = pointer_x
+        self.last_mouse_y = pointer_y
+        self.last_drag_time = current_time
+
+    def on_drag_release(self, event):
+        if getattr(self, 'is_dragging', False):
+            self.is_dragging = False
+            self.anchored_hwnd = None
+            v_x = getattr(self, 'v_x_velocity', 0.0)
+            v_y = getattr(self, 'v_y_velocity', 0.0)
+            if math.isnan(v_x) or math.isinf(v_x): v_x = 0.0
+            if math.isnan(v_y) or math.isinf(v_y): v_y = 0.0
+            self.v_x_velocity = max(-40.0, min(40.0, v_x))
+            self.v_y_velocity = max(-40.0, min(40.0, v_y))
+            self.current_state = 'thrown'
+
+    def get_window_environment(self):
+        current_env = {'y': self.default_floor_y, 'hwnd': None, 'rect': None}
+        ahead_env = {'hwnd': None, 'rect': None, 'y': None}
+        if not HAS_WIN32: return current_env, ahead_env
+        
+        pet_center_x = self.x + self.size_w // 2
+        pet_feet_y = self.y
+        CURRENT_PID = os.getpid()
+        valid_windows = []
+        
+        def win_enum_handler(hwnd, ctx):
+            if not win32gui.IsWindowVisible(hwnd): return
+            if win32gui.IsIconic(hwnd): return 
+            try: _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            except: return
+            if pid == CURRENT_PID: return
+            try:
+                is_cloaked = ctypes.c_int(0)
+                ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(is_cloaked), ctypes.sizeof(is_cloaked))
+                if is_cloaked.value != 0: return
+            except: pass
+            try:
+                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                if ex_style & win32con.WS_EX_TRANSPARENT: return
+            except: pass
+            class_name = win32gui.GetClassName(hwnd)
+            if class_name in ("Progman", "WorkerW", "Shell_TrayWnd", "EdgeUiInputTopWndClass", "DummyDWMWindow", "PopupHost"): return
+            title = win32gui.GetWindowText(hwnd)
+            if not title: return 
+            rect = win32gui.GetWindowRect(hwnd)
+            w_width = rect[2] - rect[0]
+            w_height = rect[3] - rect[1]
+            if w_width < 100 or w_height < 100: return
+            placement = win32gui.GetWindowPlacement(hwnd)
+            is_fullscreen = False
+            if placement[1] == win32con.SW_SHOWMAXIMIZED: is_fullscreen = True
+            else:
+                try:
+                    monitor = win32api.MonitorFromWindow(hwnd, win32con.MONITOR_DEFAULTTONEAREST)
+                    mon_info = win32api.GetMonitorInfo(monitor)
+                    mon_w = mon_info['Monitor'][2] - mon_info['Monitor'][0]
+                    mon_h = mon_info['Monitor'][3] - mon_info['Monitor'][1]
+                    if w_width >= mon_w - 10 and w_height >= mon_h - 10: is_fullscreen = True
+                except:
+                    if w_width >= self.v_width and w_height >= (self.v_height - 10): is_fullscreen = True
+            
+            win_floor = rect[1] - self.size_h - self.offset_y
+            valid_windows.append({'hwnd': hwnd, 'rect': rect, 'floor': win_floor, 'z': len(valid_windows), 'walkable': not is_fullscreen})
+            
+        win32gui.EnumWindows(win_enum_handler, None)
+        
+        under_windows = [w for w in valid_windows if w['walkable'] and w['rect'][0] <= pet_center_x <= w['rect'][2] and w['floor'] >= pet_feet_y - 15]
+        if under_windows:
+            under_windows.sort(key=lambda w: w['floor'])
+            for uw in under_windows:
+                is_occluded = False
+                check_y = uw['rect'][1] + 5
+                for ow in valid_windows:
+                    if ow['z'] < uw['z'] and ow['rect'][0] <= pet_center_x <= ow['rect'][2] and ow['rect'][1] <= check_y <= ow['rect'][3]:
+                        is_occluded = True
+                        break
+                if not is_occluded:
+                    current_env['y'] = uw['floor']
+                    current_env['hwnd'] = uw['hwnd']
+                    current_env['rect'] = uw['rect']
+                    break
+                    
+        check_x = pet_center_x + (20 if self.is_facing_right else -20)
+        step_windows = [w for w in valid_windows if w['walkable'] and w['rect'][0] <= check_x <= w['rect'][2] and abs(w['floor'] - pet_feet_y) > 30 and (pet_feet_y - 750) <= w['floor'] <= (pet_feet_y + 750)]
+        if step_windows:
+            random.shuffle(step_windows) 
+            for sw in step_windows:
+                is_occluded = False
+                check_y = sw['rect'][1] + 5
+                for ow in valid_windows:
+                    if ow['z'] < sw['z'] and ow['rect'][0] <= check_x <= ow['rect'][2] and ow['rect'][1] <= check_y <= ow['rect'][3]:
+                        is_occluded = True
+                        break
+                if not is_occluded:
+                    ahead_env['y'] = sw['floor']
+                    ahead_env['hwnd'] = sw['hwnd']
+                    ahead_env['rect'] = sw['rect']
+                    break
+                    
+        return current_env, ahead_env
+
     def recalculate_floor(self, pct):
-        """Altera la gravedad paramétrica del vuelo, dejando que el bucle de físicas haga el trabajo sucio."""
         if self.is_flying and not getattr(self, 'is_egg', False):
             max_offset = self.v_height - self.size_h
             self.target_offset_y = int(max_offset * (pct / 100.0))
             self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
+            if self.current_state in ['idle', 'walking']: self.current_state = 'ascending'
 
     def egg_wiggle_loop(self):
         if not getattr(self, 'is_egg', False) or self.current_state == 'exiting': return
-        
         if self.current_state == 'egg_idle':
             self.current_state = 'egg_wiggle'
             self.animate_egg_wiggle(step=0)
@@ -388,21 +607,15 @@ class DesktopPet:
 
     def animate_egg_wiggle(self, step=0):
         if self.current_state != 'egg_wiggle': return
-        
         frames = [15, -15, 10, -10, 5, -5, 0]
-        
         if step >= len(frames):
             self.current_state = 'egg_idle'
-            if getattr(self, 'egg_tk', None):
-                self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
+            if getattr(self, 'egg_tk', None): self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
             self.window.after(random.randint(45000, 75000), self.egg_wiggle_loop)
             return
-            
-        angle = frames[step]
-        rotated = self.egg_base_img.rotate(angle, expand=True, resample=Image.NEAREST)
+        rotated = self.egg_base_img.rotate(frames[step], expand=True, resample=Image.NEAREST)
         self.egg_tk_wiggle = ImageTk.PhotoImage(rotated)
         self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk_wiggle)
-        
         self.window.after(80, lambda: self.animate_egg_wiggle(step + 1))
 
     def play_shiny_sound(self):
@@ -418,7 +631,6 @@ class DesktopPet:
 
     def start_evolution_vfx(self, target_species, step=0):
         self.current_state = 'evolving_start'
-        
         if step == 0:
             try:
                 snd_path = os.path.join(self.base_dir, "game_env", "sounds", "evolving.wav")
@@ -428,22 +640,17 @@ class DesktopPet:
                     s.set_volume(0.03)
                     self.evo_channel = s.play()
             except: pass
-
-        if step <= 60:
-            self.evo_blend = step / 60.0
-        elif step <= 100:
-            self.evo_blend = 1.0
+        if step <= 60: self.evo_blend = step / 60.0
+        elif step <= 100: self.evo_blend = 1.0
         else:
             self.on_evolve(self, target_species, is_mid_evo=True, evo_channel=getattr(self, 'evo_channel', None))
             return
-
         self.window.after(50, lambda: self.start_evolution_vfx(target_species, step+1))
 
     def finish_evolution_vfx(self, step=0):
         if step == 0 and getattr(self, 'evo_channel', None):
             try: self.evo_channel.fadeout(2000)
             except: pass
-
         if step == 40:
             try:
                 snd_path = os.path.join(self.base_dir, "game_env", "sounds", "evolved.wav")
@@ -453,24 +660,16 @@ class DesktopPet:
                     s.set_volume(0.03)
                     s.play()
             except: pass
-            
             self.play_shiny_sound()
-
-        if step <= 40:
-            self.evo_blend = 1.0
-        elif step <= 100:
-            progress = (step - 40) / 60.0
-            self.evo_blend = 1.0 - progress
+        if step <= 40: self.evo_blend = 1.0
+        elif step <= 100: self.evo_blend = 1.0 - ((step - 40) / 60.0)
         else:
             self.evo_blend = 0.0
-            
             if getattr(self, 'is_overflow', False):
                 self.current_state = 'walking_away'
                 self.is_facing_right = True
-            else:
-                self.current_state = 'idle'
+            else: self.current_state = 'idle'
             return
-
         self.window.after(50, lambda: self.finish_evolution_vfx(step+1))
 
     def hatch_egg(self):
@@ -481,7 +680,10 @@ class DesktopPet:
         if self.is_egg or self.pet_data["level"] >= 100:
             self.pet_data["xp"] = 0
             return
-
+        
+        if time.time() < self.pet_data.get("xp_boost_expiry", 0):
+            amount = int(amount * 1.5)
+            
         self.pet_data["xp"] += amount
         xp_needed = self.pet_data["level"] * 30 
         
@@ -489,13 +691,11 @@ class DesktopPet:
         while self.pet_data["xp"] >= xp_needed:
             self.pet_data["xp"] -= xp_needed
             self.pet_data["level"] += 1
-            
             if self.pet_data["level"] >= 100:
                 self.pet_data["level"] = 100
                 self.pet_data["xp"] = 0 
                 leveled_up = True
                 break
-                
             xp_needed = self.pet_data["level"] * 30
             leveled_up = True
             
@@ -510,55 +710,36 @@ class DesktopPet:
             if step < 20 and self.current_state != 'exiting':
                 self.canvas.move(txt, 0, -1)
                 self.window.after(50, lambda: float_up(step+1))
-            else:
-                self.canvas.delete(txt)
+            else: self.canvas.delete(txt)
         float_up(0)
 
     def check_evolution(self):
         if self.pet_data.get("everstone", False): return
-
         rpg = self.config.get("rpg_data", {})
         evo_level = rpg.get("evolution_level", 99)
         evolves_to = rpg.get("evolves_to", [])
-
         last_evo = self.pet_data.get("last_evolution_level", 1)
-        
         if self.pet_data["level"] >= evo_level and (self.pet_data["level"] - last_evo) >= 5 and evolves_to and evolves_to[0] != "none":
-            target_species = random.choice(evolves_to)
-            self.start_evolution_vfx(target_species, step=0)
-
-    def keep_on_top(self):
-        if self.current_state != 'exiting':
-            try: self.window.attributes('-topmost', True)
-            except: pass
-            self.window.after(2000, self.keep_on_top)
+            self.start_evolution_vfx(random.choice(evolves_to), step=0)
 
     def load_config(self):
         try:
             with open(os.path.join(self.pet_dir, "config.json"), "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"Error crítico en {self.pet_dir}: {e}")
+        except:
             sys.exit(1)
 
     def animate_egg_spawn(self, step):
-        if self.current_state != 'falling_egg':
-            return 
-
+        if self.current_state != 'falling_egg': return 
         if not getattr(self, 'egg_base_img', None):
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             self.current_state = 'egg_idle'
             return
-
         w, h = self.size_w, self.size_h
-        rotation = step * -15 
-        rotated = self.egg_base_img.rotate(rotation, expand=True, resample=Image.NEAREST)
-        
+        rotated = self.egg_base_img.rotate(step * -15, expand=True, resample=Image.NEAREST)
         self.egg_tk_falling = ImageTk.PhotoImage(rotated)
         self.canvas.delete("spawn_egg")
-        
         self.canvas.create_image(w//2, h, image=self.egg_tk_falling, anchor=tk.S, tags="spawn_egg")
-        
         self.window.after(30, lambda: self.animate_egg_spawn(step + 1))
 
     def animate_vfx(self, action_type, step=0):
@@ -566,7 +747,6 @@ class DesktopPet:
         if step == 0:
             self.current_state = 'exiting' 
             self.canvas.delete(self.canvas_image_id) 
-            
             try:
                 snd_file = "return.wav" if action_type == "return" else "catch.wav"
                 snd_path = os.path.join(self.base_dir, "game_env", "sounds", snd_file)
@@ -575,13 +755,11 @@ class DesktopPet:
                     self.current_sound = pygame.mixer.Sound(snd_path)
                     self.current_sound.set_volume(0.01) 
                     self.current_sound.play()
-            except Exception: pass 
-
+            except: pass 
             try:
                 pb_dir = os.path.join(self.base_dir, "game_env", "ui")
                 available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
                 pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
-                
                 raw_img = Image.open(os.path.join(pb_dir, pb_file)).convert("RGBA")
                 r, g, b, a = raw_img.split()
                 a = a.point(lambda p: 255 if p > 127 else 0) 
@@ -605,20 +783,15 @@ class DesktopPet:
             else:
                 arc_height = 25
                 parabola = -arc_height * (1 - (2 * progress - 1)**2)
-                start_x, start_y = center_x, center_y
-                end_x, end_y = 0, w_height
-                cx = start_x + (end_x - start_x) * progress
-                cy = start_y + (end_y - start_y) * progress + parabola
+                cx = center_x - (center_x * progress)
+                cy = center_y + (w_height - center_y) * progress + parabola
                 size = max(4, int(64 * (1 - progress)))
                 rotation = -360 * progress
 
-            rotated = self.pb_base_img.rotate(rotation, expand=False, resample=Image.NEAREST)
-            resized = rotated.resize((size, size), Image.Resampling.NEAREST)
-            
-            self.vfx_img = ImageTk.PhotoImage(resized)
+            rotated = self.pb_base_img.rotate(rotation, expand=False, resample=Image.NEAREST).resize((size, size), Image.Resampling.NEAREST)
+            self.vfx_img = ImageTk.PhotoImage(rotated)
             self.canvas.delete("vfx")
             self.canvas.create_image(cx, cy, image=self.vfx_img, anchor=tk.CENTER, tags="vfx")
-            
             self.window.after(30, lambda: self.animate_vfx(action_type, step + 1))
         else:
             self.window.after(100, self.window.destroy)
@@ -629,59 +802,40 @@ class DesktopPet:
         self.animate_wild_despawn(step=0)
 
     def animate_wild_despawn(self, step):
-        frames_up = 15
-        pause = 10
-        frames_down = 15
-        
+        frames_up, pause, frames_down = 15, 10, 15
         if step == 0:
             try:
                 asset_name = "cloud.png" if self.is_flying else "tallGrass.png"
-                vfx_path = os.path.join(self.base_dir, "game_env", "ui", asset_name)
-                self.spawn_vfx_raw = Image.open(vfx_path).convert("RGBA")
-            except Exception:
-                self.spawn_vfx_raw = None
+                self.spawn_vfx_raw = Image.open(os.path.join(self.base_dir, "game_env", "ui", asset_name)).convert("RGBA")
+            except: self.spawn_vfx_raw = None
 
         if not getattr(self, 'spawn_vfx_raw', None):
             self.on_remove(self)
             return
 
         w, h = self.size_w, self.size_h
-        total_steps = frames_up + pause + frames_down
-        
-        if step <= frames_up:
-            progress = step / frames_up
-            offset_y = h - int((h/1.5) * progress) 
+        if step <= frames_up: offset_y = h - int((h/1.5) * (step / frames_up))
         elif step <= frames_up + pause:
             offset_y = h - int(h/1.5)
-            if step == frames_up + (pause // 2):
-                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
-        elif step <= total_steps:
-            progress = (step - frames_up - pause) / frames_down
-            offset_y = (h - int(h/1.5)) + int((h/1.5) * progress) 
+            if step == frames_up + (pause // 2): self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+        elif step <= frames_up + pause + frames_down: offset_y = (h - int(h/1.5)) + int((h/1.5) * ((step - frames_up - pause) / frames_down))
         else:
             self.canvas.delete("spawn_vfx")
             self.on_remove(self)
             return
 
-        resized = self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST)
-        self.vfx_tk = ImageTk.PhotoImage(resized)
+        self.vfx_tk = ImageTk.PhotoImage(self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST))
         self.canvas.delete("spawn_vfx")
         self.canvas.create_image(w//2, offset_y, image=self.vfx_tk, anchor=tk.N, tags="spawn_vfx")
-        
         self.window.after(30, lambda: self.animate_wild_despawn(step + 1))
 
     def animate_wild_spawn(self, step):
-        frames_up = 15
-        pause = 10
-        frames_down = 15
-        
+        frames_up, pause, frames_down = 15, 10, 15
         if step == 0:
             try:
                 asset_name = "cloud.png" if self.is_flying else "tallGrass.png"
-                vfx_path = os.path.join(self.base_dir, "game_env", "ui", asset_name)
-                self.spawn_vfx_raw = Image.open(vfx_path).convert("RGBA")
-            except Exception:
-                self.spawn_vfx_raw = None
+                self.spawn_vfx_raw = Image.open(os.path.join(self.base_dir, "game_env", "ui", asset_name)).convert("RGBA")
+            except: self.spawn_vfx_raw = None
 
         if not getattr(self, 'spawn_vfx_raw', None):
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
@@ -690,66 +844,47 @@ class DesktopPet:
             return
 
         w, h = self.size_w, self.size_h
-        total_steps = frames_up + pause + frames_down
-        
-        if step <= frames_up:
-            progress = step / frames_up
-            offset_y = h - int((h/1.5) * progress) 
+        if step <= frames_up: offset_y = h - int((h/1.5) * (step / frames_up))
         elif step <= frames_up + pause:
             offset_y = h - int(h/1.5)
             if step == frames_up + (pause // 2):
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 self.canvas.tag_lower(self.canvas_image_id, "spawn_vfx")
                 self.play_shiny_sound()
-                
-        elif step <= total_steps:
-            progress = (step - frames_up - pause) / frames_down
-            offset_y = (h - int(h/1.5)) + int((h/1.5) * progress) 
+        elif step <= frames_up + pause + frames_down: offset_y = (h - int(h/1.5)) + int((h/1.5) * ((step - frames_up - pause) / frames_down))
         else:
             self.canvas.delete("spawn_vfx")
             self.current_state = 'idle'
             return
 
-        resized = self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST)
-        self.vfx_tk = ImageTk.PhotoImage(resized)
+        self.vfx_tk = ImageTk.PhotoImage(self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST))
         self.canvas.delete("spawn_vfx")
         self.canvas.create_image(w//2, offset_y, image=self.vfx_tk, anchor=tk.N, tags="spawn_vfx")
-        
         self.window.after(30, lambda: self.animate_wild_spawn(step + 1))
 
     def animate_owned_spawn(self, step):
-        if self.current_state != 'falling_pokeball':
-            return 
-
+        if self.current_state != 'falling_pokeball': return 
         if step == 0:
             try:
                 pb_dir = os.path.join(self.base_dir, "game_env", "ui")
                 available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
                 pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
-                
                 raw_img = Image.open(os.path.join(pb_dir, pb_file)).convert("RGBA")
                 r, g, b, a = raw_img.split()
                 a = a.point(lambda p: 255 if p > 127 else 0) 
                 self.pb_raw = Image.merge("RGBA", (r, g, b, a))
-            except:
-                self.pb_raw = None
+            except: self.pb_raw = None
 
         if not getattr(self, 'pb_raw', None):
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            self.current_state = 'falling'
+            self.current_state = 'falling_pokeball'
             return
 
         w, h = self.size_w, self.size_h
-        rotation = step * -15 
-        rotated = self.pb_raw.rotate(rotation, expand=False, resample=Image.NEAREST)
-        target_w = max(1, w//2)
-        target_h = max(1, h//2)
-        resized = rotated.resize((target_w, target_h), Image.Resampling.NEAREST)
-        
-        self.pb_tk = ImageTk.PhotoImage(resized)
+        rotated = self.pb_raw.rotate(step * -15, expand=False, resample=Image.NEAREST)
+        self.pb_tk = ImageTk.PhotoImage(rotated.resize((max(1, w//2), max(1, h//2)), Image.Resampling.NEAREST))
         self.canvas.delete("spawn_pb")
         self.canvas.create_image(w//2, h//2, image=self.pb_tk, anchor=tk.CENTER, tags="spawn_pb")
-        
         self.window.after(30, lambda: self.animate_owned_spawn(step + 1))
 
     def handle_right_click(self, event):
@@ -764,10 +899,8 @@ class DesktopPet:
 
     def handle_double_click(self, event):
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
-            if getattr(self, 'is_egg', False):
-                self.on_open_pc(None) 
-            else:
-                self.on_open_pc(self.pet_data)
+            if getattr(self, 'is_egg', False): self.on_open_pc(None) 
+            else: self.on_open_pc(self.pet_data)
 
     def update_position(self):
         self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
@@ -775,9 +908,57 @@ class DesktopPet:
     def animate_loop(self):
         if self.current_state == 'exiting': return 
         
+        # Sincronización de Anclaje a 60 FPS (Física de Arrastre de Ventana)
+        if getattr(self, 'anchored_hwnd', None) and self.current_state in ['idle', 'walking', 'socializing', 'attacking']:
+            try:
+                if HAS_WIN32 and win32gui.IsWindowVisible(self.anchored_hwnd) and not win32gui.IsIconic(self.anchored_hwnd):
+                    new_rect = win32gui.GetWindowRect(self.anchored_hwnd)
+                    old_rect = getattr(self, 'anchored_rect', new_rect)
+                    
+                    delta_l = new_rect[0] - old_rect[0]
+                    delta_t = new_rect[1] - old_rect[1]
+                    delta_r = new_rect[2] - old_rect[2]
+                    delta_b = new_rect[3] - old_rect[3]
+
+                    # FILTRO ANTI-TELETRANSPORTE (Si la ventana se minimiza o cambia de escritorio virtual)
+                    if abs(delta_l) > 2000 or abs(delta_t) > 2000:
+                        self.anchored_hwnd = None
+                        self.anchored_rect = None
+                    elif delta_l != 0 or delta_t != 0 or delta_r != 0 or delta_b != 0:
+                        surface = getattr(self, 'climbing_surface', 'floor')
+
+                        if surface == 'floor':
+                            self.x += delta_l
+                            self.y += delta_t
+                            self.floor_y += delta_t
+                        elif surface == 'wall_l':
+                            self.x += delta_l
+                            self.y += delta_t
+                        elif surface == 'wall_r':
+                            self.x += delta_r
+                            self.y += delta_t
+                        elif surface == 'ceiling':
+                            self.x += delta_l
+                            self.y += delta_b
+
+                        self.update_position()
+                        self.anchored_rect = new_rect
+                else: 
+                    self.anchored_hwnd = None
+                    self.anchored_rect = None 
+            except: 
+                pass 
+
         blend = getattr(self, 'evo_blend', 0.0)
         
-        if self.is_egg:
+        # INVERSIÓN VISUAL
+        render_facing_right = self.is_facing_right
+        if getattr(self, 'is_climbing', False):
+            surface = getattr(self, 'climbing_surface', 'floor')
+            if surface in ['screen_l', 'screen_r']:
+                render_facing_right = not self.is_facing_right
+
+        if getattr(self, 'is_egg', False):
             if blend > 0.0 and getattr(self, 'egg_base_img', None):
                 white_layer = Image.new("RGBA", self.egg_base_img.size, (255, 255, 255, 255))
                 white_layer.putalpha(self.egg_base_img.split()[3]) 
@@ -787,213 +968,1199 @@ class DesktopPet:
             elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away'] else self.frame_rate_idle
-            self.animator.update_animation(self.current_state, self.is_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend)
-            
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating'] else self.frame_rate_idle
+            self.animator.update_animation(self.current_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle)
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
-        if self.current_state in ['exiting', 'egg_idle', 'egg_wiggle']: return
-        
-        if self.current_state in ['evolving_start', 'evolving_finish', 'despawning_wild']:
-            self.window.after(50, self.physics_loop)
-            return
-        
-        if self.current_state == 'spawning_wild':
-            self.window.after(50, self.physics_loop)
-            return
-            
-        # --- INYECCIÓN ARQUITECTÓNICA: Altimetría Dinámica en Segundo Plano ---
-        # Permite ascender/descender de forma fluida mientras el Pokémon camina o se queda quieto.
-        if self.is_flying and not getattr(self, 'is_egg', False) and self.current_state in ['idle', 'walking', 'walking_away']:
-            if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
-                self.floor_y -= 5
-                if self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
-                    self.floor_y = self.target_floor_y
-            elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
-                self.floor_y += 5
-                if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
-                    self.floor_y = self.target_floor_y
-            
-        if self.current_state == 'walking_away':
-            self.x += self.speed
-            if self.x > self.v_x + self.v_width:
-                self.on_remove(self)
-                self.window.destroy()
-                return
-            if self.is_flying:
-                self.fly_amplitude += 0.2
-                onda = math.sin(self.fly_amplitude) * 10
-                self.y = self.floor_y + onda
-            self.update_position()
-            self.window.after(50, self.physics_loop)
-            return
+        handler = self.fsm.get(self.current_state, self._fsm_active)
+        handler()
 
-        if self.current_state == 'falling_egg':
-            self.y += 10
-            if self.y >= self.floor_y:
-                self.y = self.floor_y
+    def _fsm_exiting(self):
+        pass 
+
+    def _fsm_wait(self):
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_thrown(self):
+        if getattr(self, 'is_flying', False):
+            self.v_x_velocity *= 0.92 
+            self.v_y_velocity *= 0.92 
+            self.y += self.v_y_velocity
+            self.x += self.v_x_velocity
+
+            if self.x <= self.v_x:
+                self.x = self.v_x
+                self.v_x_velocity *= -0.7 
+                self.is_facing_right = True
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = (self.v_x + self.v_width) - self.size_w
+                self.v_x_velocity *= -0.7
+                self.is_facing_right = False
+                
+            current_env, _ = self.get_window_environment()
+            physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+
+            if self.y >= physical_floor and self.v_y_velocity > 0:
+                self.y = physical_floor
+                self.v_y_velocity *= -0.5
+                
+            if self.y < self.v_y:
+                self.y = self.v_y
+                self.v_y_velocity *= -0.5
+
+            if abs(self.v_x_velocity) < 1.0 and abs(self.v_y_velocity) < 1.0:
+                self.current_state = 'ascending'
+                self.v_x_velocity = 0
+                self.v_y_velocity = 0
+                self.floor_y = self.y 
+        elif getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False):
+            # Forzar la persistencia del atributo de escalada si el JSON lo dictamina
+            self.is_climbing = True
+            self.v_y_velocity += 1.5 
+            self.v_x_velocity *= 0.95 
+            self.y += self.v_y_velocity
+            self.x += self.v_x_velocity
+            
+            wall_offset = getattr(self, 'climb_offset_x', 0)
+            ceil_offset = getattr(self, 'climb_offset_y', 0)
+            
+            current_env, _ = self.get_window_environment()
+            
+            # ANCLAJE DETECTADO: Captura el impacto en el techo del monitor de forma efectiva con tolerancia
+            if self.y <= self.v_y + 15:
+                self.y = self.v_y + ceil_offset
+                self.v_x_velocity = 0; self.v_y_velocity = 0
+                self.climbing_surface = 'screen_ceiling'
+                self.surface_angle = 180
+                self.current_state = 'idle'
+            elif self.x <= self.v_x:
+                self.x = self.v_x + wall_offset
+                self.v_x_velocity = 0; self.v_y_velocity = 0
+                self.climbing_surface = 'screen_l'
+                self.surface_angle = 270
+                self.current_state = 'idle'
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                self.v_x_velocity = 0; self.v_y_velocity = 0
+                self.climbing_surface = 'screen_r'
+                self.surface_angle = 90
+                self.current_state = 'idle'
+            else:
+                physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+                if self.v_y_velocity > 0 and self.y >= physical_floor:
+                    self.y = physical_floor
+                    self.floor_y = physical_floor
+                    self.v_x_velocity = 0; self.v_y_velocity = 0
+                    self.climbing_surface = 'floor'
+                    self.surface_angle = 0
+                    self.current_state = 'idle'
+                    if current_env['hwnd']:
+                        self.anchored_hwnd = current_env['hwnd']
+                        self.anchored_rect = current_env['rect']
+        else:
+            self.v_y_velocity += 1.5 
+            self.v_x_velocity *= 0.95 
+            self.y += self.v_y_velocity
+            self.x += self.v_x_velocity
+
+            if self.x <= self.v_x:
+                self.x = self.v_x
+                self.v_x_velocity *= -0.7 
+                self.is_facing_right = True
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = (self.v_x + self.v_width) - self.size_w
+                self.v_x_velocity *= -0.7
+                self.is_facing_right = False
+
+            current_env, _ = self.get_window_environment()
+            physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+
+            if self.v_y_velocity > 0 and self.y >= physical_floor:
+                self.y = physical_floor
+                self.floor_y = physical_floor
+                self.v_x_velocity = 0
+                self.current_state = 'egg_idle' if getattr(self, 'is_egg', False) else 'idle'
+            
+        self.update_position()
+        self.window.after(20, self.physics_loop)
+
+    def _fsm_jumping_arc(self):
+        self.v_y_velocity += 1.5 
+        self.y += self.v_y_velocity
+        self.x += (self.speed * 1.5) if self.is_facing_right else -(self.speed * 1.5)
+        self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size_w))
+
+        target_y = getattr(self, 'jump_target_y', getattr(self, 'floor_y', self.default_floor_y))
+        
+        if self.v_y_velocity > 0 and self.y >= target_y:
+            self.y = target_y
+            self.floor_y = target_y
+            self.current_state = 'walking' 
+            
+            # --- ANCLAJE INSTANTÁNEO ---
+            # Bloquea la condición de carrera asegurando la ventana físicamente en el frame exacto de aterrizaje.
+            current_env, _ = self.get_window_environment()
+            if current_env['hwnd']:
+                self.anchored_hwnd = current_env['hwnd']
+                self.anchored_rect = current_env['rect']
+            else:
+                self.anchored_hwnd = None
+            # ---------------------------
+                
+            if hasattr(self, 'jump_target_y'): delattr(self, 'jump_target_y')
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+    def _fsm_ascending(self):
+        if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
+            self.floor_y -= 5
+            if self.floor_y <= getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y = self.target_floor_y
+                self.current_state = 'idle'
+        elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
+            self.floor_y += 5
+            if self.floor_y >= getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y = self.target_floor_y
+                self.current_state = 'idle'
+        else:
+            self.current_state = 'idle'
+            
+        self.fly_amplitude += 0.2
+        self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+        self.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_walking_away(self):
+        self.x += self.speed
+        if self.x > self.v_x + self.v_width:
+            self.on_remove(self)
+            self.window.destroy()
+            return
+        if self.is_flying:
+            self.fly_amplitude += 0.2
+            self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+        self.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_falling(self):
+        self.y += 20 if self.current_state == 'falling_legendary' else 12
+        self.x += getattr(self, 'v_x_velocity', 0.0)
+        self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size_w))
+        current_env, _ = self.get_window_environment()
+        
+        target_y = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+
+        if self.is_flying and self.current_state == 'falling_legendary':
+            target_y = getattr(self, 'target_floor_y', target_y)
+
+        if self.y >= target_y:
+            self.y = target_y
+            if self.is_flying and self.current_state == 'falling_legendary': 
+                self.floor_y = target_y
+
+            if self.current_state == 'falling_egg':
                 self.current_state = 'egg_idle'
                 self.canvas.delete("spawn_egg")
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            self.update_position()
-            self.window.after(20, self.physics_loop)
-            return
-
-        if self.current_state == 'falling_pokeball':
-            self.y += 10
-            if self.y >= self.floor_y:
-                self.y = self.floor_y
+            elif self.current_state == 'falling_pokeball':
                 self.current_state = 'idle'
                 self.canvas.delete("spawn_pb")
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
-                
                 self.play_shiny_sound()
-                
                 try:
                     snd_path = os.path.join(self.base_dir, "game_env", "sounds", "return.wav")
                     if os.path.exists(snd_path):
                         import pygame
-                        s = pygame.mixer.Sound(snd_path)
-                        s.set_volume(0.01)
-                        s.play()
+                        if not hasattr(self, 'return_sound'):
+                            self.return_sound = pygame.mixer.Sound(snd_path)
+                            self.return_sound.set_volume(0.01)
+                        self.return_sound.play()
                 except: pass
+                
+                if getattr(self, 'is_flying', False):
+                    self.floor_y = self.y 
+                    self.current_state = 'ascending'
+            elif self.current_state == 'falling_legendary':
+                self.play_shiny_sound()
+                if getattr(self, 'is_flying', False): 
+                    self.current_state = 'idle'
+                else:
+                    self.v_y_velocity = -8.0
+                    self.current_state = 'legendary_bounce'
+            else:
+                if getattr(self, 'is_flying', False) and getattr(self, 'target_floor_y', self.y) != self.y:
+                    self.floor_y = self.y
+                    self.current_state = 'ascending'
+                else:
+                    self.current_state = 'idle'
+        self.update_position()
+        self.window.after(20, self.physics_loop)
+
+    def _fsm_socializing(self):
+        self.social_timer -= 1
+        if self.social_timer <= 0:
+            self.current_state = 'idle'
+        else:
+            if self.is_flying:
+                self.fly_amplitude += 0.2
+                self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+            else:
+                if self.y < self.floor_y:
+                    self.v_y_velocity += 1.5 
+                    self.y += self.v_y_velocity
+                    if self.y >= self.floor_y:
+                        self.y = self.floor_y
+                        self.v_y_velocity = 0.0
+                else:
+                    phase = (self.social_timer // 8) % 2
+                    my_turn = (phase == 0) if self.is_facing_right else (phase == 1)
+                    if my_turn and self.social_timer % 8 == 0:
+                        self.v_y_velocity = -5.0
+                        self.y += self.v_y_velocity
+        self.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_attacking(self):
+        # Chequeo de seguridad: Si el objetivo ya no existe o aborta, salimos
+        if not getattr(self, 'attack_target', None) or not self.attack_target.window.winfo_exists() or self.attack_target.current_state not in ['attacking', 'thrown']:
+            self.current_state = 'idle'
+            self.attack_target = None
             self.update_position()
-            self.window.after(20, self.physics_loop)
+            self.window.after(30, self.physics_loop)
             return
 
-        if self.current_state == 'falling':
-            self.y += 10
-            if self.y >= self.floor_y:
-                self.y = self.floor_y
-                self.current_state = 'idle'
+        current_time = time.time()
+        if not hasattr(self, 'attack_phase_wait_until'):
+            self.attack_phase_wait_until = 0.0
+
+        # Pausas coreográficas de medio segundo justo antes de arrancar a correr
+        if current_time < self.attack_phase_wait_until:
             self.update_position()
-            self.window.after(20, self.physics_loop)
+            self.window.after(30, self.physics_loop)
             return
+
+        target = self.attack_target
+        dist = abs(self.x - target.x)
+        push_dir = 1 if self.is_facing_right else -1
+
+        if not hasattr(self, 'attack_phase'):
+            self.attack_phase = 0
+
+        def advance_phase(next_phase, pause=True):
+            self.attack_phase = next_phase
+            if pause:
+                self.attack_phase_wait_until = time.time() + 0.5 
+            else:
+                self.attack_phase_wait_until = 0.0
+
+        self.is_facing_right = (target.x > self.x)
+
+        if self.attack_phase == 0:
+            # Fase previa: Se colocan EXACTAMENTE a 50 px de distancia
+            if dist < 50: 
+                self.x -= 3.0 * push_dir 
+            elif dist > 55:
+                self.x += 3.0 * push_dir 
+            else: 
+                advance_phase(1, pause=True)
+
+        elif self.attack_phase == 1:
+            # Primera carrera
+            self.x += 10.0 * push_dir
+            if dist <= self.size_w * 0.4: 
+                advance_phase(2, pause=False)
+                self.v_x_velocity = -1.5 * push_dir
+                self.v_y_velocity = -5.0
+
+        elif self.attack_phase == 2:
+            # Primer rebote con corrección a 75 px
+            target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
             
-        action_chance = random.randint(1, 100)
+            if self.y < target_y or self.v_y_velocity != 0:
+                self.v_y_velocity += 1.0
+                self.y += self.v_y_velocity
+                self.x += self.v_x_velocity
+                
+                if self.y >= target_y and self.v_y_velocity > 0:
+                    self.y = target_y
+                    self.v_y_velocity = 0
+                    self.v_x_velocity = 0
+            else:
+                if dist < 75:
+                    self.x -= 3.0 * push_dir 
+                else:
+                    advance_phase(3, pause=True)
+
+        elif self.attack_phase == 3:
+            # Segunda carrera
+            self.x += 12.0 * push_dir
+            if dist <= self.size_w * 0.4: 
+                advance_phase(4, pause=False)
+                self.v_x_velocity = -2.0 * push_dir
+                self.v_y_velocity = -6.0
+
+        elif self.attack_phase == 4:
+            # Segundo rebote con corrección a 100 px
+            target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
+            
+            if self.y < target_y or self.v_y_velocity != 0:
+                self.v_y_velocity += 1.0
+                self.y += self.v_y_velocity
+                self.x += self.v_x_velocity
+                
+                if self.y >= target_y and self.v_y_velocity > 0:
+                    self.y = target_y
+                    self.v_y_velocity = 0
+                    self.v_x_velocity = 0
+            else:
+                if dist < 100:
+                    self.x -= 4.0 * push_dir 
+                else:
+                    advance_phase(5, pause=True)
+
+        elif self.attack_phase == 5:
+            # Tercera carrera extremadamente rápida
+            self.x += 20.0 * push_dir
+            if dist <= self.size_w * 0.4: 
+                self.attack_phase = 6
+                self.v_x_velocity = -25.0 * push_dir 
+                self.v_y_velocity = -15.0            
+                self.current_state = 'thrown' 
+                
+                # Inyección física al rival para que caigan y boten juntos
+                if self.attack_target and getattr(self.attack_target, 'current_state', '') == 'attacking':
+                    self.attack_target.v_x_velocity = 25.0 * push_dir 
+                    self.attack_target.v_y_velocity = -15.0
+                    self.attack_target.current_state = 'thrown'
+                    self.attack_target.attack_target = None
+                    self.attack_target.attack_phase = 0
+                    
+                self.attack_target = None
+                # Se purga el 'return' que paralizaba el hilo FSM de este Pokémon
+
+        # Seguridad de bordes de pantalla para los que no vuelan
+        if not self.is_flying and self.current_state != 'thrown':
+            self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size_w))
+
+        # Flotación para los voladores durante el combate
+        if self.is_flying and getattr(self, 'attack_phase', 0) in [0, 1, 3, 5]:
+            self.fly_amplitude += 0.2
+            self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_eating(self):
+        self.eating_timer -= 1
+        if self.eating_timer <= 0:
+            self.current_state = 'idle'
+            if self.interaction_target:
+                self.interaction_target.destroy()
+                self.interaction_target = None
+                self.pet_data["xp_boost_expiry"] = time.time() + 1800 
+                if self.game_controller: self.game_controller.sync_save_state()
+        else:
+            if self.is_flying:
+                self.fly_amplitude += 0.2
+                self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+            else:
+                if self.y < self.floor_y:
+                    self.v_y_velocity += 1.5 
+                    self.y += self.v_y_velocity
+                    if self.y >= self.floor_y:
+                        self.y = self.floor_y
+                        self.v_y_velocity = 0.0
+                else:
+                    if self.eating_timer in [20, 10]:
+                        self.v_y_velocity = -4.0
+                        self.y += self.v_y_velocity
+        self.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_active(self):
+        self.jump_cooldown = max(0, getattr(self, 'jump_cooldown', 0) - 1)
+        self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
+        self.attack_cooldown = max(0, getattr(self, 'attack_cooldown', 0) - 1)
+
+        current_env, ahead_env = self.get_window_environment()
+        ahead_physical_floor = ahead_env['y'] if type(ahead_env) is dict else ahead_env
         
+        is_climber = getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False)
+        if is_climber:
+            self.is_climbing = True
+
+        if not getattr(self, 'is_flying', False):
+            
+            # --- ANCLAJE EN MODO TERRESTRE ---
+            if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
+                if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
+                        self.anchored_hwnd = current_env['hwnd']
+                        self.anchored_rect = current_env['rect']
+            else:
+                if not is_climber:
+                    self.anchored_hwnd = None
+
+            # Calcular suelo físico dinámico
+            if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                current_physical_floor = self.anchored_rect[1] - self.size_h - self.offset_y
+            elif self.y <= current_env['y'] + 15:
+                current_physical_floor = current_env['y']
+            else:
+                current_physical_floor = self.default_floor_y
+
+            self.floor_y = current_physical_floor
+
+            # ====================================================================
+            # LÓGICA DE FÍSICA PARA TERRESTRES NO ESCALADORES 
+            # ====================================================================
+            if not is_climber:
+                if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
+                    self.current_state = 'jumping_arc'
+                    self.jump_target_y = self.floor_y
+                    self.v_y_velocity = -3.0  
+                    
+                elif self.current_state == 'walking' and ahead_physical_floor is not None:
+                    h = self.y - ahead_physical_floor
+                    if 30 < h < 750 and self.jump_cooldown == 0: 
+                        if random.randint(1, 1000) <= 30: 
+                            self.current_state = 'jumping_arc'
+                            self.jump_target_y = ahead_physical_floor
+                            self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
+                            self.jump_cooldown = 400
+
+                elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
+                    if random.randint(1, 1000) <= 5: 
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.default_floor_y
+                        self.v_y_velocity = -3.0
+                        self.jump_cooldown = 400
+                        self.anchored_hwnd = None
+                        self.anchored_rect = None
+
+            # ====================================================================
+            # LÓGICA DE FÍSICA Y SUPERFICIES PARA ESCALADORES
+            # ====================================================================
+            else:
+                win_offset = 6 
+                wall_offset = getattr(self, 'climb_offset_x', 0)
+                ceil_offset = getattr(self, 'climb_offset_y', 0)
+
+                # Caídas desde paredes, techos o suelo flotante (Si se minimiza/cierra la ventana)
+                if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
+                    if not getattr(self, 'anchored_hwnd', None):
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.default_floor_y
+                        self.v_y_velocity = 0.0
+                        self.climbing_surface = 'floor'
+                        self.surface_angle = 0
+                        self.jump_cooldown = 60
+                elif getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    if not getattr(self, 'anchored_hwnd', None) and self.y < self.floor_y - 15:
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = 0.0
+                        self.jump_cooldown = 60
+
+                # Reposo en marcos del monitor
+                if not getattr(self, 'anchored_hwnd', None):
+                    if self.climbing_surface == 'screen_l':
+                        self.x = self.v_x + wall_offset
+                        self.surface_angle = 270
+                    elif self.climbing_surface == 'screen_r':
+                        self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                        self.surface_angle = 90
+                    elif self.climbing_surface == 'screen_ceiling':
+                        self.y = self.v_y + ceil_offset
+                        self.surface_angle = 180
+
+                # Lógica de caminata en superficies
+                if self.current_state == 'walking':
+                    if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
+                        rect = self.anchored_rect
+                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                            self.y = rect[1] - self.size_h - self.offset_y
+                            self.x += self.speed if self.is_facing_right else -self.speed
+                            
+                            if self.x > rect[2] - self.size_w / 2 and self.is_facing_right:
+                                self.climbing_surface = 'wall_r'
+                                self.surface_angle = 270
+                                self.x = rect[2] - win_offset
+                                self.y = rect[1] - self.size_h / 2
+                            elif self.x < rect[0] - self.size_w / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'wall_l'
+                                self.surface_angle = 90
+                                self.x = rect[0] - self.size_w + win_offset
+                                self.y = rect[1] - self.size_h / 2
+
+                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_r':
+                            self.x = rect[2] - win_offset
+                            self.y += self.speed if self.is_facing_right else -self.speed 
+                            if self.y > rect[3] - self.size_h / 2 and self.is_facing_right:
+                                self.climbing_surface = 'ceiling'
+                                self.surface_angle = 180
+                                self.y = rect[3] - win_offset
+                                self.x = rect[2] - self.size_w / 2
+                            elif self.y < rect[1] - self.size_h / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = rect[1] - self.size_h + win_offset
+                                self.x = rect[2] - self.size_w / 2
+                                
+                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_l':
+                            self.x = rect[0] - self.size_w + win_offset
+                            self.y -= self.speed if self.is_facing_right else -self.speed 
+                            if self.y < rect[1] - self.size_h / 2 and self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = rect[1] - self.size_h + win_offset
+                                self.x = rect[0] - self.size_w / 2
+                            elif self.y > rect[3] - self.size_h / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'ceiling'
+                                self.surface_angle = 180
+                                self.y = rect[3] - win_offset
+                                self.x = rect[0] - self.size_w / 2
+                                
+                        elif getattr(self, 'climbing_surface', 'floor') == 'ceiling':
+                            self.y = rect[3] - win_offset
+                            self.x -= self.speed if self.is_facing_right else -self.speed 
+                            if self.x < rect[0] - self.size_w / 2 and self.is_facing_right:
+                                self.climbing_surface = 'wall_l'
+                                self.surface_angle = 90
+                                self.x = rect[0] - self.size_w + win_offset
+                                self.y = rect[3] - self.size_h / 2
+                            elif self.x > rect[2] - self.size_w / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'wall_r'
+                                self.surface_angle = 270
+                                self.x = rect[2] - win_offset
+                                self.y = rect[3] - self.size_h / 2
+
+                    else: # Comportamiento en escritorio (Monitor)
+                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                            self.y = self.default_floor_y
+                            self.x += self.speed if self.is_facing_right else -self.speed
+                            if self.x >= self.v_x + self.v_width - self.size_w and self.is_facing_right:
+                                self.climbing_surface = 'screen_r'
+                                self.surface_angle = 90
+                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                self.is_facing_right = False 
+                            elif self.x <= self.v_x and not self.is_facing_right:
+                                self.climbing_surface = 'screen_l'
+                                self.surface_angle = 270
+                                self.x = self.v_x + wall_offset
+                                self.is_facing_right = True 
+                            elif ahead_physical_floor is not None and ahead_env['hwnd']:
+                                self.anchored_hwnd = ahead_env['hwnd']
+                                self.anchored_rect = ahead_env['rect']
+                                if self.is_facing_right:
+                                    self.climbing_surface = 'wall_l'
+                                    self.surface_angle = 90
+                                    self.x = self.anchored_rect[0] - self.size_w + win_offset
+                                else:
+                                    self.climbing_surface = 'wall_r'
+                                    self.surface_angle = 270
+                                    self.x = self.anchored_rect[2] - win_offset
+                                    
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_r':
+                            self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                            self.y += self.speed if self.is_facing_right else -self.speed
+                            if self.y <= self.v_y and not self.is_facing_right:
+                                self.climbing_surface = 'screen_ceiling'
+                                self.surface_angle = 180
+                                self.y = self.v_y + ceil_offset
+                                self.is_facing_right = True 
+                            elif self.y >= self.default_floor_y and self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = self.default_floor_y
+                                self.is_facing_right = False 
+                                
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_l':
+                            self.x = self.v_x + wall_offset
+                            self.y -= self.speed if self.is_facing_right else -self.speed
+                            if self.y <= self.v_y and self.is_facing_right:
+                                self.climbing_surface = 'screen_ceiling'
+                                self.surface_angle = 180
+                                self.y = self.v_y + ceil_offset
+                                self.is_facing_right = False 
+                            elif self.y >= self.default_floor_y and not self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = self.default_floor_y
+                                self.is_facing_right = True 
+                                
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_ceiling':
+                            self.y = self.v_y + ceil_offset
+                            self.x -= self.speed if self.is_facing_right else -self.speed
+                            if self.x <= self.v_x and self.is_facing_right:
+                                self.climbing_surface = 'screen_l'
+                                self.surface_angle = 270
+                                self.x = self.v_x + wall_offset
+                                self.is_facing_right = False 
+                            elif self.x >= self.v_x + self.v_width - self.size_w and not self.is_facing_right:
+                                self.climbing_surface = 'screen_r'
+                                self.surface_angle = 90
+                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                self.is_facing_right = True 
+
+        else:
+            # === LÓGICA PARA VOLADORES ===
+            self.anchored_hwnd = None
+            self.climbing_surface = 'floor'
+            self.surface_angle = 0
+            if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y -= 5
+            elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
+                self.floor_y += 5
+            self.y = self.floor_y
+
+        # ==== GESTIÓN FINAL DE ESTADOS GENÉRICOS ====
         if self.current_state == 'idle':
+            if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                self.y = self.anchored_rect[1] - self.size_h - self.offset_y
+                
+            action_chance = random.randint(1, 100)
             if action_chance <= 5: 
                 self.current_state = 'walking'
                 self.is_facing_right = random.choice([True, False])
+        
         elif self.current_state == 'walking':
+            action_chance = random.randint(1, 100)
             if action_chance <= 5: 
                 self.current_state = 'idle'
             else:
-                self.x += self.speed if self.is_facing_right else -self.speed
-                if self.x <= self.v_x:
-                    self.x = self.v_x
-                    self.is_facing_right = True
-                elif self.x >= (self.v_x + self.v_width) - self.size_w:
-                    self.x = (self.v_x + self.v_width) - self.size_w
-                    self.is_facing_right = False
-        
-        if self.is_flying and self.current_state not in ['falling', 'falling_pokeball', 'falling_egg', 'exiting']:
+                if not is_climber:
+                    self.x += self.speed if self.is_facing_right else -self.speed
+                    
+                    if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                        if self.x <= self.v_x:
+                            self.x = self.v_x
+                            self.is_facing_right = True
+                        elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                            self.x = (self.v_x + self.v_width) - self.size_w
+                            self.is_facing_right = False
+
+        # === INTERACCIONES SOCIALES Y DE COMBATE ===
+        if self.current_state in ['idle', 'walking'] and getattr(self, 'get_all_pets', None) and not getattr(self, 'is_egg', False) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+            if self.social_cooldown == 0 or self.attack_cooldown == 0:
+                for other in self.get_all_pets():
+                    if other != self and other.current_state in ['idle', 'walking'] and not getattr(other, 'is_egg', False) and getattr(other, 'climbing_surface', 'floor') == 'floor' and self.is_flying == other.is_flying:
+                        my_true_floor = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else (self.floor_y + self.size_h + self.offset_y)
+                        other_true_floor = getattr(other, 'target_floor_y', other.floor_y) if other.is_flying else (other.floor_y + other.size_h + other.offset_y)
+                        if abs(my_true_floor - other_true_floor) < 15 and 80 < abs(self.x - other.x) < 150:
+                            roll = random.randint(1, 100)
+                            if roll <= 1 and self.attack_cooldown == 0 and other.attack_cooldown == 0:
+                                self.current_state = 'attacking'
+                                other.current_state = 'attacking'
+                                self.attack_phase = 0
+                                other.attack_phase = 0
+                                self.attack_phase_wait_until = 0.0
+                                other.attack_phase_wait_until = 0.0
+                                self.attack_target = other
+                                other.attack_target = self
+                                self.attack_cooldown = 12000
+                                other.attack_cooldown = 12000
+                                self.is_facing_right = (other.x > self.x)
+                                other.is_facing_right = (self.x > other.x)
+                                break
+                            elif roll <= 3 and self.social_cooldown == 0 and other.social_cooldown == 0:
+                                self.current_state = 'socializing'
+                                other.current_state = 'socializing'
+                                self.social_timer = 90
+                                other.social_timer = 90
+                                self.social_cooldown = 2400
+                                other.social_cooldown = 2400
+                                self.is_facing_right = (other.x > self.x)
+                                other.is_facing_right = (self.x > other.x)
+                                break
+
+        if self.current_state in ['idle', 'walking'] and not self.is_wild and not self.is_egg and getattr(self, 'climbing_surface', 'floor') == 'floor' and self.game_controller:
+            for berry in getattr(self.game_controller, 'active_berries', []):
+                if berry.current_state not in ['exiting', 'dragged']:
+                    my_true_floor = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else (self.floor_y + self.size_h + self.offset_y)
+                    berry_true_floor = berry.floor_y + berry.size - 6
+                    if abs(my_true_floor - berry_true_floor) < 15 and abs(self.x - berry.x) < 20:
+                        self.current_state = 'eating'
+                        self.eating_timer = 30
+                        self.is_facing_right = (berry.x > self.x)
+                        self.interaction_target = berry
+                        berry.destroy()
+                        break
+
+        if self.is_flying and self.current_state not in ['socializing', 'attacking', 'eating']:
             self.fly_amplitude += 0.2
-            onda = math.sin(self.fly_amplitude) * 10
-            self.y = self.floor_y + onda
+            self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
             
         self.update_position()
         self.window.after(50, self.physics_loop)
 
-# --- UI: SELECTOR DE INICIALES ---
-class StarterSelectionWindow:
-    def __init__(self, parent, pets_dir, on_select_callback):
-        self.window = tk.Toplevel(parent)
-        self.window.title("Elige a tu compañero inicial")
-        
-        self.window.geometry("340x840") 
-        self.window.config(bg="#ECF0F1")
+    def _fsm_legendary_bounce(self):
+        self.v_y_velocity += 1.5 
+        self.y += self.v_y_velocity
+        self.x += (self.speed * 0.5) if self.is_facing_right else -(self.speed * 0.5)
+
+        target_y = getattr(self, 'floor_y', self.default_floor_y)
+        if self.v_y_velocity > 0 and self.y >= target_y:
+            self.y = target_y
+            self.floor_y = target_y
+            self.current_state = 'idle' 
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+# --- POKÉBALL INTERACTIVA ---
+class InteractivePokeball:
+    def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
+        self.window = tk.Toplevel(parent_root)
+        self.window.title("Toy Pokeball")
+        self.window.overrideredirect(True)
         self.window.attributes('-topmost', True)
-        self.window.grab_set() 
-        self.window.resizable(False, False)
-
-        tk.Label(self.window, text="Selecciona un Pokémon para reiniciar el sistema:", font=("Segoe UI", 10, "bold"), bg="#ECF0F1").pack(pady=10)
-
-        canvas = tk.Canvas(self.window, bg="#ECF0F1", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(self.window, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = tk.Frame(canvas, bg="#ECF0F1")
-
-        self.scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw", width=320) 
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        canvas.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=5)
-        scrollbar.pack(side="right", fill="y")
-
-        self.btn_images = [] 
-        installed_pets = [d for d in os.listdir(pets_dir) if os.path.isdir(os.path.join(pets_dir, d))]
         
-        def create_icon_btn(container, species):
-            if species not in installed_pets: return None
-            try:
-                cfg_path = os.path.join(pets_dir, species, "config.json")
-                with open(cfg_path, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
-                
-                img_cfg = cfg.get("images", {})
-                idle_prefix = img_cfg.get("idle_prefix", "idle_")
-                idle_suffix = img_cfg.get("idle_suffix", ".png")
-                
-                img_path = os.path.join(pets_dir, species, f"{idle_prefix}0{idle_suffix}")
-                raw_img = Image.open(img_path).convert("RGBA")
-                
-                r, g, b, a = raw_img.split()
-                a = a.point(lambda p: 255 if p > 127 else 0)
-                clean_img = Image.merge("RGBA", (r, g, b, a)).resize((48, 48), Image.Resampling.NEAREST)
-                
-                tk_img = ImageTk.PhotoImage(clean_img)
-                self.btn_images.append(tk_img) 
-
-                btn = tk.Button(container, image=tk_img, bg="white", relief="ridge", bd=2, width=54, height=54,
-                                command=lambda s=species: self.commit_selection(s, on_select_callback))
-                return btn
-            except Exception as e:
-                print(f"[!] Imposible generar icono para {species}: {e}")
-                return None
-
-        special_frame = tk.Frame(self.scrollable_frame, bg="#ECF0F1")
-        special_frame.pack(pady=(5, 15))
-
-        pika_btn = create_icon_btn(special_frame, "pikachu")
-        if pika_btn: pika_btn.pack(side=tk.LEFT, padx=15)
+        CHROMA_KEY = '#00FF00'
+        self.window.config(bg=CHROMA_KEY)
+        try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
+        except tk.TclError: pass
         
-        eevee_btn = create_icon_btn(special_frame, "eevee")
-        if eevee_btn: eevee_btn.pack(side=tk.LEFT, padx=15)
+        self.get_pets = get_pets_callback
+        self.on_destroy = on_destroy_callback
+        self.base_dir = base_dir
+        
+        self.size = 40
+        self.offset_y = -6
+        
+        user32 = ctypes.windll.user32
+        self.v_x = user32.GetSystemMetrics(76) 
+        self.v_y = user32.GetSystemMetrics(77)
+        self.v_width = user32.GetSystemMetrics(78)
+        self.v_height = user32.GetSystemMetrics(79)
+        
+        self.default_floor_y = (self.v_y + self.v_height) - self.size - self.offset_y
+        self.floor_y = self.default_floor_y
+        
+        self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size)
+        self.y = self.v_y - self.size
+        self.v_x_velocity = 0.0
+        self.v_y_velocity = 0.0
+        
+        self.current_state = 'falling'
+        self.angle = 0
+        
+        self.canvas = tk.Canvas(self.window, width=self.size, height=self.size, bg=CHROMA_KEY, highlightthickness=0)
+        self.canvas.pack()
+        self.canvas_image_id = self.canvas.create_image(self.size//2, self.size//2, anchor=tk.CENTER)
+        
+        pb_dir = os.path.join(self.base_dir, "game_env", "ui")
+        available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
+        pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
+        
+        try:
+            raw_img = Image.open(os.path.join(pb_dir, pb_file)).convert("RGBA")
+            r, g, b, a = raw_img.split()
+            a = a.point(lambda p: 255 if p > 127 else 0)
+            self.base_img = Image.merge("RGBA", (r, g, b, a)).resize((self.size, self.size), Image.Resampling.NEAREST)
+            self.tk_image = ImageTk.PhotoImage(self.base_img)
+            self.canvas.itemconfig(self.canvas_image_id, image=self.tk_image)
+        except Exception as e:
+            self.window.after(100, self.destroy)
+            return
+            
+        self.window.geometry(f"{self.size}x{self.size}+{int(self.x)}+{int(self.y)}")
+        
+        self.canvas.bind("<ButtonPress-1>", self.on_drag_start)
+        self.canvas.bind("<B1-Motion>", self.on_drag_motion)
+        self.canvas.bind("<ButtonRelease-1>", self.on_drag_release)
+        self.canvas.bind("<ButtonRelease-3>", lambda e: self.destroy())
+        
+        self.keep_on_top()
+        self.animate_loop()
+        self.physics_loop()
 
-        grid_frame = tk.Frame(self.scrollable_frame, bg="#ECF0F1")
-        grid_frame.pack()
+    def keep_on_top(self):
+        if self.current_state != 'exiting':
+            try: self.window.attributes('-topmost', True)
+            except: pass
+            self.window.after(2000, self.keep_on_top)
 
-        generations = [
-            ("bulbasaur", "charmander", "squirtle"),     
-            ("chikorita", "cyndaquil", "totodile"),      
-            ("treecko", "torchic", "mudkip"),            
-            ("turtwig", "chimchar", "piplup"),           
-            ("snivy", "tepig", "oshawott"),              
-            ("chespin", "fennekin", "froakie"),          
-            ("rowlet", "litten", "popplio"),             
-            ("grookey", "scorbunny", "sobble"),          
-            ("sprigatito", "fuecoco", "quaxly")          
-        ]
-
-        found_any = False
-        for r_idx, gen in enumerate(generations):
-            for c_idx, species in enumerate(gen):
-                btn = create_icon_btn(grid_frame, species)
-                if btn:
-                    found_any = True
-                    btn.grid(row=r_idx, column=c_idx, padx=12, pady=8)
-
-        if not found_any and not pika_btn and not eevee_btn:
-            tk.Label(self.scrollable_frame, text="No tienes iniciales instalados en game_env/pets/", fg="red", bg="#ECF0F1").pack()
-
-        self.window.update_idletasks()
-        canvas.configure(scrollregion=canvas.bbox("all"))
-
-    def commit_selection(self, species, callback):
+    def destroy(self):
+        self.current_state = 'exiting'
+        if self.on_destroy:
+            self.on_destroy()
         self.window.destroy()
-        callback(species)
+
+    def update_position(self):
+        self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
+        
+    def on_drag_start(self, event):
+        if self.current_state == 'exiting': return
+        self.drag_offset_x = event.x
+        self.drag_offset_y = event.y
+        self.drag_start_x = self.window.winfo_pointerx()
+        self.drag_start_y = self.window.winfo_pointery()
+        self.is_dragging = False
+
+    def on_drag_motion(self, event):
+        if self.current_state == 'exiting': return
+        pointer_x = self.window.winfo_pointerx()
+        pointer_y = self.window.winfo_pointery()
+
+        if not getattr(self, 'is_dragging', False):
+            if abs(pointer_x - getattr(self, 'drag_start_x', pointer_x)) > 5 or \
+               abs(pointer_y - getattr(self, 'drag_start_y', pointer_y)) > 5:
+                self.is_dragging = True
+                self.current_state = 'dragged'
+                self.v_x_velocity = 0.0
+                self.v_y_velocity = 0.0
+                self.last_drag_time = time.time()
+                self.last_mouse_x = pointer_x
+                self.last_mouse_y = pointer_y
+            else:
+                return
+
+        self.x = pointer_x - self.drag_offset_x
+        self.y = pointer_y - self.drag_offset_y
+        self.update_position()
+
+        current_time = time.time()
+        dt = current_time - getattr(self, 'last_drag_time', current_time)
+        if dt > 0:
+            self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
+            self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
+        
+        self.last_mouse_x = pointer_x
+        self.last_mouse_y = pointer_y
+        self.last_drag_time = current_time
+
+    def on_drag_release(self, event):
+        if getattr(self, 'is_dragging', False):
+            self.is_dragging = False
+            self.anchored_hwnd = None
+            
+            v_x = getattr(self, 'v_x_velocity', 0.0)
+            v_y = getattr(self, 'v_y_velocity', 0.0)
+            
+            if math.isnan(v_x) or math.isinf(v_x): v_x = 0.0
+            if math.isnan(v_y) or math.isinf(v_y): v_y = 0.0
+
+            self.v_x_velocity = max(-40.0, min(40.0, v_x))
+            self.v_y_velocity = max(-40.0, min(40.0, v_y))
+            
+            self.current_state = 'thrown'
+
+    def get_window_environment(self):
+        current_env = {'y': self.default_floor_y, 'hwnd': None, 'rect': None}
+        if not HAS_WIN32: return current_env
+        
+        center_x = self.x + self.size // 2
+        bottom_y = self.y
+        CURRENT_PID = os.getpid()
+        valid_windows = []
+        
+        def win_enum_handler(hwnd, ctx):
+            if not win32gui.IsWindowVisible(hwnd): return
+            if win32gui.IsIconic(hwnd): return 
+            try:
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                if pid == CURRENT_PID: return
+            except: pass
+            try:
+                is_cloaked = ctypes.c_int(0)
+                ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(is_cloaked), ctypes.sizeof(is_cloaked))
+                if is_cloaked.value != 0: return
+            except: pass
+            try:
+                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                if ex_style & win32con.WS_EX_TRANSPARENT: return
+            except: pass
+            class_name = win32gui.GetClassName(hwnd)
+            if class_name in ("Progman", "WorkerW", "Shell_TrayWnd", "EdgeUiInputTopWndClass", "DummyDWMWindow", "PopupHost"): return
+            title = win32gui.GetWindowText(hwnd)
+            if not title: return 
+            rect = win32gui.GetWindowRect(hwnd)
+            w_width = rect[2] - rect[0]
+            w_height = rect[3] - rect[1]
+            if w_width < 100 or w_height < 100: return
+            
+            placement = win32gui.GetWindowPlacement(hwnd) 
+            is_fullscreen = False
+            if placement[1] == win32con.SW_SHOWMAXIMIZED:
+                is_fullscreen = True
+            else:
+                try:
+                    monitor = win32api.MonitorFromWindow(hwnd, win32con.MONITOR_DEFAULTTONEAREST)
+                    mon_info = win32api.GetMonitorInfo(monitor)
+                    mon_w = mon_info['Monitor'][2] - mon_info['Monitor'][0]
+                    mon_h = mon_info['Monitor'][3] - mon_info['Monitor'][1]
+                    if w_width >= mon_w - 10 and w_height >= mon_h - 10:
+                        is_fullscreen = True
+                except:
+                    if w_width >= self.v_width and w_height >= (self.v_height - 10):
+                        is_fullscreen = True
+                        
+            win_floor = rect[1] - self.size - self.offset_y
+            valid_windows.append({'hwnd': hwnd, 'rect': rect, 'floor': win_floor, 'z': len(valid_windows), 'walkable': not is_fullscreen})
+            
+        win32gui.EnumWindows(win_enum_handler, None)
+        
+        under_windows = [w for w in valid_windows if w['walkable'] and w['rect'][0] <= center_x <= w['rect'][2] and w['floor'] >= bottom_y - 15]
+        if under_windows:
+            under_windows.sort(key=lambda w: w['floor'])
+            for uw in under_windows:
+                is_occluded = False
+                check_y = uw['rect'][1] + 5
+                for ow in valid_windows:
+                    if ow['z'] < uw['z'] and ow['rect'][0] <= center_x <= ow['rect'][2] and ow['rect'][1] <= check_y <= ow['rect'][3]:
+                        is_occluded = True
+                        break
+                if not is_occluded:
+                    current_env['y'] = uw['floor']
+                    current_env['hwnd'] = uw['hwnd']
+                    current_env['rect'] = uw['rect']
+                    break
+        return current_env
+
+    def animate_loop(self):
+        if self.current_state == 'exiting': return
+        
+        if getattr(self, 'anchored_hwnd', None) and self.current_state == 'idle':
+            try:
+                if HAS_WIN32 and win32gui.IsWindowVisible(self.anchored_hwnd) and not win32gui.IsIconic(self.anchored_hwnd):
+                    new_rect = win32gui.GetWindowRect(self.anchored_hwnd)
+                    old_rect = getattr(self, 'anchored_rect', new_rect)
+                    delta_x = new_rect[0] - old_rect[0]
+                    delta_y = new_rect[1] - old_rect[1]
+                    if delta_x != 0 or delta_y != 0:
+                        self.x += delta_x
+                        self.y += delta_y
+                        self.floor_y += delta_y
+                        self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size))
+                        self.update_position()
+                    self.anchored_rect = new_rect
+                else:
+                    self.anchored_hwnd = None
+            except:
+                self.anchored_hwnd = None
+
+        if abs(self.v_x_velocity) > 0.5:
+            self.angle = (self.angle - self.v_x_velocity * 4) % 360
+            self.tk_image = ImageTk.PhotoImage(self.base_img.rotate(self.angle, resample=Image.NEAREST, expand=False))
+            self.canvas.itemconfig(self.canvas_image_id, image=self.tk_image)
+            
+        self.window.after(16, self.animate_loop)
+
+    def physics_loop(self):
+        if self.current_state == 'exiting': return
+        if self.current_state == 'dragged':
+            self.window.after(30, self.physics_loop)
+            return
+
+        self.v_y_velocity += 0.99 
+        self.v_x_velocity *= 0.99 
+        
+        self.y += self.v_y_velocity
+        self.x += self.v_x_velocity
+
+        if self.x <= self.v_x:
+            self.x = self.v_x
+            self.v_x_velocity *= -0.5 
+        elif self.x >= (self.v_x + self.v_width) - self.size:
+            self.x = (self.v_x + self.v_width) - self.size
+            self.v_x_velocity *= -0.5
+
+        if self.y <= self.v_y:
+            self.y = self.v_y
+            self.v_y_velocity *= -0.5 
+
+        current_env = self.get_window_environment()
+        if self.y <= current_env['y'] + 15:
+            physical_floor = current_env['y']
+            if current_env['hwnd']:
+                if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
+                    self.anchored_hwnd = current_env['hwnd']
+                    self.anchored_rect = current_env['rect']
+        else:
+            physical_floor = self.default_floor_y
+            self.anchored_hwnd = None
+
+        if self.y >= physical_floor and self.v_y_velocity > 0:
+            self.y = physical_floor
+            self.floor_y = physical_floor
+            
+            if self.v_y_velocity > 2.0:
+                self.v_y_velocity *= -0.75 
+                self.v_x_velocity *= 0.85 
+            else:
+                self.v_y_velocity = 0.0
+                self.v_x_velocity *= 0.6
+            
+            if abs(self.v_x_velocity) < 0.5 and abs(self.v_y_velocity) < 0.5:
+                self.current_state = 'idle'
+                self.v_x_velocity = 0
+                self.v_y_velocity = 0
+        else:
+            self.current_state = 'falling'
+
+        if self.current_state != 'dragged':
+            ball_cx = self.x + self.size/2
+            ball_cy = self.y + self.size/2
+            
+            for p in self.get_pets():
+                if p.current_state in ['falling_egg', 'falling_pokeball', 'exiting', 'dragged']: continue
+                
+                p_cx = p.x + p.size_w/2
+                p_cy = p.y + p.size_h/2
+                
+                dx = ball_cx - p_cx
+                dy = ball_cy - p_cy
+                dist = math.sqrt(dx**2 + dy**2)
+                
+                min_dist = (self.size/2) + (p.size_w/2.5) 
+                
+                if dist < min_dist:
+                    force_multiplier = (p.size_w / 64.0) * (p.speed * 1.5 if p.current_state == 'walking' else 1.0)
+                    
+                    if p.current_state == 'walking':
+                        push_dir = 1 if p.is_facing_right else -1
+                        self.v_x_velocity = push_dir * force_multiplier * 2.7
+                    else:
+                        if dx != 0:
+                            self.v_x_velocity = (dx/dist) * force_multiplier * 2.7
+                        else:
+                            self.v_x_velocity = random.choice([-1, 1]) * force_multiplier * 2.7
+                            
+                    self.v_y_velocity = -force_multiplier * 2.7 - 2.7
+                    self.y -= 5 
+                    self.current_state = 'thrown'
+                    self.anchored_hwnd = None
+                    break 
+        
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+
+# --- INYECCIÓN: BAYA CONSUMIBLE ---
+class InteractiveBerry(InteractivePokeball):
+    def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
+        self.window = tk.Toplevel(parent_root)
+        self.window.title("Consumable Berry")
+        self.window.overrideredirect(True)
+        self.window.attributes('-topmost', True)
+        CHROMA_KEY = '#00FF00'
+        self.window.config(bg=CHROMA_KEY)
+        try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
+        except tk.TclError: pass
+        self.get_pets = get_pets_callback
+        self.on_destroy = on_destroy_callback
+        self.base_dir = base_dir
+        
+        self.size_baya = 40 
+        self.size = self.size_baya
+        self.offset_y = -6
+        user32 = ctypes.windll.user32
+        self.v_x = user32.GetSystemMetrics(76) 
+        self.v_y = user32.GetSystemMetrics(77)
+        self.v_width = user32.GetSystemMetrics(78)
+        self.v_height = user32.GetSystemMetrics(79)
+        self.default_floor_y = (self.v_y + self.v_height) - self.size - self.offset_y
+        self.floor_y = self.default_floor_y
+        
+        spawn_edge = random.choice(['left', 'right', 'top'])
+        if spawn_edge == 'left':
+            self.x = self.v_x - self.size
+            self.y = random.randint(self.v_y, self.v_y + self.v_height // 2)
+            self.v_x_velocity = random.uniform(40.0, 60.0) 
+            self.v_y_velocity = random.uniform(-10.0, -5.0)
+        elif spawn_edge == 'right':
+            self.x = self.v_x + self.v_width + self.size
+            self.y = random.randint(self.v_y, self.v_y + self.v_height // 2)
+            self.v_x_velocity = random.uniform(-60.0, -40.0) 
+            self.v_y_velocity = random.uniform(-10.0, -5.0)
+        else:
+            self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size)
+            self.y = self.v_y - self.size
+            self.v_x_velocity = random.uniform(-15.0, 15.0)
+            self.v_y_velocity = 5.0
+            
+        self.current_state = 'thrown'
+        self.angle = 0
+        self.canvas = tk.Canvas(self.window, width=self.size, height=self.size, bg=CHROMA_KEY, highlightthickness=0)
+        self.canvas.pack()
+        self.canvas_image_id = self.canvas.create_image(self.size//2, self.size//2, anchor=tk.CENTER)
+        
+        pb_dir = os.path.join(self.base_dir, "game_env", "ui")
+        available_berries = [f for f in os.listdir(pb_dir) if f.lower().endswith("berry.png")]
+        if not available_berries: available_berries = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
+        pb_file = random.choice(available_berries) if available_berries else "pokeball.png"
+        
+        try:
+            raw_img = Image.open(os.path.join(pb_dir, pb_file)).convert("RGBA")
+            r, g, b, a = raw_img.split()
+            a = a.point(lambda p: 255 if p > 127 else 0)
+            self.base_img = Image.merge("RGBA", (r, g, b, a)).resize((self.size, self.size), Image.Resampling.NEAREST)
+            self.tk_image = ImageTk.PhotoImage(self.base_img)
+            self.canvas.itemconfig(self.canvas_image_id, image=self.tk_image)
+        except:
+            self.window.after(100, self.destroy)
+            return
+            
+        self.window.geometry(f"{self.size}x{self.size}+{int(self.x)}+{int(self.y)}")
+        self.canvas.bind("<ButtonPress-1>", self.on_drag_start)
+        self.canvas.bind("<B1-Motion>", self.on_drag_motion)
+        self.canvas.bind("<ButtonRelease-1>", self.on_drag_release)
+        self.canvas.bind("<ButtonRelease-3>", lambda e: self.destroy())
+        self.keep_on_top()
+        self.animate_loop()
+        self.physics_loop()
+
+    def physics_loop(self):
+        if self.current_state == 'exiting': return
+        if self.current_state == 'dragged':
+            self.window.after(30, self.physics_loop)
+            return
+
+        self.v_y_velocity += 0.8 
+        self.v_x_velocity *= 0.99 
+        self.y += self.v_y_velocity
+        self.x += self.v_x_velocity
+
+        if self.x <= self.v_x:
+            self.x = self.v_x
+            self.v_x_velocity *= -0.5 
+        elif self.x >= (self.v_x + self.v_width) - self.size:
+            self.x = (self.v_x + self.v_width) - self.size
+            self.v_x_velocity *= -0.5
+
+        if self.y <= self.v_y:
+            self.y = self.v_y
+            self.v_y_velocity *= -0.75 
+
+        current_env = self.get_window_environment()
+        if self.y <= current_env['y'] + 15:
+            physical_floor = current_env['y']
+            if current_env['hwnd']:
+                if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
+                    self.anchored_hwnd = current_env['hwnd']
+                    self.anchored_rect = current_env['rect']
+        else:
+            physical_floor = self.default_floor_y
+            self.anchored_hwnd = None
+
+        if self.y >= physical_floor and self.v_y_velocity > 0:
+            self.y = physical_floor
+            self.floor_y = physical_floor
+            if self.v_y_velocity > 2.0:
+                self.v_y_velocity *= -0.05 
+                self.v_x_velocity *= 0.6 
+            else:
+                self.v_y_velocity = 0.0
+                self.v_x_velocity *= 0.3
+            if abs(self.v_x_velocity) < 0.5 and abs(self.v_y_velocity) < 0.5:
+                self.current_state = 'idle'
+                self.v_x_velocity = 0
+                self.v_y_velocity = 0
+        else: self.current_state = 'falling'
+        self.update_position()
+        self.window.after(30, self.physics_loop)
 
 # --- CONTROLADOR CENTRAL DEL JUEGO ---
 class GameController:
@@ -1002,6 +2169,7 @@ class GameController:
         self.active_instances = [] 
         self.wild_instances = []
         self.overflow_instances = [] 
+        self.active_berries = [] 
         
         base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         self.pets_directory = os.path.join(base_dir, "game_env", "pets")
@@ -1011,7 +2179,7 @@ class GameController:
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         
-        w, h = 280, 175 
+        w, h = 280, 205 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
 
@@ -1062,7 +2230,6 @@ class GameController:
         chk_breed = tk.Checkbutton(settings_row, text="Crianza", font=("Segoe UI", 8), variable=self.allow_breed_var, bg=bg_main, command=self.sync_settings)
         chk_breed.pack(side=tk.RIGHT, expand=True)
 
-        # INYECCIÓN: Wrapper estructural. Mantiene el espacio sin alterar el orden del empaquetado.
         self.fly_wrapper = tk.Frame(content_frame, bg=bg_main)
         self.fly_wrapper.pack(fill=tk.X, padx=10, pady=(0, 4))
         
@@ -1076,6 +2243,11 @@ class GameController:
         btn_reset_fly = tk.Button(self.fly_row, text="R", font=("Segoe UI", 7, "bold"), bg="#95A5A6", fg="white", bd=0, width=2, command=self.reset_fly_height)
         btn_reset_fly.pack(side=tk.RIGHT)
 
+        toy_row = tk.Frame(content_frame, bg=bg_main)
+        toy_row.pack(fill=tk.X, padx=10, pady=(0, 5))
+        self.btn_toy = tk.Button(toy_row, text="Juguete (Pokéball)", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
+        self.btn_toy.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 0))
+
         bottom_row = tk.Frame(content_frame, bg=bg_main)
         bottom_row.pack(fill=tk.X, padx=10, pady=(0, 5))
         
@@ -1088,7 +2260,6 @@ class GameController:
         btn_reset = tk.Button(bottom_row, text="Format PC", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
-        # El orden aquí es crítico: primero construir el diccionario de físicas, luego inyectar la UI.
         self.build_spawn_pool()
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
         self.update_pc_ui()
@@ -1097,7 +2268,35 @@ class GameController:
         self.root.after(15000, self.wild_spawner_loop)
         self.root.after(10000, self.xp_tick_loop)
         self.root.after(600000, self.egg_laying_loop) 
+        self.root.after(120000, self.berry_spawner_loop) 
         self.root.mainloop()
+
+    def berry_spawner_loop(self):
+        self.active_berries = [b for b in self.active_berries if b.current_state != 'exiting']
+        if random.randint(1, 100) <= 20: 
+            base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+            def remove_berry(b):
+                if b in self.active_berries: self.active_berries.remove(b)
+            berry = InteractiveBerry(self.root, base_dir, self.get_all_pets, None)
+            berry.on_destroy = lambda: remove_berry(berry)
+            self.active_berries.append(berry)
+        self.root.after(random.randint(120000, 240000), self.berry_spawner_loop)
+
+    def toggle_toy_ball(self):
+        if hasattr(self, 'active_toy') and self.active_toy:
+            self.active_toy.destroy()
+        else:
+            base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+            self.active_toy = InteractivePokeball(self.root, base_dir, self.get_all_pets, self.clear_toy)
+            self.btn_toy.config(text="Eliminar Juguete", bg="#E74C3C")
+            
+    def clear_toy(self):
+        self.active_toy = None
+        if hasattr(self, 'btn_toy') and self.btn_toy.winfo_exists():
+            self.btn_toy.config(text="Juguete (Pokéball)", bg="#E67E22")
+
+    def get_all_pets(self):
+        return self.active_instances + self.wild_instances + self.overflow_instances
 
     def sync_settings(self):
         self.save_mgr.data["settings"]["allow_wild"] = self.allow_wild_var.get()
@@ -1130,7 +2329,7 @@ class GameController:
         self.spawn_pool_species = []
         self.spawn_pool_weights = []
         self.evo_parents = {}
-        self.species_flying_status = {} # Mapa global de genética voladora
+        self.species_flying_status = {}
         
         all_available = [d for d in os.listdir(self.pets_directory) if os.path.isdir(os.path.join(self.pets_directory, d))]
         
@@ -1203,7 +2402,6 @@ class GameController:
         if pet:
             self.everstone_var.set(pet.get("everstone", False))
             
-            # INYECCIÓN: Si no vuela, el bloque visual del slider se esfuma.
             is_fly = self.species_flying_status.get(pet["species"], False)
             if is_fly:
                 self.fly_row.pack(fill=tk.X)
@@ -1229,7 +2427,7 @@ class GameController:
             for p in self.save_mgr.data["inventory"]:
                 if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False):
                     p["everstone"] = new_state
-            self.save_mgr.save_data()
+            self.save_mgr.data = self.save_mgr.load_save()
             
             if not new_state:
                 for active_pet in self.active_instances:
@@ -1241,6 +2439,9 @@ class GameController:
             StarterSelectionWindow(self.root, self.pets_directory, self.execute_reset)
 
     def execute_reset(self, chosen_species):
+        if hasattr(self, 'active_toy') and self.active_toy:
+            self.active_toy.destroy()
+            
         for pet in self.active_instances + self.wild_instances:
             pet.window.destroy()
         self.active_instances.clear()
@@ -1365,7 +2566,7 @@ class GameController:
         pet = DesktopPet(
             self.root, pet_data, is_wild, self.on_pet_removed, self.on_pet_caught, 
             self.show_pc_ui, self.on_pet_evolve, coords, is_mid_evo, evo_channel, 
-            is_overflow=is_overflow
+            is_overflow=is_overflow, get_all_pets_callback=self.get_all_pets, game_controller_ref=self
         )
         
         if is_wild: 
@@ -1395,7 +2596,7 @@ class GameController:
                         wild_data = {
                             "id": str(uuid.uuid4()), "species": target, "level": lvl, 
                             "xp": 0, "is_shiny": is_shiny_roll, "last_evolution_level": lvl,
-                            "flying_height_pct": 3.0
+                            "flying_height_pct": 3.0, "xp_boost_expiry": 0
                         }
                         self.spawn_entity(wild_data, is_wild=True)
                         
@@ -1446,7 +2647,7 @@ class GameController:
                             "is_egg": True,
                             "everstone": False,
                             "flying_height_pct": 3.0,
-                            "hatch_time_remaining": random.randint(900000, 1800000)
+                            "hatch_time_remaining": random.randint(900000, 1800000), "xp_boost_expiry": 0
                         }
                         self.save_mgr.data["inventory"].append(egg_data)
                         self.save_mgr.save_data()
@@ -1517,6 +2718,8 @@ class GameController:
         self.save_mgr.save_data()
 
     def exit_game(self):
+        if hasattr(self, 'active_toy') and self.active_toy:
+            self.active_toy.destroy()
         self.sync_save_state()
         sys.exit()
 

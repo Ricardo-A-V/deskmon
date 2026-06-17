@@ -4,7 +4,8 @@
         "size": 96,
         "movement_speed": 2,
         "is_flying": false,
-        "offset_y": 5
+        "offset_y": 5,
+        "is_climbing": true
     },
     "images": {
         "idle_is_animated": true,

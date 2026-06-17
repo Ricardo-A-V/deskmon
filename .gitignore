@@ -22,6 +22,8 @@ temp_shortcut.vbs
 # Herramientas de desarrollo y procesamiento crudo
 dev_env/
 raw_shinys/
+dev_spawner.py
+climbing_configurator.py
 
 # Releases empaquetados
 releases/
