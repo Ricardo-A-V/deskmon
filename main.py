@@ -6,7 +6,8 @@ import sys
 import random
 import math
 import time
-import uuid 
+import uuid
+import threading 
 
 try:
     import win32gui
@@ -20,6 +21,105 @@ except ImportError:
 
 # --- SUPRESIÓN ESTRICTA DE LA TERMINAL DE PYGAME ---
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
+
+try:
+    from pypresence import Presence
+    HAS_DISCORD = True
+except ImportError:
+    HAS_DISCORD = False
+    print("[!] Advertencia: Falta la librería 'pypresence'. Ejecuta 'pip install pypresence' para habilitar Discord RPC.")
+
+import threading # Obligatorio para evitar micro-tirones en Tkinter
+
+# --- GESTOR DE DISCORD RICH PRESENCE ---
+class DiscordRPC:
+    def __init__(self, client_id):
+        self.client_id = client_id
+        self.RPC = None
+        self.connected = False
+        self.target_pet = None
+        if HAS_DISCORD:
+            self.connect()
+
+    def connect(self):
+        try:
+            self.RPC = Presence(self.client_id)
+            self.RPC.connect()
+            self.connected = True
+            print("[+] Discord RPC Conectado.")
+        except Exception as e:
+            print(f"[-] Error conectando a Discord: {e}")
+            self.connected = False
+
+    def set_target(self, pet):
+        # Ignora huevos para no arruinar la sorpresa
+        if getattr(pet, 'is_egg', False): return
+        self.target_pet = pet
+
+    def update_loop(self, root):
+        if self.connected and self.target_pet and self.target_pet.window.winfo_exists():
+            pet = self.target_pet
+            
+            # 1. Parsear Nombre y Nivel
+            name = pet.pet_data['species'].capitalize()
+            if getattr(pet, 'is_shiny', False):
+                name += " ★"
+            level = pet.pet_data['level']
+
+            # 2. Parsear Actividad y Entorno (Conciencia del Sistema Operativo)
+            window_title = ""
+            if getattr(pet, 'anchored_hwnd', None):
+                try:
+                    raw_title = win32gui.GetWindowText(pet.anchored_hwnd)
+                    if raw_title:
+                        # Extraemos el nombre del programa principal para que quede limpio
+                        parts = raw_title.split('-')
+                        window_title = parts[-1].strip()
+                        if len(window_title) > 20:
+                            window_title = window_title[:17] + "..."
+                except: pass
+
+            is_climbing = getattr(pet, 'is_climbing', False) and getattr(pet, 'climbing_surface', 'floor') != 'floor'
+            
+            if getattr(pet, 'is_flying', False):
+                activity = f"Flotando sobre {window_title}" if window_title else "Flotando por la pantalla"
+            elif is_climbing:
+                activity = f"Trepando por {window_title}" if window_title else "Trepando por los bordes"
+            elif window_title:
+                if pet.current_state == 'idle':
+                    activity = f"Descansando en {window_title}"
+                else:
+                    activity = f"Explorando {window_title}"
+            else:
+                if pet.current_state == 'idle': activity = "Descansando en el escritorio"
+                elif pet.current_state == 'jumping_arc': activity = "Dando saltos"
+                elif pet.current_state == 'falling': activity = "Cayendo al vacío"
+                elif pet.current_state == 'attacking': activity = "Luchando con otro pokémon"
+                elif pet.current_state == 'socializing': activity = "Charlando con otro pokémon"
+                elif pet.current_state == 'eating': activity = "Comiendo una baya"
+                else: activity = "De paseo por el escritorio"
+
+            # 3. Envío Asíncrono del Payload
+            def send_payload():
+                try:
+                    self.RPC.update(
+                        state=activity,
+                        details=f"Nv. {level} | {name}",
+                        # En lugar de buscar un asset por cada especie, cargamos siempre el logo principal.
+                        large_image="app_logo", 
+                        large_text="Deskmon",
+                        # Opcional: Ponemos el nombre del Pokémon al pasar el ratón por encima del logo
+                        small_image="shiny_star" if getattr(pet, 'is_shiny', False) else None,
+                        small_text=name if getattr(pet, 'is_shiny', False) else None
+                    )
+                except:
+                    self.connected = False 
+            
+            # Disparamos en hilo fantasma para que la espera de red no congele la animación a 60FPS
+            threading.Thread(target=send_payload, daemon=True).start()
+        
+        # Refresco cada 15 segundos (Límite estricto de la API de Discord)
+        root.after(15000, lambda: self.update_loop(root))
 
 from PIL import Image, ImageTk, ImageOps
 
@@ -906,8 +1006,13 @@ class DesktopPet:
 
     def handle_double_click(self, event):
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
-            if getattr(self, 'is_egg', False): self.on_open_pc(None) 
-            else: self.on_open_pc(self.pet_data)
+            if getattr(self, 'is_egg', False): 
+                self.on_open_pc(None) 
+            else: 
+                self.on_open_pc(self.pet_data)
+                # FIX: Al hacerle doble clic, se vuelve la estrella de Discord
+                if self.game_controller and hasattr(self.game_controller, 'discord_rpc'):
+                    self.game_controller.discord_rpc.set_target(self)
 
     def update_position(self):
         self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
@@ -2322,6 +2427,17 @@ class GameController:
         btn_reset = tk.Button(bottom_row, text="Format PC", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
+
+        # --- INYECCIÓN DISCORD RPC ---
+        # REEMPLAZA "TU_CLIENT_ID" por los números de tu App en el Discord Developer Portal
+        self.discord_rpc = DiscordRPC("1517136709039685685") 
+        self.discord_rpc.update_loop(self.root)
+        # -----------------------------
+
+        self.build_spawn_pool()
+        self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
+
+
         self.build_spawn_pool()
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
         self.update_pc_ui()
@@ -2638,6 +2754,9 @@ class GameController:
         else: 
             self.active_instances.append(pet)
             self.sync_save_state()
+            # FIX: El último Pokémon del PC captura la atención de Discord
+            if hasattr(self, 'discord_rpc'):
+                self.discord_rpc.set_target(pet)
 
     def wild_spawner_loop(self):
         if self.save_mgr.data.get("settings", {}).get("allow_wild", True):
