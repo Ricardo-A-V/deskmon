@@ -4,7 +4,11 @@
         "size": 64,
         "movement_speed": 2,
         "is_flying": false,
-        "offset_y": 5
+        "offset_y": 5,
+        "can_screen_wrap": false,
+        "can_teleport": true,
+        "heavy_fall": false,
+        "aggressive": true
     },
     "images": {
         "idle_is_animated": true,

@@ -5,7 +5,11 @@
         "movement_speed": 2,
         "is_flying": false,
         "offset_y": 5,
-        "is_climbing": true
+        "is_climbing": true,
+        "can_screen_wrap": false,
+        "can_teleport": false,
+        "heavy_fall": false,
+        "aggressive": false
     },
     "images": {
         "idle_is_animated": true,
