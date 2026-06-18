@@ -364,20 +364,27 @@ class DesktopPet:
         
         if spawn_coords:
             self.x = spawn_coords[0]
-            self.y = self.floor_y 
+            self.y = spawn_coords[1]
+            self.floor_y = spawn_coords[1] # FIX CRÍTICO: Sincronizar el suelo local con la altura de aparición
             if is_mid_evo:
                 self.evo_channel = evo_channel
                 self.current_state = 'evolving_finish'
                 self.finish_evolution_vfx(step=0)
             else:
-                self.current_state = 'egg_idle' if self.is_egg else 'idle'
+                if self.is_egg:
+                    # FIX: Inyectamos el huevo en el estado 'thrown' para que tenga gravedad y rebotes reales
+                    self.current_state = 'thrown'
+                    self.v_x_velocity = random.choice([-2.0, 2.0])
+                    self.v_y_velocity = -4.0 # Pequeño salto parabólico al ser puesto por la madre
+                else:
+                    self.current_state = 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             if self.is_egg:
                 self.y = self.v_y - self.size_h
-                self.current_state = 'falling_egg'
-                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
-                self.animate_egg_spawn(step=0)
+                self.current_state = 'thrown' # Cae rebotando al iniciar la app
+                self.v_x_velocity = random.choice([-2.0, 2.0])
+                self.v_y_velocity = 2.0
             elif self.is_wild:
                 if self.is_legendary and not self.is_flying:
                     self.y = self.v_y - self.size_h
@@ -388,7 +395,8 @@ class DesktopPet:
                     self.current_state = 'ascending' 
                     self.play_shiny_sound() 
                 else:
-                    self.y = self.floor_y
+                    # FIX: Los voladores salvajes ahora aparecen en el cielo (target_floor_y), no en el suelo
+                    self.y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
                     self.current_state = 'spawning_wild'
                     self.canvas.itemconfig(self.canvas_image_id, state='hidden')
                     self.animate_wild_spawn(step=0)
@@ -398,7 +406,7 @@ class DesktopPet:
                 self.canvas.itemconfig(self.canvas_image_id, state='hidden')
                 self.animate_owned_spawn(step=0)
 
-        self.window.geometry(f"{self.size_w}x{self.size_h}+{self.x}+{self.y}")
+        self.window.geometry(f"{self.size_w}x{self.size_h}+{int(self.x)}+{int(self.y)}")
         self.is_facing_right = random.choice([True, False])
         self.frame_rate_active = self.config.get("images", {}).get("frame_rate_active", 120)
         self.frame_rate_idle = self.config.get("images", {}).get("frame_rate_idle", 200)
@@ -429,7 +437,6 @@ class DesktopPet:
             'ascending': self._fsm_ascending,
             'walking_away': self._fsm_walking_away,
             'falling': self._fsm_falling,
-            'falling_egg': self._fsm_falling,
             'falling_pokeball': self._fsm_falling,
             'falling_legendary': self._fsm_falling,
             'socializing': self._fsm_socializing,
@@ -1010,12 +1017,17 @@ class DesktopPet:
                 self.v_y_velocity *= -0.5
 
             if abs(self.v_x_velocity) < 1.0 and abs(self.v_y_velocity) < 1.0:
-                self.current_state = 'ascending'
                 self.v_x_velocity = 0
                 self.v_y_velocity = 0
                 self.floor_y = self.y 
+                # FIX: Si está huyendo, retoma su camino hacia la derecha
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'ascending'
+
         elif getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False):
-            # Forzar la persistencia del atributo de escalada si el JSON lo dictamina
             self.is_climbing = True
             self.v_y_velocity += 1.5 
             self.v_x_velocity *= 0.95 
@@ -1027,25 +1039,36 @@ class DesktopPet:
             
             current_env, _ = self.get_window_environment()
             
-            # ANCLAJE DETECTADO: Captura el impacto en el techo del monitor de forma efectiva con tolerancia
             if self.y <= self.v_y + 15:
                 self.y = self.v_y + ceil_offset
                 self.v_x_velocity = 0; self.v_y_velocity = 0
                 self.climbing_surface = 'screen_ceiling'
                 self.surface_angle = 180
-                self.current_state = 'idle'
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'idle'
             elif self.x <= self.v_x:
                 self.x = self.v_x + wall_offset
                 self.v_x_velocity = 0; self.v_y_velocity = 0
                 self.climbing_surface = 'screen_l'
                 self.surface_angle = 270
-                self.current_state = 'idle'
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'idle'
             elif self.x >= (self.v_x + self.v_width) - self.size_w:
                 self.x = self.v_x + self.v_width - self.size_w - wall_offset
                 self.v_x_velocity = 0; self.v_y_velocity = 0
                 self.climbing_surface = 'screen_r'
                 self.surface_angle = 90
-                self.current_state = 'idle'
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'idle'
             else:
                 physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
                 if self.v_y_velocity > 0 and self.y >= physical_floor:
@@ -1054,7 +1077,13 @@ class DesktopPet:
                     self.v_x_velocity = 0; self.v_y_velocity = 0
                     self.climbing_surface = 'floor'
                     self.surface_angle = 0
-                    self.current_state = 'idle'
+                    
+                    if getattr(self, 'is_overflow', False):
+                        self.current_state = 'walking_away'
+                        self.is_facing_right = True
+                    else:
+                        self.current_state = 'idle'
+                        
                     if current_env['hwnd']:
                         self.anchored_hwnd = current_env['hwnd']
                         self.anchored_rect = current_env['rect']
@@ -1080,7 +1109,13 @@ class DesktopPet:
                 self.y = physical_floor
                 self.floor_y = physical_floor
                 self.v_x_velocity = 0
-                self.current_state = 'egg_idle' if getattr(self, 'is_egg', False) else 'idle'
+                
+                # FIX: Retoma su escape al tocar tierra tras ser lanzado
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'egg_idle' if getattr(self, 'is_egg', False) else 'idle'
             
         self.update_position()
         self.window.after(20, self.physics_loop)
@@ -1096,35 +1131,51 @@ class DesktopPet:
         if self.v_y_velocity > 0 and self.y >= target_y:
             self.y = target_y
             self.floor_y = target_y
-            self.current_state = 'walking' 
             
-            # --- ANCLAJE INSTANTÁNEO ---
-            # Bloquea la condición de carrera asegurando la ventana físicamente en el frame exacto de aterrizaje.
+            # FIX: Si está huyendo y ejecuta un salto por un desnivel, sigue huyendo
+            if getattr(self, 'is_overflow', False):
+                self.current_state = 'walking_away'
+                self.is_facing_right = True
+            else:
+                self.current_state = 'walking' 
+            
             current_env, _ = self.get_window_environment()
             if current_env['hwnd']:
                 self.anchored_hwnd = current_env['hwnd']
                 self.anchored_rect = current_env['rect']
             else:
                 self.anchored_hwnd = None
-            # ---------------------------
                 
             if hasattr(self, 'jump_target_y'): delattr(self, 'jump_target_y')
             
         self.update_position()
         self.window.after(30, self.physics_loop)
+
     def _fsm_ascending(self):
         if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
             self.floor_y -= 5
             if self.floor_y <= getattr(self, 'target_floor_y', self.floor_y):
                 self.floor_y = self.target_floor_y
-                self.current_state = 'idle'
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'idle'
         elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
             self.floor_y += 5
             if self.floor_y >= getattr(self, 'target_floor_y', self.floor_y):
                 self.floor_y = self.target_floor_y
-                self.current_state = 'idle'
+                if getattr(self, 'is_overflow', False):
+                    self.current_state = 'walking_away'
+                    self.is_facing_right = True
+                else:
+                    self.current_state = 'idle'
         else:
-            self.current_state = 'idle'
+            if getattr(self, 'is_overflow', False):
+                self.current_state = 'walking_away'
+                self.is_facing_right = True
+            else:
+                self.current_state = 'idle'
             
         self.fly_amplitude += 0.2
         self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
@@ -1137,9 +1188,19 @@ class DesktopPet:
             self.on_remove(self)
             self.window.destroy()
             return
+            
         if self.is_flying:
             self.fly_amplitude += 0.2
             self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+        else:
+            current_env, _ = self.get_window_environment()
+            physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+            
+            # Efecto Lemming: Si pierden el suelo (ej: caen de una ventana mientras huyen), activan la caída libre
+            if self.y < physical_floor - 15:
+                self.current_state = 'falling'
+                self.v_y_velocity = 0.0
+                
         self.update_position()
         self.window.after(50, self.physics_loop)
 
@@ -1193,7 +1254,12 @@ class DesktopPet:
                     self.floor_y = self.y
                     self.current_state = 'ascending'
                 else:
-                    self.current_state = 'idle'
+                    # FIX: Retoma su escape al terminar la caída libre (Efecto Lemming)
+                    if getattr(self, 'is_overflow', False):
+                        self.current_state = 'walking_away'
+                        self.is_facing_right = True
+                    else:
+                        self.current_state = 'idle'
         self.update_position()
         self.window.after(20, self.physics_loop)
 
@@ -1222,7 +1288,6 @@ class DesktopPet:
         self.window.after(50, self.physics_loop)
 
     def _fsm_attacking(self):
-        # Chequeo de seguridad: Si el objetivo ya no existe o aborta, salimos
         if not getattr(self, 'attack_target', None) or not self.attack_target.window.winfo_exists() or self.attack_target.current_state not in ['attacking', 'thrown']:
             self.current_state = 'idle'
             self.attack_target = None
@@ -1234,7 +1299,6 @@ class DesktopPet:
         if not hasattr(self, 'attack_phase_wait_until'):
             self.attack_phase_wait_until = 0.0
 
-        # Pausas coreográficas de medio segundo justo antes de arrancar a correr
         if current_time < self.attack_phase_wait_until:
             self.update_position()
             self.window.after(30, self.physics_loop)
@@ -1257,7 +1321,6 @@ class DesktopPet:
         self.is_facing_right = (target.x > self.x)
 
         if self.attack_phase == 0:
-            # Fase previa: Se colocan EXACTAMENTE a 50 px de distancia
             if dist < 50: 
                 self.x -= 3.0 * push_dir 
             elif dist > 55:
@@ -1266,7 +1329,6 @@ class DesktopPet:
                 advance_phase(1, pause=True)
 
         elif self.attack_phase == 1:
-            # Primera carrera
             self.x += 10.0 * push_dir
             if dist <= self.size_w * 0.4: 
                 advance_phase(2, pause=False)
@@ -1274,7 +1336,6 @@ class DesktopPet:
                 self.v_y_velocity = -5.0
 
         elif self.attack_phase == 2:
-            # Primer rebote con corrección a 75 px
             target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
             
             if self.y < target_y or self.v_y_velocity != 0:
@@ -1293,7 +1354,6 @@ class DesktopPet:
                     advance_phase(3, pause=True)
 
         elif self.attack_phase == 3:
-            # Segunda carrera
             self.x += 12.0 * push_dir
             if dist <= self.size_w * 0.4: 
                 advance_phase(4, pause=False)
@@ -1301,7 +1361,6 @@ class DesktopPet:
                 self.v_y_velocity = -6.0
 
         elif self.attack_phase == 4:
-            # Segundo rebote con corrección a 100 px
             target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
             
             if self.y < target_y or self.v_y_velocity != 0:
@@ -1320,7 +1379,6 @@ class DesktopPet:
                     advance_phase(5, pause=True)
 
         elif self.attack_phase == 5:
-            # Tercera carrera extremadamente rápida
             self.x += 20.0 * push_dir
             if dist <= self.size_w * 0.4: 
                 self.attack_phase = 6
@@ -1328,7 +1386,6 @@ class DesktopPet:
                 self.v_y_velocity = -15.0            
                 self.current_state = 'thrown' 
                 
-                # Inyección física al rival para que caigan y boten juntos
                 if self.attack_target and getattr(self.attack_target, 'current_state', '') == 'attacking':
                     self.attack_target.v_x_velocity = 25.0 * push_dir 
                     self.attack_target.v_y_velocity = -15.0
@@ -1337,13 +1394,10 @@ class DesktopPet:
                     self.attack_target.attack_phase = 0
                     
                 self.attack_target = None
-                # Se purga el 'return' que paralizaba el hilo FSM de este Pokémon
 
-        # Seguridad de bordes de pantalla para los que no vuelan
         if not self.is_flying and self.current_state != 'thrown':
             self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size_w))
 
-        # Flotación para los voladores durante el combate
         if self.is_flying and getattr(self, 'attack_phase', 0) in [0, 1, 3, 5]:
             self.fly_amplitude += 0.2
             self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
@@ -1392,7 +1446,7 @@ class DesktopPet:
 
         if not getattr(self, 'is_flying', False):
             
-            # --- ANCLAJE EN MODO TERRESTRE ---
+            # --- ANCLAJE EN MODO TERRESTRE (Simulando la naturalidad de main2.py) ---
             if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
                 if getattr(self, 'climbing_surface', 'floor') == 'floor':
                     if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
@@ -1413,29 +1467,33 @@ class DesktopPet:
             self.floor_y = current_physical_floor
 
             # ====================================================================
-            # LÓGICA DE FÍSICA PARA TERRESTRES NO ESCALADORES 
+            # LÓGICA DE FÍSICA PARA TERRESTRES NO ESCALADORES (Como en main2.py)
             # ====================================================================
             if not is_climber:
+                # 1. Si pierden el suelo, caen con parábola suave (el saltito por el borde)
                 if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
                     self.current_state = 'jumping_arc'
                     self.jump_target_y = self.floor_y
                     self.v_y_velocity = -3.0  
                     
+                # 2. Si detectan un escalón sólido arriba, saltan orgánicamente
                 elif self.current_state == 'walking' and ahead_physical_floor is not None:
                     h = self.y - ahead_physical_floor
                     if 30 < h < 750 and self.jump_cooldown == 0: 
-                        if random.randint(1, 1000) <= 30: 
+                        if random.randint(1, 1000) <= 30: # Probabilidad de SUBIR
                             self.current_state = 'jumping_arc'
                             self.jump_target_y = ahead_physical_floor
                             self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
                             self.jump_cooldown = 400
 
+                # 3. NUEVO: Salto espontáneo hacia ABAJO desde una ventana sin llegar al borde
                 elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
                     if random.randint(1, 1000) <= 5: 
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.default_floor_y
                         self.v_y_velocity = -3.0
                         self.jump_cooldown = 400
+                        
                         self.anchored_hwnd = None
                         self.anchored_rect = None
 
@@ -1447,7 +1505,6 @@ class DesktopPet:
                 wall_offset = getattr(self, 'climb_offset_x', 0)
                 ceil_offset = getattr(self, 'climb_offset_y', 0)
 
-                # Caídas desde paredes, techos o suelo flotante (Si se minimiza/cierra la ventana)
                 if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
                     if not getattr(self, 'anchored_hwnd', None):
                         self.current_state = 'jumping_arc'
@@ -1463,7 +1520,6 @@ class DesktopPet:
                         self.v_y_velocity = 0.0
                         self.jump_cooldown = 60
 
-                # Reposo en marcos del monitor
                 if not getattr(self, 'anchored_hwnd', None):
                     if self.climbing_surface == 'screen_l':
                         self.x = self.v_x + wall_offset
@@ -1475,7 +1531,6 @@ class DesktopPet:
                         self.y = self.v_y + ceil_offset
                         self.surface_angle = 180
 
-                # Lógica de caminata en superficies
                 if self.current_state == 'walking':
                     if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
                         rect = self.anchored_rect
@@ -1536,7 +1591,7 @@ class DesktopPet:
                                 self.x = rect[2] - win_offset
                                 self.y = rect[3] - self.size_h / 2
 
-                    else: # Comportamiento en escritorio (Monitor)
+                    else: 
                         if getattr(self, 'climbing_surface', 'floor') == 'floor':
                             self.y = self.default_floor_y
                             self.x += self.speed if self.is_facing_right else -self.speed
@@ -1605,17 +1660,20 @@ class DesktopPet:
                                 self.is_facing_right = True 
 
         else:
-            # === LÓGICA PARA VOLADORES ===
             self.anchored_hwnd = None
             self.climbing_surface = 'floor'
             self.surface_angle = 0
-            if self.floor_y > getattr(self, 'target_floor_y', self.floor_y):
+            
+            target = getattr(self, 'target_floor_y', self.floor_y)
+            if self.floor_y > target:
                 self.floor_y -= 5
-            elif self.floor_y < getattr(self, 'target_floor_y', self.floor_y):
+                if self.floor_y < target: self.floor_y = target
+            elif self.floor_y < target:
                 self.floor_y += 5
+                if self.floor_y > target: self.floor_y = target
+                
             self.y = self.floor_y
 
-        # ==== GESTIÓN FINAL DE ESTADOS GENÉRICOS ====
         if self.current_state == 'idle':
             if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
                 self.y = self.anchored_rect[1] - self.size_h - self.offset_y
@@ -1641,7 +1699,6 @@ class DesktopPet:
                             self.x = (self.v_x + self.v_width) - self.size_w
                             self.is_facing_right = False
 
-        # === INTERACCIONES SOCIALES Y DE COMBATE ===
         if self.current_state in ['idle', 'walking'] and getattr(self, 'get_all_pets', None) and not getattr(self, 'is_egg', False) and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if self.social_cooldown == 0 or self.attack_cooldown == 0:
                 for other in self.get_all_pets():
@@ -1704,7 +1761,12 @@ class DesktopPet:
         if self.v_y_velocity > 0 and self.y >= target_y:
             self.y = target_y
             self.floor_y = target_y
-            self.current_state = 'idle' 
+            # FIX: Aseguramos el escape tras rebotar
+            if getattr(self, 'is_overflow', False):
+                self.current_state = 'walking_away'
+                self.is_facing_right = True
+            else:
+                self.current_state = 'idle' 
             
         self.update_position()
         self.window.after(30, self.physics_loop)
@@ -2659,24 +2721,36 @@ class GameController:
 
     def on_pet_evolve(self, pet_instance, new_species, is_mid_evo=False, evo_channel=None):
         if getattr(pet_instance, 'is_egg', False):
+            # 1. Quitarle el estado de huevo y asegurar sus datos en el Inventario (PC)
             pet_instance.pet_data["is_egg"] = False
             self.save_mgr.save_data()
             
+            # 2. Contar cuántos Pokémon patrullando hay (excluyendo el huevo que acaba de romperse)
             active_count = len([p for p in self.active_instances if not getattr(p, 'is_egg', False) and p != pet_instance])
             
+            # 3. Extraer coordenadas y destruir la instancia del huevo
             target_coords = (pet_instance.x, pet_instance.y)
             if pet_instance in self.active_instances:
                 self.active_instances.remove(pet_instance)
+                # CRÍTICO: Sincronizar aquí borra temporalmente al Pokémon de la lista de "Activos" en el JSON
+                self.sync_save_state()
             pet_instance.window.destroy()
 
+            # 4. Decisión de Spawn basada en el límite de campo (6)
             if active_count >= 6:
+                # OVERFLOW (Caminar hacia la derecha y guardarse):
+                # Al pasar is_overflow=True, el FSM lo obligará a caminar e irse.
+                # Como NO se añade a active_instances, se queda guardado de forma segura únicamente en el PC.
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel, is_overflow=True)
-                self.update_pc_ui()
             else:
+                # ESPACIO DISPONIBLE:
+                # Nace normal, entra en active_instances y se vuelve a sincronizar como Activo en el JSON.
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel)
-                self.update_pc_ui()
+            
+            self.update_pc_ui()
             return
 
+        # === LÓGICA PARA EVOLUCIONES DE POKÉMON NORMALES (NO HUEVOS) ===
         pet_instance.pet_data["species"] = new_species
         pet_instance.pet_data["last_evolution_level"] = pet_instance.pet_data["level"]
         self.save_mgr.save_data()
@@ -2684,6 +2758,7 @@ class GameController:
         target_coords = (pet_instance.x, pet_instance.y)
         if pet_instance in self.active_instances:
             self.active_instances.remove(pet_instance)
+            self.sync_save_state()
         pet_instance.window.destroy()
 
         self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel)
