@@ -46,7 +46,7 @@ class DiscordRPC:
             self.RPC = Presence(self.client_id)
             self.RPC.connect()
             self.connected = True
-            print("[+] Discord RPC Conectado.")
+            print("[+] Discord RPC Connected.")
         except Exception as e:
             print(f"[-] Error conectando a Discord: {e}")
             self.connected = False
@@ -250,7 +250,8 @@ class DesktopPetAnimator:
             sys.exit(1)
 
     def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0):
-        if state == 'exiting': return
+        # FIX: Congelar el motor visual durante el temblor para evitar inversiones
+        if state in ['exiting', 'landing_shake']: return
 
         current_time = time.time()
         elapsed_time_ms = (current_time - self.last_frame_time) * 1000
@@ -268,9 +269,10 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing']:
+        # FIX: Añadimos los estados telequinéticos a la lista de renderizado estático
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled']:
             render_state = 'idle'
-        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'eating']:
+        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking']:
             render_state = 'walking'
 
         if render_state == 'walking':
@@ -390,6 +392,7 @@ class DesktopPet:
         self.can_screen_wrap = physics.get("can_screen_wrap", False)
         self.can_teleport = physics.get("can_teleport", False)
         self.heavy_fall = physics.get("heavy_fall", False)
+        self.telekinetic = physics.get("telekinetic", False)
         self.aggressive = physics.get("aggressive", False)
         self.teleport_cooldown = 0
 
@@ -569,6 +572,31 @@ class DesktopPet:
 
     def on_drag_start(self, event):
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
+        
+        # FIX: Destrucción total del vínculo telequinético si se hace clic en el Maestro
+        if self.current_state == 'tk_channeling':
+            self.current_state = 'idle'
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            target = getattr(self, 'tk_target', None)
+            if target:
+                t_w = target.size_w if target.__class__.__name__ == 'DesktopPet' else target.size
+                t_h = target.size_h if target.__class__.__name__ == 'DesktopPet' else target.size
+                self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                target.current_state = 'falling'
+                target.tk_master = None
+            self.tk_target = None
+                
+        # FIX: Destrucción del vínculo si se hace clic en la víctima (Pokémon)
+        if self.current_state == 'tk_lifted':
+            self.current_state = 'falling'
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            master = getattr(self, 'tk_master', None)
+            if master and master.current_state == 'tk_channeling':
+                master.current_state = 'idle'
+                master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
+                master.tk_target = None
+            self.tk_master = None
+                
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
         self.drag_start_x = self.window.winfo_pointerx()
@@ -631,8 +659,6 @@ class DesktopPet:
         CURRENT_PID = os.getpid()
         valid_windows = []
         
-        # FIX ANTITRASPASO: Aislamiento del contenedor. 
-        # La Pokéball (12px) y el Huevo (12px) ignoran la mecánica de su interior.
         fall_tolerance = 15
         if self.current_state in ['falling', 'falling_pokeball', 'falling_egg', 'falling_legendary']:
             f_speed = 12
@@ -649,7 +675,13 @@ class DesktopPet:
             if win32gui.IsIconic(hwnd): return 
             try: _, pid = win32process.GetWindowThreadProcessId(hwnd)
             except: return
-            if pid == CURRENT_PID: return
+            
+            if pid == CURRENT_PID:
+                # FIX EXCEPCIÓN: Permitir colisión con Bill's PC ignorando el resto de las mascotas
+                title = win32gui.GetWindowText(hwnd)
+                if title != "Bill's PC":
+                    return
+
             try:
                 is_cloaked = ctypes.c_int(0)
                 ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(is_cloaked), ctypes.sizeof(is_cloaked))
@@ -835,13 +867,223 @@ class DesktopPet:
             self.check_evolution()
 
     def show_level_up_vfx(self):
-        txt = self.canvas.create_text(self.size_w//2, 15, text="LEVEL UP!", fill="#F1C40F", font=("Segoe UI", 10, "bold"), tags="vfx_lvl")
+        font_config = ("Segoe UI", 10, "bold")
+        x, y = self.size_w // 2, 15
+        
+        # Agrupamos el borde y el centro bajo el mismo tag ("vfx_lvl_group")
+        offsets = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        for ox, oy in offsets:
+            self.canvas.create_text(x + ox, y + oy, text="LEVEL UP!", fill="#000000", font=font_config, tags="vfx_lvl_group")
+            
+        self.canvas.create_text(x, y, text="LEVEL UP!", fill="#F10F0F", font=font_config, tags="vfx_lvl_group")
+        
         def float_up(step):
             if step < 20 and self.current_state != 'exiting':
-                self.canvas.move(txt, 0, -1)
+                self.canvas.move("vfx_lvl_group", 0, -1)
+                
+                # SOLUCIÓN MATEMÁTICA: Parpadeo de bloque entero.
+                # Al ocultar y mostrar ambos elementos a la vez, el rojo nunca interactúa con el verde.
+                estado = 'hidden' if (step // 2) % 2 == 0 else 'normal'
+                self.canvas.itemconfig("vfx_lvl_group", state=estado)
+                    
                 self.window.after(50, lambda: float_up(step+1))
-            else: self.canvas.delete(txt)
+            else:
+                self.canvas.delete("vfx_lvl_group")
         float_up(0)
+
+    def show_heart_vfx(self):
+        # Matriz estructurada: 0 = Vacío, 1 = Rojo (Relleno), 2 = Negro (Borde)
+        heart_matrix = [
+            [0, 2, 2, 0, 2, 2, 0],
+            [2, 1, 1, 2, 1, 1, 2],
+            [2, 1, 1, 1, 1, 1, 2],
+            [0, 2, 1, 1, 1, 2, 0],
+            [0, 0, 2, 1, 2, 0, 0],
+            [0, 0, 0, 2, 0, 0, 0]
+        ]
+        pixel_size = 2 
+        start_x = (self.size_w // 2) - ((7 * pixel_size) // 2)
+        start_y = 10
+        
+        for row_idx, row in enumerate(heart_matrix):
+            for col_idx, val in enumerate(row):
+                if val != 0:
+                    px = start_x + (col_idx * pixel_size)
+                    py = start_y + (row_idx * pixel_size)
+                    color = "#E74C3C" if val == 1 else "#000000"
+                    self.canvas.create_rectangle(px, py, px+pixel_size, py+pixel_size, fill=color, outline=color, tags="vfx_heart")
+
+        def float_up(step):
+            if step < 20 and self.current_state != 'exiting':
+                self.canvas.move("vfx_heart", 0, -1)
+                self.window.after(50, lambda: float_up(step+1))
+            else: 
+                self.canvas.delete("vfx_heart")
+        float_up(0)
+
+    def manage_tk_aura(self, canvas, w, h, is_active):
+        if is_active:
+            canvas.delete("tk_aura") 
+            t = time.time()
+            cx, cy = w / 2, h / 2
+            base_radius = max(w, h) * 0.6
+            
+            # Enjambre de 24 partículas psíquicas generadas matemáticamente en tiempo real
+            for i in range(24):
+                # 1. Velocidad asimétrica (Algunas partículas van rápido, otras lento, otras al revés)
+                speed = 1.5 + (math.sin(i * 7.1) * 2.0)
+                angle = (t * speed) + (i * 0.8)
+                
+                # 2. Dispersión del radio (Rompe la circunferencia para crear una nube caótica)
+                scatter = math.cos(i * 13.3) * (base_radius * 0.5)
+                r = base_radius + scatter
+                
+                px = cx + math.cos(angle) * r
+                py = cy + math.sin(angle) * r
+                
+                # 3. Fase de parpadeo individual basada en el tiempo
+                blink_phase = math.sin(t * 12.0 + i * 3.14)
+                
+                if blink_phase > 0.5:
+                    color = "#FFFFFF" # Destello blanco intenso
+                    size = 2
+                elif blink_phase > -0.3:
+                    color = "#D24DFF" # Morado de energía base
+                    size = 1
+                else:
+                    continue # Partícula invisible (simula que se apaga del todo)
+                
+                canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
+                
+            canvas.tag_lower("tk_aura") # Forzar la nube por detrás del sprite
+        else:
+            canvas.delete("tk_aura")
+
+    def trigger_landing_shake(self):
+        self.current_state = 'landing_shake'
+        self.shake_timer = 25
+        
+        # ONDA SÍSMICA (Seismic Shockwave)
+        if getattr(self, 'get_all_pets', None):
+            for other in self.get_all_pets():
+                if other != self and other.current_state in ['idle', 'walking', 'socializing', 'attacking'] and not getattr(other, 'is_flying', False) and not getattr(other, 'is_egg', False):
+                    # FIX: Calcular el suelo físico real (las suelas de los pies), no el anclaje superior
+                    my_floor = self.floor_y + self.size_h + getattr(self, 'offset_y', 0)
+                    other_floor = other.floor_y + other.size_h + getattr(other, 'offset_y', 0)
+                    
+                    # Rango de impacto aumentado a 400px para que se note el efecto de masa
+                    if abs(my_floor - other_floor) < 25 and abs(other.x - self.x) < 400:
+                        other.current_state = 'jumping_arc'
+                        other.jump_target_y = other.floor_y
+                        other.v_y_velocity = -5.0 
+                        other.v_x_velocity = 0.0
+                        other.anchored_hwnd = None
+
+    def _fsm_tk_lifted(self):
+        if not hasattr(self, 'tk_master') or not self.tk_master.window.winfo_exists() or self.tk_master.current_state != 'tk_channeling':
+            self.current_state = 'falling'
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_tk_channeling(self):
+        target = getattr(self, 'tk_target', None)
+        
+        if not target or getattr(target, 'current_state', '') not in ['tk_controlled', 'tk_lifted']:
+            self.current_state = 'idle'
+            self.tk_cooldown = 600
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            if target: 
+                t_w = target.size_w if target.__class__.__name__ == 'DesktopPet' else target.size
+                t_h = target.size_h if target.__class__.__name__ == 'DesktopPet' else target.size
+                self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                target.tk_master = None
+            self.tk_target = None
+            self.window.after(30, self.physics_loop) 
+            return
+
+        self.tk_timer -= 1
+        
+        is_berry = target.__class__.__name__ == 'InteractiveBerry'
+        is_toy = target.__class__.__name__ == 'InteractivePokeball'
+        is_pet = target.__class__.__name__ == 'DesktopPet'
+
+        t_w = target.size_w if is_pet else target.size
+        t_h = target.size_h if is_pet else target.size
+
+        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+        self.manage_tk_aura(target.canvas, t_w, t_h, True)
+
+        my_cx = self.x + self.size_w / 2
+        my_cy = self.y + self.size_h / 2
+        t_cx = target.x + t_w / 2
+        t_cy = target.y + t_h / 2
+
+        if is_berry:
+            dx = my_cx - t_cx
+            dy = my_cy - t_cy
+            dist = math.sqrt(dx**2 + dy**2)
+            if dist < 30:
+                self.current_state = 'eating'
+                self.eating_timer = 30
+                self.interaction_target = target
+                self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+                target.destroy()
+                self.show_heart_vfx()
+                self.window.after(30, self.physics_loop)
+                return
+            else:
+                self.tk_timer += 1 
+                target.x += (dx / max(1, dist)) * 12.0
+                target.y += (dy / max(1, dist)) * 12.0
+        
+        elif is_toy or is_pet:
+            if not getattr(self, 'tk_orbit_started', False):
+                dx_center = my_cx - t_cx
+                dy_center = my_cy - t_cy
+                dist_to_center = math.sqrt(dx_center**2 + dy_center**2)
+                
+                if dist_to_center > 40:
+                    self.tk_timer += 1 
+                    target.x += (dx_center / max(1, dist_to_center)) * 18.0
+                    target.y += (dy_center / max(1, dist_to_center)) * 18.0
+                else:
+                    self.tk_orbit_started = True
+                    self.tk_orbit_angle = 0.0 
+            else:
+                self.tk_orbit_angle += 0.12
+                angle = self.tk_orbit_angle % (2 * math.pi)
+                radius = self.size_w * 1.3
+                
+                target.x = my_cx + math.cos(angle) * radius - t_w / 2
+                target.y = my_cy + math.sin(angle) * radius - t_h / 2 - 20
+
+                if self.tk_timer <= 0:
+                    # FIX: Lanzamiento orgánico en la mitad superior de la órbita (math.sin < -0.1)
+                    # El 20% de probabilidad hace que suelte el objeto en un punto distinto cada vez
+                    if math.sin(angle) < -0.1 and (random.randint(1, 100) <= 20 or math.cos(angle) > 0.9):
+                        self.current_state = 'idle'
+                        self.tk_cooldown = 3000
+                        target.current_state = 'thrown'
+                        
+                        # Calcula un arco parabólico estrictamente superior (entre 180 y 360 grados)
+                        launch_angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)
+                        
+                        # ASIGNACIÓN DE FUERZA MASIVA SEGÚN LA MASA DEL OBJETIVO
+                        if is_toy:
+                            force = random.uniform(40.0, 55.0)
+                        else:
+                            force = random.uniform(22.0, 32.0)
+                            
+                        target.v_x_velocity = math.cos(launch_angle) * force
+                        target.v_y_velocity = math.sin(launch_angle) * force
+                            
+                        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+                        self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                        target.tk_master = None
+
+        target.update_position()
+        self.update_position()
+        self.window.after(30, self.physics_loop)
 
     def check_evolution(self):
         if self.pet_data.get("everstone", False): return
@@ -1259,8 +1501,7 @@ class DesktopPet:
                 
                 # GATILLO DE VIBRACIÓN INTERNA DEL POKÉMON (Ajustado a 0.75s)
                 if getattr(self, 'heavy_fall', False) and self.v_y_velocity > 15:
-                    self.current_state = 'landing_shake'
-                    self.shake_timer = 25
+                    self.trigger_landing_shake()
                 else:
                     if getattr(self, 'is_overflow', False):
                         self.current_state = 'walking_away'
@@ -1294,8 +1535,7 @@ class DesktopPet:
             
             # GATILLO DE VIBRACIÓN INTERNA DEL POKÉMON
             if getattr(self, 'heavy_fall', False) and self.v_y_velocity > 15:
-                self.current_state = 'landing_shake'
-                self.shake_timer = 25 # 0.75 segundos aturdido
+                    self.trigger_landing_shake()
             else:
                 if getattr(self, 'is_overflow', False):
                     self.current_state = 'walking_away'
@@ -1485,10 +1725,10 @@ class DesktopPet:
                     self.floor_y = self.y
                     self.current_state = 'ascending'
                 else:
-                    # GATILLO DE VIBRACIÓN INTERNA DEL POKÉMON (Ajustado a 0.75s)
-                    if getattr(self, 'heavy_fall', False) and self.current_state == 'falling':
-                        self.current_state = 'landing_shake'
-                        self.shake_timer = 25
+                    # FIX: En estado de caída directa, la velocidad está bloqueada matemáticamente, 
+                    # por lo que no es necesario evaluar self.v_y_velocity.
+                    if getattr(self, 'heavy_fall', False):
+                        self.trigger_landing_shake()
                     else:
                         if getattr(self, 'is_overflow', False):
                             self.current_state = 'walking_away'
@@ -1621,33 +1861,42 @@ class DesktopPet:
             if dist <= self.size_w * 0.5 or has_crossed: 
                 self.attack_phase = 6
                 
-                # --- SISTEMA DE PESO EN COMBATE ---
-                # Si el enemigo NO es pesado o NO es agresivo (Lucha), se considera un objetivo blando
+                # --- SISTEMA DE MASA Y POTENCIA RELATIVA ---
+                # Poder = Nivel + (Mitad del tamaño geométrico)
+                my_power = self.pet_data['level'] + (self.size_w * 0.5)
+                target_power = target.pet_data['level'] + (target.size_w * 0.5)
+                
+                # Ratio de impacto = Fuerza del enemigo / Mi propia masa
+                # Limitado matemáticamente entre 0.4x y 2.0x para evitar colapsar la pantalla
+                my_knockback_ratio = max(0.4, min(4.0, target_power / max(1, my_power)))
+                target_knockback_ratio = max(0.4, min(4.0, my_power / max(1, target_power)))
+                
                 target_is_soft = not getattr(target, 'heavy_fall', False) or not getattr(target, 'aggressive', False)
                 self_is_soft = not getattr(self, 'heavy_fall', False) or not getattr(self, 'aggressive', False)
                 
                 # Qué le ocurre al ATACANTE (self)
                 if getattr(self, 'heavy_fall', False) and target_is_soft:
                     self.current_state = 'landing_shake'
-                    self.shake_timer = 25 # 0.75 segundos de vibración como un muro
+                    self.shake_timer = 25 
                     self.v_x_velocity = 0.0
                     self.v_y_velocity = 0.0
                 else:
                     self.current_state = 'thrown' 
-                    self.v_x_velocity = -25.0 * push_dir 
-                    self.v_y_velocity = -15.0            
+                    self.v_x_velocity = -(25.0 * my_knockback_ratio) * push_dir 
+                    # El eje Y se limita a 1.5 máximo para evitar que el salto rompa el radar de techo
+                    self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio))            
                 
                 # Qué le ocurre al RECEPTOR (target)
                 if target and getattr(target, 'current_state', '') == 'attacking':
                     if getattr(target, 'heavy_fall', False) and self_is_soft:
                         target.current_state = 'landing_shake'
-                        target.shake_timer = 25 # 0.75 segundos de vibración como un muro
+                        target.shake_timer = 25 
                         target.v_x_velocity = 0.0
                         target.v_y_velocity = 0.0
                     else:
                         target.current_state = 'thrown'
-                        target.v_x_velocity = 25.0 * push_dir 
-                        target.v_y_velocity = -15.0
+                        target.v_x_velocity = (25.0 * target_knockback_ratio) * push_dir 
+                        target.v_y_velocity = -(15.0 * min(1.5, target_knockback_ratio))
                         
                     target.attack_target = None
                     target.attack_phase = 0
@@ -1696,12 +1945,47 @@ class DesktopPet:
         self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
         self.attack_cooldown = max(0, getattr(self, 'attack_cooldown', 0) - 1)
         self.teleport_cooldown = max(0, getattr(self, 'teleport_cooldown', 0) - 1)
+
+        self.tk_cooldown = max(0, getattr(self, 'tk_cooldown', 0) - 1)
+        
+        if getattr(self, 'telekinetic', False) and self.tk_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: # Probabilidad de activar poderes
+                target = None
+                if self.game_controller:
+                    # 1. Prioriza atraer Bayas (Alcance de 400 -> 800)
+                    for b in getattr(self.game_controller, 'active_berries', []):
+                        if b.current_state not in ['exiting', 'tk_controlled'] and abs(b.x - self.x) < 800:
+                            target = b; break
+                    # 2. Si no hay bayas, busca el Juguete (Alcance de 400 -> 800)
+                    if not target and getattr(self.game_controller, 'active_toy', None):
+                        t = self.game_controller.active_toy
+                        if t.current_state not in ['exiting', 'tk_controlled'] and abs(t.x - self.x) < 800:
+                            target = t
+                # 3. Si no hay objetos, levanta a otro Pokémon cercano (Alcance de 250 -> 500)
+                if not target and getattr(self, 'get_all_pets', None):
+                    valid_pets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500]
+                    if valid_pets: target = random.choice(valid_pets)
+                    
+                if target:
+                    self.current_state = 'tk_channeling'
+                    self.tk_target = target
+                    self.tk_timer = 150 # Levitar durante 5 segundos
+                    
+                    self.tk_orbit_started = False # FIX: Fuerza el reseteo de la fase orbital
+                    
+                    target.tk_master = self
+                    target.current_state = 'tk_controlled' if target.__class__.__name__ != 'DesktopPet' else 'tk_lifted'
+                    if target.__class__.__name__ == 'DesktopPet':
+                        target.anchored_hwnd = None
+                        
+                    self.window.after(50, self.physics_loop) 
+                    return
         
         if self.can_teleport and self.teleport_cooldown == 0 and self.current_state in ['idle', 'walking']:
             if random.randint(1, 100) <= 1:
                 self.current_state = 'teleporting_out'
                 self.teleport_step = 1.0
-                self.teleport_cooldown = 3600 
+                self.teleport_cooldown = 3000
                 self.window.after(50, self.physics_loop)
                 return
 
@@ -2001,17 +2285,27 @@ class DesktopPet:
                                 other.is_facing_right = (self.x > other.x)
                                 break
 
-        if self.current_state in ['idle', 'walking'] and not self.is_wild and not self.is_egg and getattr(self, 'climbing_surface', 'floor') == 'floor' and self.game_controller:
+        # === INTERACCIÓN CON BAYAS (RADIAL Y DINÁMICA) ===
+        if self.current_state in ['idle', 'walking'] and not self.is_wild and not getattr(self, 'is_egg', False) and self.game_controller:
             for berry in getattr(self.game_controller, 'active_berries', []):
-                if berry.current_state not in ['exiting', 'dragged']:
-                    my_true_floor = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else (self.floor_y + self.size_h + self.offset_y)
-                    berry_true_floor = berry.floor_y + berry.size - 6
-                    if abs(my_true_floor - berry_true_floor) < 15 and abs(self.x - berry.x) < 20:
+                # Quitamos la restricción de 'dragged'. Si la baya existe, es comestible.
+                if berry.current_state != 'exiting':
+                    # Calculamos los centros geométricos reales de ambos objetos
+                    my_cx = self.x + self.size_w / 2
+                    my_cy = self.y + self.size_h / 2
+                    berry_cx = berry.x + berry.size / 2
+                    berry_cy = berry.y + berry.size / 2
+                    
+                    # Distancia Euclidiana
+                    dist = math.sqrt((my_cx - berry_cx)**2 + (my_cy - berry_cy)**2)
+                    
+                    # Hitbox generosa (60% del tamaño del Pokémon)
+                    if dist < max(self.size_w, self.size_h) * 0.6:
                         self.current_state = 'eating'
                         self.eating_timer = 30
-                        self.is_facing_right = (berry.x > self.x)
                         self.interaction_target = berry
-                        berry.destroy()
+                        berry.destroy() # Destruye la baya visualmente
+                        self.show_heart_vfx() # Dispara el corazón pixelado
                         break
 
         if self.is_flying and self.current_state not in ['socializing', 'attacking', 'eating']:
@@ -2132,6 +2426,44 @@ class InteractivePokeball:
             except: pass
             self.window.after(2000, self.keep_on_top)
 
+    def manage_tk_aura(self, canvas, w, h, is_active):
+        if is_active:
+            canvas.delete("tk_aura") 
+            t = time.time()
+            cx, cy = w / 2, h / 2
+            base_radius = max(w, h) * 0.6
+            
+            # Enjambre de 24 partículas psíquicas generadas matemáticamente en tiempo real
+            for i in range(24):
+                # 1. Velocidad asimétrica (Algunas partículas van rápido, otras lento, otras al revés)
+                speed = 1.5 + (math.sin(i * 7.1) * 2.0)
+                angle = (t * speed) + (i * 0.8)
+                
+                # 2. Dispersión del radio (Rompe la circunferencia para crear una nube caótica)
+                scatter = math.cos(i * 13.3) * (base_radius * 0.5)
+                r = base_radius + scatter
+                
+                px = cx + math.cos(angle) * r
+                py = cy + math.sin(angle) * r
+                
+                # 3. Fase de parpadeo individual basada en el tiempo
+                blink_phase = math.sin(t * 12.0 + i * 3.14)
+                
+                if blink_phase > 0.5:
+                    color = "#FFFFFF" # Destello blanco intenso
+                    size = 2
+                elif blink_phase > -0.3:
+                    color = "#D24DFF" # Morado de energía base
+                    size = 1
+                else:
+                    continue # Partícula invisible (simula que se apaga del todo)
+                
+                canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
+                
+            canvas.tag_lower("tk_aura") # Forzar la nube por detrás del sprite
+        else:
+            canvas.delete("tk_aura")
+
     def destroy(self):
         self.current_state = 'exiting'
         if self.on_destroy:
@@ -2143,6 +2475,18 @@ class InteractivePokeball:
         
     def on_drag_start(self, event):
         if self.current_state == 'exiting': return
+        
+        # FIX: Liberar el objeto de la telequinesis y avisar al Maestro para que pare
+        if self.current_state == 'tk_controlled':
+            self.current_state = 'falling'
+            self.manage_tk_aura(self.canvas, self.size, self.size, False)
+            master = getattr(self, 'tk_master', None)
+            if master and master.current_state == 'tk_channeling':
+                master.current_state = 'idle'
+                master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
+                master.tk_target = None
+            self.tk_master = None
+            
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
         self.drag_start_x = self.window.winfo_pointerx()
@@ -2211,7 +2555,11 @@ class InteractivePokeball:
             if win32gui.IsIconic(hwnd): return 
             try:
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                if pid == CURRENT_PID: return
+                if pid == CURRENT_PID:
+                    # FIX EXCEPCIÓN: Permitir colisión con Bill's PC
+                    title = win32gui.GetWindowText(hwnd)
+                    if title != "Bill's PC":
+                        return
             except: pass
             try:
                 is_cloaked = ctypes.c_int(0)
@@ -2301,6 +2649,14 @@ class InteractivePokeball:
     def physics_loop(self):
         if self.current_state == 'exiting': return
         if self.current_state == 'dragged':
+            self.window.after(30, self.physics_loop)
+            return
+        
+        # FIX: Control Telequinético para el Juguete
+        if self.current_state == 'tk_controlled':
+            if not hasattr(self, 'tk_master') or not self.tk_master.window.winfo_exists() or self.tk_master.current_state != 'tk_channeling':
+                self.current_state = 'falling'
+                self.manage_tk_aura(self.canvas, self.size, self.size, False)
             self.window.after(30, self.physics_loop)
             return
 
@@ -2468,6 +2824,14 @@ class InteractiveBerry(InteractivePokeball):
             self.window.after(30, self.physics_loop)
             return
 
+        # FIX: Control Telequinético para la Baya
+        if self.current_state == 'tk_controlled':
+            if not hasattr(self, 'tk_master') or not self.tk_master.window.winfo_exists() or self.tk_master.current_state != 'tk_channeling':
+                self.current_state = 'falling'
+                self.manage_tk_aura(self.canvas, self.size, self.size, False)
+            self.window.after(30, self.physics_loop)
+            return
+
         self.v_y_velocity += 0.8 
         self.v_x_velocity *= 0.99 
         self.y += self.v_y_velocity
@@ -2512,6 +2876,129 @@ class InteractiveBerry(InteractivePokeball):
         self.update_position()
         self.window.after(30, self.physics_loop)
 
+# --- VENTANA DE SELECCIÓN DE INICIAL ---
+class StarterSelectionWindow:
+    def __init__(self, parent, pets_dir, on_select_callback):
+        self.window = tk.Toplevel(parent)
+        self.window.title("Selector Inicial")
+        self.window.geometry("450x550")
+        self.window.attributes('-topmost', True)
+        self.window.grab_set() 
+
+        self.pets_dir = pets_dir
+        self.on_select = on_select_callback
+        self.images_cache = [] # CRÍTICO: Previene que el Garbage Collector borre las imágenes
+        
+        tk.Label(self.window, text="Prepare for your new adventure.\nSelect your starting pokémon:", font=("Segoe UI", 12, "bold")).pack(pady=(15, 10))
+        
+        # 1. Crear el contenedor con Scroll (Lógica obligatoria en Tkinter para listas largas)
+        container = tk.Frame(self.window)
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        canvas = tk.Canvas(container, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = tk.Frame(canvas)
+        
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw", width=400)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # 2. Bind para usar la rueda del ratón en el scroll
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        self.window.bind("<Destroy>", lambda e: canvas.unbind_all("<MouseWheel>"))
+
+        # 3. Matriz Canónica (9 Generaciones + Pikachu/Eevee)
+        starter_grid = [
+            ["pikachu", "eevee"],
+            ["bulbasaur", "charmander", "squirtle"],
+            ["chikorita", "cyndaquil", "totodile"],
+            ["treecko", "torchic", "mudkip"],
+            ["turtwig", "chimchar", "piplup"],
+            ["snivy", "tepig", "oshawott"],
+            ["chespin", "fennekin", "froakie"],
+            ["rowlet", "litten", "popplio"],
+            ["grookey", "scorbunny", "sobble"],
+            ["sprigatito", "fuecoco", "quaxly"]
+        ]
+        
+        # 4. Construcción del Grid Visual
+        for row_idx, row_species in enumerate(starter_grid):
+            row_frame = tk.Frame(self.scrollable_frame)
+            row_frame.pack(fill=tk.X, pady=8)
+            
+            # Forzar el centrado distribuyendo el peso en columnas vacías a los lados
+            row_frame.grid_columnconfigure(0, weight=1)
+            row_frame.grid_columnconfigure(len(row_species)+1, weight=1)
+            
+            for col_idx, species in enumerate(row_species):
+                btn = self.create_pet_button(row_frame, species)
+                if btn:
+                    btn.grid(row=0, column=col_idx+1, padx=8)
+                    
+    def create_pet_button(self, parent_frame, species):
+        pet_path = os.path.join(self.pets_dir, species)
+        if not os.path.exists(pet_path):
+            return None # Si el usuario no tiene la carpeta descargada, se omite
+            
+        img_tk = None
+        try:
+            config_path = os.path.join(pet_path, "config.json")
+            idle_file = "idle_0.png"
+            
+            # Buscar inteligentemente cómo se llama su sprite idle en el json
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    img_cfg = cfg.get("images", {})
+                    pref = img_cfg.get("idle_prefix", "idle_")
+                    suf = img_cfg.get("idle_suffix", ".png")
+                    idle_file = f"{pref}0{suf}"
+                    
+            img_path = os.path.join(pet_path, idle_file)
+            if os.path.exists(img_path):
+                raw_img = Image.open(img_path).convert("RGBA")
+                # Limpiar canales alpha sucios que rompen los fondos en Tkinter
+                r, g, b, a = raw_img.split()
+                a = a.point(lambda p: 255 if p > 127 else 0)
+                raw_img = Image.merge("RGBA", (r, g, b, a))
+                
+                raw_img = raw_img.resize((64, 64), Image.Resampling.NEAREST)
+                img_tk = ImageTk.PhotoImage(raw_img)
+                self.images_cache.append(img_tk) 
+        except Exception as e:
+            print(f"Error procesando sprite de {species}: {e}")
+            
+        btn = tk.Button(
+            parent_frame, 
+            text=species.capitalize(), 
+            image=img_tk, 
+            compound=tk.TOP, 
+            font=("Segoe UI", 9, "bold"),
+            bg="#ECF0F1",
+            activebackground="#D5D8DC",
+            bd=1,
+            relief=tk.RAISED,
+            cursor="hand2",
+            width=100,
+            command=lambda s=species: self.confirm(s)
+        )
+        return btn
+        
+    def confirm(self, species):
+        import tkinter.messagebox as mb
+        if mb.askyesno("Confirmar", f"¿Recibir a {species.capitalize()} como tu Pokémon inicial?"):
+            self.on_select(species)
+            self.window.destroy()
+
 # --- CONTROLADOR CENTRAL DEL JUEGO ---
 class GameController:
     def __init__(self):
@@ -2529,7 +3016,8 @@ class GameController:
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         
-        w, h = 280, 205 
+        # Aumentamos la altura de 205 a 250 para acomodar el buscador sin aplastar
+        w, h = 280, 250 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
 
@@ -2543,7 +3031,25 @@ class GameController:
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False) 
         
-        tk.Label(header_frame, text="Bill's PC", font=("Segoe UI", 9, "bold"), bg=bg_header, fg=fg_header).pack(side=tk.LEFT, padx=10)
+        # --- LÓGICA DE ARRASTRE DE VENTANA ---
+        self._drag_data = {"x": 0, "y": 0}
+        def drag_start(event):
+            self._drag_data["x"] = event.x
+            self._drag_data["y"] = event.y
+        def drag_motion(event):
+            delta_x = event.x - self._drag_data["x"]
+            delta_y = event.y - self._drag_data["y"]
+            x = self.root.winfo_x() + delta_x
+            y = self.root.winfo_y() + delta_y
+            self.root.geometry(f"+{x}+{y}")
+            
+        header_frame.bind("<ButtonPress-1>", drag_start)
+        header_frame.bind("<B1-Motion>", drag_motion)
+        
+        lbl_title = tk.Label(header_frame, text="Bill's PC", font=("Segoe UI", 9, "bold"), bg=bg_header, fg=fg_header)
+        lbl_title.pack(side=tk.LEFT, padx=10)
+        lbl_title.bind("<ButtonPress-1>", drag_start)
+        lbl_title.bind("<B1-Motion>", drag_motion)
         
         btn_power = tk.Button(header_frame, text="X", font=("Segoe UI", 8, "bold"), bg="#C0392B", fg="white", bd=0, width=3, command=self.exit_game)
         btn_power.pack(side=tk.RIGHT, padx=(0,0))
@@ -2554,8 +3060,18 @@ class GameController:
         content_frame = tk.Frame(self.root, bg=bg_main)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
+        # Barra de búsqueda
+        search_row = tk.Frame(content_frame, bg=bg_main)
+        search_row.pack(fill=tk.X, padx=10, pady=(8, 0))
+        
+        tk.Label(search_row, text="🔍", bg=bg_main, fg="#7F8C8D").pack(side=tk.LEFT)
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", self.filter_pc_list)
+        self.entry_search = tk.Entry(search_row, textvariable=self.search_var, relief=tk.FLAT)
+        self.entry_search.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
         top_row = tk.Frame(content_frame, bg=bg_main)
-        top_row.pack(fill=tk.X, padx=10, pady=(8, 4))
+        top_row.pack(fill=tk.X, padx=10, pady=(4, 4))
         
         self.combo_var = tk.StringVar()
         self.combo = ttk.Combobox(top_row, textvariable=self.combo_var, state="readonly", justify="center")
@@ -2607,19 +3123,12 @@ class GameController:
         btn_release = tk.Button(bottom_row, text="Release", font=("Segoe UI", 8, "bold"), bg="#8E44AD", fg="white", bd=0, pady=2, command=self.release_from_pc)
         btn_release.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
 
-        btn_reset = tk.Button(bottom_row, text="Format PC", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
+        btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
-
         # --- INYECCIÓN DISCORD RPC ---
-        # REEMPLAZA "TU_CLIENT_ID" por los números de tu App en el Discord Developer Portal
         self.discord_rpc = DiscordRPC("1517136709039685685") 
         self.discord_rpc.update_loop(self.root)
-        # -----------------------------
-
-        self.build_spawn_pool()
-        self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
-
 
         self.build_spawn_pool()
         self.combo.bind("<<ComboboxSelected>>", self.on_combo_select)
@@ -2796,7 +3305,7 @@ class GameController:
                         active_pet.check_evolution()
 
     def confirm_reset(self):
-        if messagebox.askyesno("Reinicio", "ALERTA: Esto borrará todos tus Pokémon y restablecerá los datos de fábrica.\n\n¿Proceder?"):
+        if messagebox.askyesno("Restart", "WARNING: This action will delete all your pokémon and reset the game data.\n\nProceed?"):
             StarterSelectionWindow(self.root, self.pets_directory, self.execute_reset)
 
     def execute_reset(self, chosen_species):
@@ -2815,12 +3324,9 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
-        current_selection = self.combo_var.get()
-        
+        # Esta función ahora solo construye la lista maestra (sin filtrar)
         if not self.save_mgr.data["inventory"]:
-            self.combo['values'] = ["(Vacio)"]
-            self.combo.current(0)
-            self.on_combo_select()
+            self.full_display_list = ["(Vacio)"]
         else:
             formatted_list = []
             for p in self.save_mgr.data["inventory"]:
@@ -2830,29 +3336,45 @@ class GameController:
                 formatted_list.append(f"{p['species'].capitalize()}{shiny_tag} - lvl.{p['level']}")
             
             if not formatted_list:
-                self.combo['values'] = ["(Vacio)"]
-                self.combo.current(0)
-                self.on_combo_select()
-                return
-
-            unique_owned = sorted(list(set(formatted_list)))
-            display_list = []
-            
-            for p_str in unique_owned:
-                count = formatted_list.count(p_str)
-                if count > 1: 
-                    display_list.append(f"{p_str} (x{count})")
-                else: 
-                    display_list.append(p_str)
-                    
-            self.combo['values'] = display_list
-            
-            if current_selection in display_list:
-                self.combo.set(current_selection)
+                self.full_display_list = ["(Vacio)"]
             else:
-                self.combo.current(0)
+                unique_owned = sorted(list(set(formatted_list)))
+                display_list = []
+                for p_str in unique_owned:
+                    count = formatted_list.count(p_str)
+                    if count > 1: 
+                        display_list.append(f"{p_str} (x{count})")
+                    else: 
+                        display_list.append(p_str)
+                self.full_display_list = display_list
                 
-            self.on_combo_select()
+        # Llama al filtro para aplicar la búsqueda (o mostrar todos si está en blanco)
+        self.filter_pc_list()
+
+    def filter_pc_list(self, *args):
+        search_query = self.search_var.get().lower().strip()
+        current_selection = self.combo_var.get()
+        
+        if not hasattr(self, 'full_display_list'):
+            return
+
+        if not search_query:
+            filtered = self.full_display_list
+        else:
+            # Filtra ignorando mayúsculas y acentos
+            filtered = [item for item in self.full_display_list if search_query in item.lower()]
+            
+        if not filtered:
+            filtered = ["(No hay resultados)"]
+            
+        self.combo['values'] = filtered
+        
+        if current_selection in filtered:
+            self.combo.set(current_selection)
+        else:
+            self.combo.current(0)
+            
+        self.on_combo_select()
 
     def spawn_from_pc(self):
         selection = self.combo_var.get()

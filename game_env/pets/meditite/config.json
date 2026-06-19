@@ -8,7 +8,8 @@
         "can_screen_wrap": false,
         "can_teleport": true,
         "heavy_fall": false,
-        "aggressive": true
+        "aggressive": true,
+        "telekinetic": true
     },
     "images": {
         "idle_is_animated": true,
