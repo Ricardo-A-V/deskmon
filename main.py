@@ -249,7 +249,7 @@ class DesktopPetAnimator:
             print(f"Error cargando assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0):
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False):
         # FIX: Congelar el motor visual durante el temblor para evitar inversiones
         if state in ['exiting', 'landing_shake']: return
 
@@ -269,8 +269,8 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        # FIX: Añadimos los estados telequinéticos a la lista de renderizado estático
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled']:
+        # FIX: Añadimos la burbuja a la lista de renderizado estático
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled']:
             render_state = 'idle'
         elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking']:
             render_state = 'walking'
@@ -307,6 +307,21 @@ class DesktopPetAnimator:
             white_layer = Image.new("RGBA", processed_image.size, (255, 255, 255, 255))
             white_layer.putalpha(processed_image.split()[3]) 
             processed_image = Image.blend(processed_image, white_layer, blend_factor)
+
+        # --- NUEVO: EFECTO DE INTERFERENCIA (GLITCH VECTORIAL) ---
+        # Alterna entre el sprite normal y el roto basándose en los milisegundos del reloj
+        if is_glitching and int(time.time() * 15) % 2 == 0:
+            w, h = processed_image.size
+            glitched = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            strip_h = max(1, h // 5) # Corta el sprite en 5 láminas horizontales
+            
+            for i in range(5):
+                box = (0, i * strip_h, w, min(h, (i + 1) * strip_h))
+                strip = processed_image.crop(box)
+                offset_x = random.choice([-12, -6, 6, 12]) # Las desplaza aleatoriamente
+                glitched.paste(strip, (offset_x, i * strip_h))
+                
+            processed_image = glitched
 
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
@@ -393,6 +408,9 @@ class DesktopPet:
         self.can_teleport = physics.get("can_teleport", False)
         self.heavy_fall = physics.get("heavy_fall", False)
         self.telekinetic = physics.get("telekinetic", False)
+        self.bubble_blower = physics.get("bubble_blower", False) 
+        self.can_dig = physics.get("can_dig", False)
+        self.fairy_aura = physics.get("fairy_aura", False) # NUEVA
         self.aggressive = physics.get("aggressive", False)
         self.teleport_cooldown = 0
 
@@ -557,7 +575,11 @@ class DesktopPet:
             'walking': self._fsm_active,
             'climbing': self._fsm_active,
             'teleporting_out': self._fsm_teleporting_out,
-            'teleporting_in': self._fsm_teleporting_in
+            'teleporting_in': self._fsm_teleporting_in,
+            'bubbled': self._fsm_bubbled,
+            'digging_in': self._fsm_digging_in, # NUEVO: Fase de hundimiento
+            'digging': self._fsm_digging,
+            'digging_out': self._fsm_digging_out # NUEVO: Fase de emersión
         }
             
         self.keep_on_top()
@@ -597,6 +619,19 @@ class DesktopPet:
                 master.tk_target = None
             self.tk_master = None
                 
+        # FIX: Explotar la burbuja manualmente si agarras al objetivo
+        if self.current_state == 'bubbled':
+            self.manage_bubble_vfx(False)
+            self.show_bubble_burst_vfx()
+            self.current_state = 'thrown' if getattr(self, 'is_flying', False) else 'falling'
+
+        # FIX: Interrumpir la excavación manualmente restaurando las coordenadas internas
+        if self.current_state in ['digging', 'digging_in', 'digging_out']:
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            # Reset estricto al centro geométrico del Canvas
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2) 
+            self.current_state = 'falling'
+
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
         self.drag_start_x = self.window.winfo_pointerx()
@@ -632,7 +667,30 @@ class DesktopPet:
         if dt > 0:
             self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
             self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
+
+        # FIX: Destrucción del vínculo si se hace clic en la víctima de telequinesis
+        if self.current_state == 'tk_lifted':
+            self.current_state = 'falling'
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            master = getattr(self, 'tk_master', None)
+            if master and master.current_state == 'tk_channeling':
+                master.current_state = 'idle'
+                master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
+                master.tk_target = None
+            self.tk_master = None
+            
+        # FIX: Explotar la burbuja manualmente si agarras al objetivo
+        if self.current_state == 'bubbled':
+            self.manage_bubble_vfx(False)
+            self.show_bubble_burst_vfx()
+            self.current_state = 'falling'
+
+        # FIX: Interrumpir la excavación manualmente si agarras al objetivo
+        if self.current_state == 'digging':
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            self.current_state = 'falling'
         
+        # ACTUALIZACIÓN DE VARIABLES PARA FÍSICAS (Sin alterar el offset del ratón)
         self.last_mouse_x = pointer_x
         self.last_mouse_y = pointer_y
         self.last_drag_time = current_time
@@ -959,6 +1017,120 @@ class DesktopPet:
         else:
             canvas.delete("tk_aura")
 
+    def manage_bubble_vfx(self, is_active, progress=1.0):
+        if is_active:
+            self.canvas.delete("vfx_bubble")
+            
+            # Carga y limpieza de la imagen en memoria
+            if not getattr(self, 'bubble_base_img', None):
+                try:
+                    ui_dir = os.path.join(self.base_dir, "game_env", "ui")
+                    raw_img = Image.open(os.path.join(ui_dir, "bubble.png")).convert("RGBA")
+                    
+                    r, g, b, a = raw_img.split()
+                    a = a.point(lambda p: 255 if p > 127 else 0)
+                    self.bubble_base_img = Image.merge("RGBA", (r, g, b, a))
+                except Exception as e:
+                    print(f"[-] Error: Falta bubble.png en game_env/ui. {e}")
+                    return
+
+            # FIX GEOMÉTRICO: Límite matemático estricto al borde del canvas
+            canvas_limit = min(self.size_w, self.size_h)
+            # Reservamos 6 píxeles de margen (3 por lado) para que la oscilación no toque el borde
+            base_max_size = canvas_limit - 6 
+            
+            # PULSO ORGÁNICO: Oscilación inyectada si la fase de crecimiento terminó
+            pulse_offset = 0
+            if progress >= 1.0:
+                # math.sin genera una curva fluida entre -1 y 1. 
+                # Multiplicado por 3 da un crecimiento/decrecimiento dinámico de +/- 3 píxeles en bucle.
+                pulse_offset = int(math.sin(time.time() * 6.0) * 3)
+
+            current_size = max(10, int(base_max_size * progress) + pulse_offset)
+            
+            # Renderizado en tiempo real
+            resized_bubble = self.bubble_base_img.resize((current_size, current_size), Image.Resampling.NEAREST)
+            self.bubble_tk = ImageTk.PhotoImage(resized_bubble)
+            
+            cx = self.size_w // 2
+            # FIX: Compensación de gravedad visual. Bajamos la burbuja un 15% para centrarla en el cuerpo.
+            cy = (self.size_h // 2) + int(self.size_h * 0.05)
+            
+            self.canvas.create_image(cx, cy, image=self.bubble_tk, anchor=tk.CENTER, tags="vfx_bubble")
+            self.canvas.tag_raise("vfx_bubble")
+        else:
+            self.canvas.delete("vfx_bubble")
+            # Liberación de punteros de Tkinter para evitar pérdidas de memoria (Memory Leaks)
+            if hasattr(self, 'bubble_tk'):
+                delattr(self, 'bubble_tk')
+
+    def show_bubble_burst_vfx(self):
+        particles = []
+        cx = self.size_w // 2
+        cy = (self.size_h // 2) + int(self.size_h * 0.15)
+        
+        # Generar 8 gotas/chispas de explosión
+        for _ in range(8):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(3.0, 6.0)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            size = random.choice([1, 2])
+            color = random.choice(["#FFFFFF", "#D4E6F1", "#A9CCE3"]) # Blanco y tonos de agua
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_bubble_burst")
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(10, 18)})
+            
+        def animate_burst():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    p['vy'] += 0.4 # Gravedad individual para que caigan como agua
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_burst)
+                
+        animate_burst()
+
+    def _fsm_bubbled(self):
+        max_time = getattr(self, 'bubble_max_time', 150)
+        elapsed = max_time - self.bubble_timer
+        
+        # FASE 1: Crecimiento y absorción
+        if elapsed < 20: 
+            self.manage_bubble_vfx(True, elapsed / 20.0)
+        else:
+            self.manage_bubble_vfx(True, 1.0)
+            
+        self.bubble_timer -= 1
+        
+        # FASE 2: Elevación con turbulencia fluida
+        self.y -= 1.8 
+        self.x += math.sin(self.bubble_timer * 0.1) * 2.0 
+        
+        if self.y < self.v_y:
+            self.y = self.v_y
+
+        # FASE 3: Explosión y reentrada al motor de gravedad
+        if self.bubble_timer <= 0:
+            self.manage_bubble_vfx(False)
+            self.show_bubble_burst_vfx() 
+            # FIX: Si es volador, se activa la recuperación de vuelo ("thrown") en lugar de la caída libre ("falling")
+            self.current_state = 'thrown' if getattr(self, 'is_flying', False) else 'falling'
+            self.v_y_velocity = 0.0 
+            self.v_x_velocity = 0.0
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
     def trigger_landing_shake(self):
         self.current_state = 'landing_shake'
         self.shake_timer = 25
@@ -1062,7 +1234,7 @@ class DesktopPet:
                     # El 20% de probabilidad hace que suelte el objeto en un punto distinto cada vez
                     if math.sin(angle) < -0.1 and (random.randint(1, 100) <= 20 or math.cos(angle) > 0.9):
                         self.current_state = 'idle'
-                        self.tk_cooldown = 3000
+                        self.tk_cooldown = 12000
                         target.current_state = 'thrown'
                         
                         # Calcula un arco parabólico estrictamente superior (entre 180 y 360 grados)
@@ -1346,7 +1518,9 @@ class DesktopPet:
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
             target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating'] else self.frame_rate_idle
-            self.animator.update_animation(self.current_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle)
+            # Pasamos la variable is_glitching al motor gráfico
+            self.animator.update_animation(self.current_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False))
+            
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
@@ -1940,6 +2114,228 @@ class DesktopPet:
         self.update_position()
         self.window.after(50, self.physics_loop)
 
+    def schedule_glitch_teleport(self):
+        if not getattr(self, 'is_glitching', False) or self.current_state == 'exiting':
+            return
+            
+        # Si el usuario lo agarra o está involucrado en telequinesis, pausamos los saltos
+        if self.current_state in ['dragged', 'tk_controlled', 'tk_lifted']:
+            self.window.after(500, self.schedule_glitch_teleport)
+            return
+            
+        if getattr(self, 'glitch_teleports_left', 0) > 0:
+            self.glitch_teleports_left -= 1
+            
+            # Teletransporte caótico: Nueva coordenada X
+            self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
+            
+            if getattr(self, 'is_flying', False):
+                self.y = random.randint(self.v_y, self.default_floor_y)
+                self.floor_y = self.y
+            else:
+                # FIX: Teletransporte a nivel de suelo estricto (sin salto previo)
+                # Elevamos temporalmente a la capa superior de la pantalla para realizar el escaneo
+                self.y = self.v_y 
+                current_env, _ = self.get_window_environment()
+                
+                if current_env['hwnd']:
+                    # El radar detectó una ventana en esta nueva coordenada X. Se ancla.
+                    self.anchored_hwnd = current_env['hwnd']
+                    self.anchored_rect = current_env['rect']
+                    self.floor_y = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
+                    self.y = self.floor_y
+                else:
+                    # El radar no detectó ventanas. Se coloca al fondo del escritorio.
+                    self.anchored_hwnd = None
+                    self.anchored_rect = None
+                    self.floor_y = self.default_floor_y
+                    self.y = self.default_floor_y
+                
+            self.update_position()
+            
+            # Programar la siguiente interferencia entre 1.5 y 3 segundos
+            self.window.after(random.randint(1500, 3000), self.schedule_glitch_teleport)
+        else:
+            # Fin de la fase
+            self.is_glitching = False
+            self.glitch_cooldown = 12000
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+
+    def _fsm_digging_in(self):
+        self.dig_step += 1
+        desplazamiento = self.dig_step * 3 # Pixeles que baja por fotograma
+        
+        # Desplaza el sprite hacia abajo. El Canvas recorta el exceso automáticamente.
+        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        
+        if self.dig_step % 2 == 0:
+            self.show_dirt_vfx()
+            
+        if desplazamiento >= self.size_h // 2 + 10: 
+            # Totalmente oculto bajo el límite del Canvas
+            self.current_state = 'digging'
+            self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_digging(self):
+        self.dig_timer -= 1
+        
+        # --- NAVEGACIÓN ORGÁNICA ---
+        # 2% de probabilidad por ciclo (aprox. 1 cambio de sentido cada 2.5 segundos reales)
+        if random.randint(1, 1000) <= 20:
+            self.is_facing_right = not self.is_facing_right
+        
+        # Aceleración estructural: x2 velocidad mientras no hay fricción del aire
+        velocidad_excavacion = self.speed * 2
+        self.x += velocidad_excavacion if self.is_facing_right else -velocidad_excavacion
+        
+        if getattr(self, 'can_screen_wrap', False):
+            if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
+            elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
+        else:
+            if self.x <= self.v_x:
+                self.x = self.v_x
+                self.is_facing_right = True
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = (self.v_x + self.v_width) - self.size_w
+                self.is_facing_right = False
+        
+        current_env, _ = self.get_window_environment()
+        if getattr(self, 'anchored_hwnd', None):
+            if not current_env['hwnd'] or current_env['hwnd'] != self.anchored_hwnd:
+                self.anchored_hwnd = None
+                self.canvas.itemconfig(self.canvas_image_id, state='normal')
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+                self.current_state = 'falling'
+                self.v_y_velocity = 0.0
+                self.update_position()
+                self.window.after(30, self.physics_loop)
+                return
+        
+        self.y = getattr(self, 'anchored_rect', [0, self.default_floor_y + self.size_h + getattr(self, 'offset_y', 0)])[1] - self.size_h - getattr(self, 'offset_y', 0) if getattr(self, 'anchored_hwnd', None) else self.default_floor_y
+        self.floor_y = self.y
+        
+        if self.dig_timer % 4 == 0:
+            self.show_dirt_vfx()
+            
+        if self.dig_timer <= 0:
+            self.current_state = 'digging_out'
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            
+        self.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_digging_out(self):
+        self.dig_step -= 1
+        desplazamiento = self.dig_step * 3
+        
+        # Efecto inverso: El sprite sube desde el límite inferior del Canvas
+        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        
+        if self.dig_step % 2 == 0:
+            self.show_dirt_vfx()
+            
+        if self.dig_step <= 0:
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            self.current_state = 'idle'
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def show_dirt_vfx(self):
+        particles = []
+        cx = self.size_w // 2
+        cy = self.size_h - 5 
+        
+        for _ in range(random.randint(3, 4)):
+            # Vectores reorientados: Cerramos el ángulo para acercarlo a math.pi * 1.5 (Vertical puro en Tkinter)
+            angle = random.choice([
+                random.uniform(math.pi + 0.4, math.pi + 0.9),      
+                random.uniform(2 * math.pi - 0.9, 2 * math.pi - 0.4) 
+            ])
+            # Aumento de inercia inicial masivo para forzar un arco parabólico más alto
+            speed = random.uniform(6.0, 10.0)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            
+            size = random.choice([2, 3, 4]) 
+            color = random.choice(["#3E2723", "#4E342E", "#5D4037", "#8D6E63", "#795548"])
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_dirt")
+            # Aumentada ligeramente la vida para que no desaparezcan antes de caer
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(12, 18)})
+            
+        def animate_dirt():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    p['vy'] += 0.9 # La gravedad se mantiene estricta para asegurar una caída brusca
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_dirt)
+                
+        animate_dirt()
+
+    def show_fairy_sparkles_vfx(self):
+        particles = []
+        cx = self.size_w // 2
+        cy = self.size_h // 2
+        
+        # Generar 6-9 chispas de luz
+        for _ in range(random.randint(6, 9)):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(2.0, 5.0)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            
+            size = random.choice([1, 2])
+            color = random.choice(["#FFB6C1", "#FF69B4", "#FF1493", "#F08080", "#FFFFFF"]) # Gama de rosas y blanco
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_fairy")
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(20, 35)})
+            
+        def animate_sparkles():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    
+                    # Físicas mágicas: Frenado horizontal y elevación vertical constante
+                    p['vx'] *= 0.85 
+                    p['vy'] *= 0.85 
+                    p['vy'] -= 0.3 
+                    
+                    p['life'] -= 1
+                    
+                    # Parpadeo estroboscópico en sus últimos frames de vida
+                    if p['life'] < 10 and p['life'] % 2 == 0:
+                        self.canvas.itemconfig(p['id'], state='hidden')
+                    else:
+                        self.canvas.itemconfig(p['id'], state='normal')
+                        
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_sparkles)
+                
+        animate_sparkles()
+
     def _fsm_active(self):
         self.jump_cooldown = max(0, getattr(self, 'jump_cooldown', 0) - 1)
         self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
@@ -1947,9 +2343,91 @@ class DesktopPet:
         self.teleport_cooldown = max(0, getattr(self, 'teleport_cooldown', 0) - 1)
 
         self.tk_cooldown = max(0, getattr(self, 'tk_cooldown', 0) - 1)
+        self.glitch_cooldown = max(0, getattr(self, 'glitch_cooldown', 0) - 1)
+        self.bubble_cooldown = max(0, getattr(self, 'bubble_cooldown', 0) - 1)
+        self.dig_cooldown = max(0, getattr(self, 'dig_cooldown', 0) - 1) # NUEVO COOLDOWN
+
+        # --- MECÁNICA: PACIFICACIÓN TIPO HADA ---
+        if getattr(self, 'fairy_aura', False) and self.current_state in ['idle', 'walking']:
+            if getattr(self, 'get_all_pets', None):
+                for other in self.get_all_pets():
+                    # Si detecta a un Pokémon peleando y entra en su Hitbox (distancia menor al ancho del sprite)
+                    if other != self and other.current_state == 'attacking' and abs(self.x - other.x) < self.size_w and abs(self.y - other.y) < self.size_h:
+                        
+                        # Pacificar a su oponente de forma remota y aplicar gravedad
+                        opponent = getattr(other, 'attack_target', None)
+                        if opponent:
+                            opponent.current_state = 'thrown' if getattr(opponent, 'is_flying', False) else 'falling'
+                            opponent.v_y_velocity = 0.0
+                            opponent.v_x_velocity = 0.0
+                            opponent.attack_cooldown = 12000
+                            opponent.attack_target = None
+                            opponent.show_fairy_sparkles_vfx()
+                            
+                        # Pacificar al objetivo primario y aplicar gravedad
+                        other.current_state = 'thrown' if getattr(other, 'is_flying', False) else 'falling'
+                        other.v_y_velocity = 0.0
+                        other.v_x_velocity = 0.0
+                        other.attack_cooldown = 12000
+                        other.attack_target = None
+                        other.show_fairy_sparkles_vfx()
+                        
+                        self.show_fairy_sparkles_vfx()
+                        
+                        # El hada da un pequeño salto de felicidad al detener la pelea
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = -3.0
+                        self.window.after(50, self.physics_loop)
+                        return
+        
+        # --- MECÁNICA: EXCAVACIÓN TIPO TIERRA ---
+        if getattr(self, 'can_dig', False) and self.dig_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+            if random.randint(1, 1000) <= 10: 
+                self.current_state = 'digging_in'
+                self.dig_step = 0
+                self.dig_timer = random.randint(200, 400) # Tiempo bajo tierra
+                self.dig_cooldown = 12000 # 10 minutos reales
+                self.window.after(50, self.physics_loop)
+                return
+        
+        # --- MECÁNICA: BURBUJA DE AGUA ---
+        if getattr(self, 'bubble_blower', False) and self.bubble_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                if getattr(self, 'get_all_pets', None):
+                    # FIX: Alcance muy reducido (150px horizontal, 60px vertical)
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 150 and abs(p.y - self.y) < 60]
+                    if valid_targets:
+                        target = random.choice(valid_targets)
+                        self.bubble_cooldown = 12000 
+                        
+                        # Disparamos el proyectil animado desde nuestro centro geométrico
+                        def on_bubble_hit(hit_target):
+                            hit_target.current_state = 'bubbled'
+                            hit_target.bubble_max_time = random.randint(130, 200) 
+                            hit_target.bubble_timer = hit_target.bubble_max_time
+                            hit_target.anchored_hwnd = None
+                        
+                        BubbleProjectile(self.window.master, self.base_dir, self.x + self.size_w/2, self.y + self.size_h/2, target, on_bubble_hit)
+                        
+                        # El Pokémon que lanza la burbuja hace un pequeño salto de invocación
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = -4.0
+                        self.window.after(50, self.physics_loop)
+                        return
+
+        # --- FASE DE INTERFERENCIA PARA FANTASMAS (SCREEN WRAP) ---
+        if getattr(self, 'can_screen_wrap', False) and self.glitch_cooldown == 0 and not getattr(self, 'is_glitching', False):
+            if random.randint(1, 1000) <= 10: # Aprox 1% de probabilidad
+                self.is_glitching = True
+                self.glitch_teleports_left = random.randint(4, 10) # Número de teletransportes caóticos
+                try: self.window.attributes('-alpha', 0.5) # Baja la opacidad al 50%
+                except: pass
+                self.schedule_glitch_teleport()
         
         if getattr(self, 'telekinetic', False) and self.tk_cooldown == 0 and self.current_state in ['idle', 'walking']:
-            if random.randint(1, 1000) <= 8: # Probabilidad de activar poderes
+            if random.randint(1, 1000) <= 10: # Probabilidad de activar poderes
                 target = None
                 if self.game_controller:
                     # 1. Prioriza atraer Bayas (Alcance de 400 -> 800)
@@ -2353,6 +2831,72 @@ class DesktopPet:
         self.update_position()
         self.window.after(30, self.physics_loop)
 
+    # --- PROYECTIL DE BURBUJA DE AGUA ---
+class BubbleProjectile:
+    def __init__(self, parent_root, base_dir, start_x, start_y, target, on_hit_callback):
+        self.window = tk.Toplevel(parent_root)
+        self.window.overrideredirect(True)
+        self.window.attributes('-topmost', True)
+        CHROMA_KEY = '#00FF00'
+        self.window.config(bg=CHROMA_KEY)
+        try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
+        except tk.TclError: pass
+        
+        self.target = target
+        self.on_hit = on_hit_callback
+        self.size = 15
+        self.x = start_x
+        self.y = start_y
+        
+        self.canvas = tk.Canvas(self.window, width=self.size, height=self.size, bg=CHROMA_KEY, highlightthickness=0)
+        self.canvas.pack()
+        self.canvas_image_id = self.canvas.create_image(self.size//2, self.size//2, anchor=tk.CENTER)
+        
+        try:
+            ui_dir = os.path.join(base_dir, "game_env", "ui")
+            raw_img = Image.open(os.path.join(ui_dir, "bubble.png")).convert("RGBA")
+            r, g, b, a = raw_img.split()
+            a = a.point(lambda p: 255 if p > 127 else 0)
+            base_img = Image.merge("RGBA", (r, g, b, a))
+            self.tk_image = ImageTk.PhotoImage(base_img.resize((self.size, self.size), Image.Resampling.NEAREST))
+            self.canvas.itemconfig(self.canvas_image_id, image=self.tk_image)
+        except:
+            self.window.after(10, self.destroy)
+            return
+            
+        self.window.geometry(f"{self.size}x{self.size}+{int(self.x)}+{int(self.y)}")
+        self.physics_loop()
+        
+    def destroy(self):
+        self.window.destroy()
+        
+    def physics_loop(self):
+        if not self.target or not self.target.window.winfo_exists() or self.target.current_state in ['exiting', 'dragged', 'bubbled']:
+            self.destroy()
+            return
+            
+        t_cx = self.target.x + self.target.size_w/2
+        t_cy = self.target.y + self.target.size_h/2
+        my_cx = self.x + self.size/2
+        my_cy = self.y + self.size/2
+        
+        dx = t_cx - my_cx
+        dy = t_cy - my_cy
+        dist = math.sqrt(dx**2 + dy**2)
+        
+        # Al tocar al objetivo, explota el proyectil y activa el estado de la burbuja gigante
+        if dist < 20:
+            self.on_hit(self.target)
+            self.destroy()
+            return
+            
+        speed = 10.0
+        self.x += (dx/max(1, dist)) * speed
+        self.y += (dy/max(1, dist)) * speed
+        
+        self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
+        self.window.after(30, self.physics_loop)
+
 # --- POKÉBALL INTERACTIVA ---
 class InteractivePokeball:
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
@@ -2711,7 +3255,8 @@ class InteractivePokeball:
             ball_cy = self.y + self.size/2
             
             for p in self.get_pets():
-                if p.current_state in ['falling_egg', 'falling_pokeball', 'exiting', 'dragged']: continue
+                # FIX: La Pokéball ahora ignora físicamente a los huevos
+                if p.current_state in ['falling_egg', 'falling_pokeball', 'exiting', 'dragged'] or getattr(p, 'is_egg', False): continue
                 
                 p_cx = p.x + p.size_w/2
                 p_cy = p.y + p.size_h/2

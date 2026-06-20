@@ -8,7 +8,9 @@
         "can_screen_wrap": false,
         "can_teleport": false,
         "heavy_fall": false,
-        "aggressive": false
+        "aggressive": false,
+        "bubble_blower": true,
+        "fairy_aura": true
     },
     "images": {
         "idle_is_animated": true,
