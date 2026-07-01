@@ -249,10 +249,10 @@ class DesktopPetAnimator:
             print(f"Error cargando assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False):
-        # FIX: Congelar el motor visual durante el temblor para evitar inversiones
-        if state in ['exiting', 'landing_shake']: return
-
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False):
+        # FIX: Congelar el motor visual durante eventos estáticos
+        if state in ['exiting', 'landing_shake', 'dark_victim_frozen', 'dark_victim_hidden']: return
+        
         current_time = time.time()
         elapsed_time_ms = (current_time - self.last_frame_time) * 1000
         state_changed = state != self.last_state
@@ -269,10 +269,12 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        # FIX: Añadimos la burbuja a la lista de renderizado estático
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled']:
+        # FIX: deluge_float movido aquí para forzar la animación de caída/flote
+        # FIX VISUAL: groudon_channeling movido a 'idle' para forzar sprite frontal
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling']:
             render_state = 'idle'
-        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking']:
+            
+        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim']:
             render_state = 'walking'
 
         if render_state == 'walking':
@@ -322,6 +324,13 @@ class DesktopPetAnimator:
                 glitched.paste(strip, (offset_x, i * strip_h))
                 
             processed_image = glitched
+
+        # --- NUEVO: MODO SINIESTRO (Silueta) ---
+        if is_darkened:
+            black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))
+            black_layer.putalpha(processed_image.split()[3])
+            # Se mezcla al 85% para mantener ligeros matices del cuerpo
+            processed_image = Image.blend(processed_image, black_layer, 0.85)
 
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
@@ -410,7 +419,8 @@ class DesktopPet:
         self.telekinetic = physics.get("telekinetic", False)
         self.bubble_blower = physics.get("bubble_blower", False) 
         self.can_dig = physics.get("can_dig", False)
-        self.fairy_aura = physics.get("fairy_aura", False) # NUEVA
+        self.fairy_aura = physics.get("fairy_aura", False)
+        self.dark_arts = physics.get("dark_arts", False) # NUEVA
         self.aggressive = physics.get("aggressive", False)
         self.teleport_cooldown = 0
 
@@ -429,6 +439,18 @@ class DesktopPet:
         if self.is_egg:
             self.is_flying = False  
             self.offset_y = 0      
+            
+            # FIX: Anular mecánicas avanzadas para que el huevo no herede comportamientos de adulto
+            self.heavy_fall = False
+            self.can_screen_wrap = False
+            self.can_teleport = False
+            self.telekinetic = False
+            self.bubble_blower = False
+            self.can_dig = False
+            self.fairy_aura = False
+            self.dark_arts = False
+            self.aggressive = False
+            
         elif self.is_flying: 
             if self.is_wild and getattr(self, 'is_legendary', False):
                 self.pet_data["flying_height_pct"] = 100.0
@@ -439,7 +461,7 @@ class DesktopPet:
             self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
             self.offset_y = -6 
         else: 
-            self.offset_y = -6 
+            self.offset_y = -6
             
         self.fly_amplitude = 0
         self.default_floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
@@ -577,11 +599,21 @@ class DesktopPet:
             'teleporting_out': self._fsm_teleporting_out,
             'teleporting_in': self._fsm_teleporting_in,
             'bubbled': self._fsm_bubbled,
-            'digging_in': self._fsm_digging_in, # NUEVO: Fase de hundimiento
+            'digging_in': self._fsm_digging_in,
             'digging': self._fsm_digging,
-            'digging_out': self._fsm_digging_out # NUEVO: Fase de emersión
-        }
-            
+            'digging_out': self._fsm_digging_out,
+            'mewtwo_channeling': self._fsm_mewtwo_channeling, 
+            'mewtwo_victim': self._fsm_mewtwo_victim,
+            'hooh_channeling': self._fsm_hooh_channeling, 
+            'panic_run': self._fsm_panic_run,
+            'kyogre_channeling': self._fsm_kyogre_channeling,
+            'deluge_float': self._fsm_deluge_float,
+            'groudon_channeling': self._fsm_groudon_channeling,
+            'lugia_channeling': self._fsm_lugia_channeling,
+            'lugia_dash': self._fsm_lugia_dash,
+            'rayquaza_channeling': self._fsm_rayquaza_channeling, # NUEVO
+            'rayquaza_cyclone_victim': self._fsm_rayquaza_cyclone_victim # NUEVO
+        }            
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
@@ -631,6 +663,28 @@ class DesktopPet:
             # Reset estricto al centro geométrico del Canvas
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2) 
             self.current_state = 'falling'
+
+        # FIX: Destruir interacción de las Sombras si intervienes
+        if self.current_state.startswith('dark_'):
+            self.cancel_dark_arts()
+
+        # FIX: Interrumpir el Vórtice Psíquico de Mewtwo
+        if self.current_state.startswith('mewtwo_'):
+            self.cancel_mewtwo_arts()
+
+        # FIX: Interrumpir Fuego Sagrado de Ho-Oh
+        if self.current_state in ['hooh_channeling', 'panic_run']:
+            self.cancel_hooh_arts()
+        # FIX: Solo cancelar Kyogre si agarras al Maestro (Kyogre). 
+        # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
+        elif self.current_state == 'kyogre_channeling':
+            self.cancel_kyogre_arts()
+
+        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
+
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
+
+        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
 
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
@@ -689,6 +743,24 @@ class DesktopPet:
         if self.current_state == 'digging':
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             self.current_state = 'falling'
+
+        # FIX: Destruir interacción de las Sombras si intervienes
+        if self.current_state.startswith('dark_'):
+            self.cancel_dark_arts()
+
+        # FIX: Interrumpir Fuego Sagrado de Ho-Oh
+        if self.current_state in ['hooh_channeling', 'panic_run']:
+            self.cancel_hooh_arts()
+        # FIX: Solo cancelar Kyogre si agarras al Maestro (Kyogre). 
+        # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
+        elif self.current_state == 'kyogre_channeling':
+            self.cancel_kyogre_arts()
+
+        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
+
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
+
+        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
         
         # ACTUALIZACIÓN DE VARIABLES PARA FÍSICAS (Sin alterar el offset del ratón)
         self.last_mouse_x = pointer_x
@@ -705,7 +777,12 @@ class DesktopPet:
             if math.isnan(v_y) or math.isinf(v_y): v_y = 0.0
             self.v_x_velocity = max(-40.0, min(40.0, v_x))
             self.v_y_velocity = max(-40.0, min(40.0, v_y))
-            self.current_state = 'thrown'
+            
+            # FIX: Si está siendo inundado, vuelve al estado flotante en lugar de estrellarse contra el suelo
+            if getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
+                self.current_state = 'deluge_float'
+            else:
+                self.current_state = 'thrown'
 
     def get_window_environment(self):
         current_env = {'y': self.default_floor_y, 'hwnd': None, 'rect': None}
@@ -1131,6 +1208,1407 @@ class DesktopPet:
         self.update_position()
         self.window.after(30, self.physics_loop)
 
+    def cancel_rayquaza_arts(self):
+        for attr in ['rayquaza_phase', 'rayquaza_start_x', 'rayquaza_end_x', 'rayquaza_target_y', 'rayquaza_global_timer', 'rayquaza_sweeps_done', 'rayquaza_sweeps_total', 'rayquaza_sweep_duration']:
+            if hasattr(self, attr): delattr(self, attr)
+            
+        if self.current_state not in ['dragged', 'exiting']:
+            if getattr(self, 'is_flying', False):
+                self.floor_y = self.y
+                self.current_state = 'ascending'
+            else:
+                self.current_state = 'falling'
+                
+        targets = getattr(self, 'rayquaza_targets', [])
+        self.rayquaza_targets = []
+        for target in targets:
+            if target and target.window.winfo_exists():
+                target.rayquaza_master = None
+                if target.current_state == 'rayquaza_cyclone_victim' and target.current_state not in ['dragged', 'exiting']:
+                    target.current_state = 'falling'
+                    
+        master = getattr(self, 'rayquaza_master', None)
+        self.rayquaza_master = None
+        if master and master.window.winfo_exists():
+            master.cancel_rayquaza_arts()
+
+    def _fsm_rayquaza_channeling(self):
+        if not hasattr(self, 'rayquaza_start_x'):
+            # FIX: Extremos en 1/8 (12.5%) y 7/8 (87.5%) de la pantalla
+            is_left = random.choice([True, False])
+            self.rayquaza_start_x = self.v_x + (self.v_width * 0.125) if is_left else self.v_x + (self.v_width * 0.875)
+            self.rayquaza_end_x = self.v_x + (self.v_width * 0.875) if is_left else self.v_x + (self.v_width * 0.125)
+            self.rayquaza_target_y = self.v_y + (self.v_height * 0.15) 
+
+        if getattr(self, 'rayquaza_phase', 0) == 0:
+            target_x = self.rayquaza_start_x - (self.size_w // 2)
+            dx = target_x - self.x
+            dy = self.rayquaza_target_y - self.y
+            dist = math.sqrt(dx**2 + dy**2)
+
+            self.is_facing_right = (dx > 0)
+            fly_speed = self.speed * 2.5
+            
+            if dist > fly_speed:
+                self.x += (dx/dist) * fly_speed
+                self.y += (dy/dist) * fly_speed
+            else:
+                self.x = target_x
+                self.y = self.rayquaza_target_y
+                self.rayquaza_phase = 1
+                
+                self.rayquaza_timer = self.rayquaza_sweep_duration 
+                self.rayquaza_global_timer = 0 # Cronómetro maestro constante para las víctimas
+                
+                self.is_facing_right = (self.rayquaza_end_x > self.rayquaza_start_x)
+                
+                active_targets = []
+                for target in getattr(self, 'rayquaza_targets', []):
+                    if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                        
+                        if target.current_state.startswith('dark_'): target.cancel_dark_arts()
+                        elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
+                        elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
+                        elif target.current_state in ['kyogre_channeling', 'deluge_float']: target.cancel_kyogre_arts()
+                        elif target.current_state == 'groudon_channeling': target.cancel_groudon_arts()
+                        elif target.current_state in ['lugia_channeling', 'lugia_dash']: target.cancel_lugia_arts()
+                        elif target.current_state == 'tk_channeling':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_target', None):
+                                if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                    t_targ = target.tk_target
+                                    t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    t_targ.current_state = 'falling'
+                                    if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                            target.tk_target = None
+                        elif target.current_state == 'tk_lifted':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_master', None):
+                                target.tk_master.tk_target = None
+                                target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                target.tk_master.current_state = 'falling'
+                            target.tk_master = None
+                        elif target.current_state == 'bubbled':
+                            target.manage_bubble_vfx(False)
+                            target.show_bubble_burst_vfx()
+
+                        if getattr(target, 'is_glitching', False):
+                            target.is_glitching = False
+                            target.glitch_teleports_left = 0
+                            target.glitch_cooldown = 12000
+
+                        target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                        target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                        try: target.window.attributes('-alpha', 1.0)
+                        except: pass
+                        
+                        target.current_state = 'rayquaza_cyclone_victim'
+                        target.rayquaza_master = self
+                        target.rayquaza_angle_offset = random.uniform(0, 2 * math.pi)
+                        target.anchored_hwnd = None
+                        active_targets.append(target)
+                self.rayquaza_targets = active_targets
+
+        elif self.rayquaza_phase == 1:
+            self.rayquaza_timer -= 1
+            self.rayquaza_global_timer += 1
+            
+            progress = (self.rayquaza_sweep_duration - self.rayquaza_timer) / float(self.rayquaza_sweep_duration)
+            current_target_x = self.rayquaza_start_x + (self.rayquaza_end_x - self.rayquaza_start_x) * progress - (self.size_w // 2)
+            
+            self.x = current_target_x
+            
+            # FIX MATEMÁTICO: Oscilación pronunciada. (80 px de recorrido a un ritmo suave de 0.05)
+            self.y = self.rayquaza_target_y + math.sin(self.rayquaza_global_timer * 0.05) * 80.0
+            
+            if self.rayquaza_timer % 3 == 0:
+                self.show_emerald_cyclone_vfx(is_master=True)
+
+            if self.rayquaza_timer <= 0:
+                self.rayquaza_sweeps_done += 1
+                
+                if self.rayquaza_sweeps_done >= self.rayquaza_sweeps_total:
+                    for target in getattr(self, 'rayquaza_targets', []):
+                        if target and target.window.winfo_exists():
+                            target.rayquaza_master = None
+                            if target.current_state == 'rayquaza_cyclone_victim':
+                                target.current_state = 'thrown'
+                                target.v_y_velocity = random.uniform(-5.0, 5.0) 
+                                target.v_x_velocity = random.uniform(-40.0, 40.0) 
+                                
+                    self.rayquaza_targets = []
+                    if getattr(self, 'is_flying', False):
+                        self.floor_y = self.y 
+                        self.current_state = 'ascending'
+                    else:
+                        self.current_state = 'falling'
+                        
+                    for attr in ['rayquaza_phase', 'rayquaza_start_x', 'rayquaza_end_x', 'rayquaza_target_y', 'rayquaza_global_timer', 'rayquaza_sweeps_done', 'rayquaza_sweeps_total', 'rayquaza_sweep_duration']:
+                        if hasattr(self, attr): delattr(self, attr)
+                else:
+                    self.rayquaza_start_x, self.rayquaza_end_x = self.rayquaza_end_x, self.rayquaza_start_x
+                    self.is_facing_right = (self.rayquaza_end_x > self.rayquaza_start_x)
+                    self.rayquaza_sweep_duration = max(30, int(self.rayquaza_sweep_duration * 0.85))
+                    self.rayquaza_timer = self.rayquaza_sweep_duration
+
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_rayquaza_cyclone_victim(self):
+        master = getattr(self, 'rayquaza_master', None)
+        if not master or master.current_state != 'rayquaza_channeling' or not master.window.winfo_exists():
+            if self.current_state not in ['dragged', 'exiting']:
+                self.current_state = 'falling'
+            self.window.after(30, self.physics_loop)
+            return
+
+        elapsed = getattr(master, 'rayquaza_global_timer', 0)
+        
+        m_cx = master.x + master.size_w / 2
+        m_cy = master.y + master.size_h / 2
+        
+        # Ajustado para que el anillo máximo no exceda los límites de inercia
+        radius_x = max(200.0, (self.v_width * 0.4) - (elapsed * 1.5))
+        radius_y = max(30.0, 100.0 - (elapsed * 0.2)) 
+        
+        angular_speed = 0.02 + (elapsed * 0.0003)
+        self.rayquaza_angle_offset += angular_speed
+        
+        target_x = m_cx + math.cos(self.rayquaza_angle_offset) * radius_x - self.size_w / 2
+        target_y = m_cy + math.sin(self.rayquaza_angle_offset) * radius_y - self.size_h / 2 + 80 
+        
+        # FIX FÍSICO: Eliminación del 'Rubber-banding'.
+        # Leemos qué tan rápido está yendo Rayquaza en este viaje en particular
+        sweep_dur = getattr(master, 'rayquaza_sweep_duration', 120)
+        
+        # Si Rayquaza acelera (sweep_dur baja), el multiplicador sube hasta un 400%
+        speed_multiplier = 120.0 / float(max(1, sweep_dur)) 
+        
+        base_pull = min(0.15, 0.02 + (elapsed * 0.0005))
+        
+        # Separación vectorial de tensores:
+        # Atracción ultra-agresiva en X para que no se queden atrás (hasta 90% de anclaje instantáneo)
+        pull_strength_x = min(0.9, base_pull * speed_multiplier * 1.5) 
+        # Atracción suave en Y para mantener la sensación orgánica de levitación
+        pull_strength_y = min(0.3, base_pull * speed_multiplier) 
+        
+        self.x += (target_x - self.x) * pull_strength_x
+        self.y += (target_y - self.y) * pull_strength_y
+            
+        if elapsed % 5 == 0:
+            self.show_emerald_cyclone_vfx(is_master=False)
+
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def show_emerald_cyclone_vfx(self, is_master=False):
+        if getattr(self, 'current_state', 'exiting') == 'exiting': return
+        particles = []
+        cx = self.size_w // 2
+        cy = self.size_h // 2
+        
+        count = random.randint(5, 8) if is_master else random.randint(2, 4)
+        
+        for _ in range(count):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(5.0, 10.0) if is_master else random.uniform(3.0, 6.0)
+            
+            # Proyección achatada para emparejar con la elipse orbital
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * (speed * 0.3) - 1.0
+            
+            size = random.choice([2, 3])
+            color = random.choice(["#2ECC71", "#27AE60", "#1ABC9C", "#58D68D", "#A9DFBF"])
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_emerald")
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(10, 20)})
+            
+        def animate_cyclone():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    
+                    p['vx'] *= 0.85
+                    p['vy'] -= 0.5 
+                    
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_cyclone)
+                
+        animate_cyclone()
+
+    def cancel_lugia_arts(self):
+        self.surface_angle = 0 
+        if hasattr(self, 'lugia_target_x'): delattr(self, 'lugia_target_x')
+        if hasattr(self, 'lugia_dash_direction'): delattr(self, 'lugia_dash_direction')
+        
+        if self.current_state not in ['dragged', 'exiting']:
+            if getattr(self, 'is_flying', False):
+                self.floor_y = self.y
+                self.current_state = 'ascending'
+            else:
+                self.current_state = 'falling'
+
+    def _fsm_lugia_channeling(self):
+        # FIX: Calcular el objetivo una sola vez y guardarlo en memoria estática
+        if not hasattr(self, 'lugia_target_x'):
+            # Guardamos la dirección real del ataque futuro
+            self.lugia_dash_direction = self.is_facing_right 
+            
+            # Calculamos el punto de retiro (A la inversa del ataque)
+            if self.lugia_dash_direction:
+                self.lugia_target_x = self.v_x - 300
+            else:
+                self.lugia_target_x = self.v_x + self.v_width + 300
+                
+            self.lugia_target_y = self.v_y + (self.v_height * 0.3)
+
+        dx = self.lugia_target_x - self.x
+        dy = self.lugia_target_y - self.y
+        dist = math.sqrt(dx**2 + dy**2)
+        
+        fly_speed = self.speed * 2.5
+        
+        if dist > fly_speed:
+            self.x += (dx/dist) * fly_speed
+            self.y += (dy/dist) * fly_speed
+            # El sprite mira hacia la dirección de su vuelo actual (De frente)
+            self.is_facing_right = (dx > 0)
+        else:
+            self.x = self.lugia_target_x
+            self.y = self.lugia_target_y
+            self.current_state = 'lugia_dash'
+            # Se da la vuelta para encarar la pantalla usando la dirección guardada
+            self.is_facing_right = self.lugia_dash_direction
+            self.lugia_pushed = False
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_lugia_dash(self):
+        # 2. Cruzar la pantalla a velocidad extrema (Túnel de Viento)
+        dash_speed = 100.0 
+        
+        self.x += dash_speed if self.is_facing_right else -dash_speed
+        self.y += math.sin(self.x * 0.02) * 4.0 
+        
+        # FIX: Rotación de 45 grados hacia adelante (Picado aerodinámico)
+        self.surface_angle = -30 if self.is_facing_right else 30
+        
+        # 3. Gatillo de la Onda de Viento (Justo al entrar en la zona visible)
+        if not getattr(self, 'lugia_pushed', False):
+            if (self.is_facing_right and self.x > self.v_x) or (not self.is_facing_right and self.x < self.v_x + self.v_width - self.size_w):
+                self.lugia_pushed = True
+                
+                # TEMBLOR HORIZONTAL (Símil de onda sónica)
+                if self.game_controller and hasattr(self.game_controller, 'root'):
+                    pc = self.game_controller.root
+                    try:
+                        if not getattr(self.game_controller, 'is_shaking', False):
+                            self.game_controller.is_shaking = True
+                            ox = pc.winfo_x()
+                            oy = pc.winfo_y()
+                            shake_x = random.choice([-20, 20])
+                            pc.geometry(f"+{ox + shake_x}+{oy}")
+                            def restore_pc():
+                                if pc.winfo_exists():
+                                    pc.geometry(f"+{ox}+{oy}")
+                                    self.game_controller.is_shaking = False
+                            self.window.after(80, restore_pc)
+                    except: pass
+                
+                # PROPULSAR A TODAS LAS VÍCTIMAS
+                if getattr(self, 'get_all_pets', None):
+                    for target in self.get_all_pets():
+                        if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                            
+                            # LIMPIEZA DE EVENTOS ESTRICTA
+                            if target.current_state.startswith('dark_'): target.cancel_dark_arts()
+                            elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
+                            elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
+                            elif target.current_state in ['kyogre_channeling', 'deluge_float']: target.cancel_kyogre_arts()
+                            elif target.current_state == 'groudon_channeling': target.cancel_groudon_arts()
+                            elif target.current_state == 'tk_channeling':
+                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_target', None):
+                                    if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                        t_targ = target.tk_target
+                                        t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                        t_targ.current_state = 'falling'
+                                        if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                                target.tk_target = None
+                            elif target.current_state == 'tk_lifted':
+                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_master', None):
+                                    target.tk_master.tk_target = None
+                                    target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                    target.tk_master.current_state = 'falling'
+                                target.tk_master = None
+                            elif target.current_state == 'bubbled':
+                                target.manage_bubble_vfx(False)
+                                target.show_bubble_burst_vfx()
+
+                            if getattr(target, 'is_glitching', False):
+                                target.is_glitching = False
+                                target.glitch_teleports_left = 0
+                                target.glitch_cooldown = 12000
+
+                            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                            target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                            try: target.window.attributes('-alpha', 1.0)
+                            except: pass
+                            
+                            # INERCIA HORIZONTAL EXTREMA
+                            target.current_state = 'thrown'
+                            force_x = random.uniform(55.0, 95.0) 
+                            target.v_x_velocity = force_x if self.is_facing_right else -force_x
+                            target.v_y_velocity = random.uniform(-10.0, -25.0) 
+                            target.anchored_hwnd = None
+                            
+                            target.wind_tunnel_timer = 50
+                            target.show_wind_tunnel_vfx(self.is_facing_right)
+
+        # 4. Finalizar el ataque al salir de la pantalla por el otro lado
+        if (self.is_facing_right and self.x > self.v_x + self.v_width + 100) or (not self.is_facing_right and self.x < self.v_x - self.size_w - 100):
+            self.surface_angle = 0 
+            if hasattr(self, 'lugia_target_x'): delattr(self, 'lugia_target_x')
+            if hasattr(self, 'lugia_dash_direction'): delattr(self, 'lugia_dash_direction')
+            
+            if getattr(self, 'is_flying', False):
+                self.floor_y = self.y 
+                self.current_state = 'ascending'
+            else:
+                self.current_state = 'falling'
+            
+        self.update_position()
+        self.window.after(16, self.physics_loop)
+        
+    def show_wind_tunnel_vfx(self, wind_to_right):
+        # Delegación: Esta función la ejecutan LAS VÍCTIMAS, dibujando viento sobre sus propios cuerpos
+        if getattr(self, 'current_state', 'exiting') == 'exiting' or getattr(self, 'wind_tunnel_timer', 0) <= 0: 
+            self.canvas.delete("vfx_wind")
+            return
+            
+        self.wind_tunnel_timer -= 1
+        self.canvas.delete("vfx_wind")
+        
+        # Dibuja de 2 a 4 estelas de viento dinámicas
+        for _ in range(random.randint(2, 4)):
+            y = random.randint(10, self.size_h - 10)
+            length = random.randint(20, 50)
+            
+            # Las líneas "atraviesan" la caja del Pokémon a la velocidad del viento
+            x = random.randint(0, self.size_w // 2) if wind_to_right else random.randint(self.size_w // 2, self.size_w)
+            end_x = x + length if wind_to_right else x - length
+            
+            self.canvas.create_line(x, y, end_x, y, fill="#FFFFFF", width=2, tags="vfx_wind")
+            
+        self.window.after(30, lambda: self.show_wind_tunnel_vfx(wind_to_right))
+
+    def cancel_mewtwo_arts(self):
+        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+        if hasattr(self, 'mewtwo_base_y'): delattr(self, 'mewtwo_base_y')
+        
+        if self.current_state not in ['dragged', 'exiting']:
+            self.current_state = 'falling'
+            
+        targets = getattr(self, 'mewtwo_targets', [])
+        self.mewtwo_targets = [] 
+        for target in targets:
+            if target and target.window.winfo_exists():
+                target.mewtwo_master = None
+                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                # FIX: Limpieza visual de emergencia si se cancela la habilidad
+                target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                if target.current_state not in ['dragged', 'exiting']:
+                    target.current_state = 'falling'
+                    
+        master = getattr(self, 'mewtwo_master', None)
+        self.mewtwo_master = None
+        if master and master.window.winfo_exists():
+            master.cancel_mewtwo_arts()
+
+    def _fsm_mewtwo_channeling(self):
+        if not getattr(self, 'mewtwo_targets', None):
+            self.cancel_mewtwo_arts()
+            self.window.after(30, self.physics_loop)
+            return
+
+        self.mewtwo_timer += 1
+        
+        # FIX: Levitación con onda senoidal de amplitud baja (4 píxeles)
+        target_y = self.default_floor_y - 140
+        if not hasattr(self, 'mewtwo_base_y'):
+            self.mewtwo_base_y = self.y
+            
+        if self.mewtwo_base_y > target_y:
+            self.mewtwo_base_y -= 1.5
+            
+        self.y = self.mewtwo_base_y + math.sin(self.mewtwo_timer * 0.1) * 4.0
+            
+        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+
+        if self.mewtwo_timer >= 500:
+            self.show_mewtwo_blast_vfx()
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            
+            my_cx = self.x + self.size_w / 2
+            
+            for target in self.mewtwo_targets:
+                if target and target.window.winfo_exists():
+                    target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                    # FIX: Limpieza visual al salir expulsados
+                    target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                    target.mewtwo_master = None
+                    target.current_state = 'thrown'
+                    
+                    t_cx = target.x + target.size_w / 2
+                    push_dir = 1 if t_cx > my_cx else -1
+                    
+                    target.v_x_velocity = push_dir * random.uniform(30.0, 60.0)
+                    target.v_y_velocity = random.uniform(-35.0, -60.0)
+            
+            self.mewtwo_targets = []
+            self.current_state = 'falling'
+            if hasattr(self, 'mewtwo_base_y'): delattr(self, 'mewtwo_base_y')
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_mewtwo_victim(self):
+        master = getattr(self, 'mewtwo_master', None)
+        if not master or master.current_state != 'mewtwo_channeling' or not master.window.winfo_exists():
+            self.cancel_mewtwo_arts()
+            self.window.after(30, self.physics_loop)
+            return
+
+        timer = master.mewtwo_timer
+        activation_tick = getattr(self, 'mewtwo_activation_tick', 0)
+        
+        if timer < activation_tick:
+            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+            self.window.after(30, self.physics_loop)
+            return
+
+        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+
+        my_cx = self.x + self.size_w / 2
+        my_cy = self.y + self.size_h / 2
+        m_cx = master.x + master.size_w / 2
+        m_cy = master.y + master.size_h / 2
+
+        active_timer = timer - activation_tick
+
+        # MATEMÁTICA ORBITAL FIX 2.0:
+        # Distancia masiva: Empieza a 1600px y se cierra hasta mantener un anillo de 800px de radio (Casi ocupa toda la pantalla)
+        orbit_radius = max(800, 1600 - (active_timer * 1.5))
+        
+        # Velocidad exponencial: Inicia a (0.002) y usa el cuadrado del tiempo para que la aceleración real ocurra al final
+        angular_speed = 0.002 + ((timer ** 2) * 0.0000008)
+        offset = getattr(self, 'mewtwo_orbit_offset', 0)
+        current_angle = (timer * angular_speed) + offset
+        
+        target_x = m_cx + math.cos(current_angle) * orbit_radius - self.size_w / 2
+        target_y = m_cy + math.sin(current_angle) * orbit_radius - self.size_h / 2
+        
+        dx = target_x - self.x
+        dy = target_y - self.y
+        dist = math.sqrt(dx**2 + dy**2)
+        
+        pull_speed = 4.0 + (active_timer * 0.1)
+        
+        if dist > pull_speed:
+            self.x += (dx / dist) * pull_speed
+            self.y += (dy / dist) * pull_speed
+        else:
+            self.x = target_x
+            self.y = target_y
+
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def show_mewtwo_blast_vfx(self):
+        particles = []
+        cx = self.size_w // 2
+        cy = self.size_h // 2
+        
+        # Generamos 30 partículas de alta velocidad de energía psíquica
+        for _ in range(30):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(10.0, 25.0)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            
+            size = random.choice([2, 3, 4])
+            color = random.choice(["#8E44AD", "#9B59B6", "#D2B4DE", "#D441F5", "#FFFFFF"]) 
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_mewtwo")
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(15, 25)})
+            
+        def animate_blast():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    # Fricción para crear el efecto de "estallido y parada súbita" en el aire
+                    p['vx'] *= 0.88  
+                    p['vy'] *= 0.88
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_blast)
+                
+        animate_blast()
+
+    def cancel_hooh_arts(self):
+        if self.current_state not in ['dragged', 'exiting']:
+            self.current_state = 'falling'
+            
+        targets = getattr(self, 'hooh_targets', [])
+        self.hooh_targets = []
+        for target in targets:
+            if target and target.window.winfo_exists():
+                target.hooh_master = None
+                # FIX: Solo cancelar la acción de la víctima si realmente ya había empezado a correr
+                if target.current_state == 'panic_run' and target.current_state not in ['dragged', 'exiting']:
+                    target.current_state = 'falling'
+                    
+        master = getattr(self, 'hooh_master', None)
+        self.hooh_master = None
+        if master and master.window.winfo_exists():
+            master.cancel_hooh_arts()
+
+    def _fsm_hooh_channeling(self):
+        if not hasattr(self, 'hooh_target_x'):
+            try:
+                monitor = win32api.MonitorFromPoint((int(self.x), int(self.y)), win32con.MONITOR_DEFAULTTONEAREST)
+                mon_info = win32api.GetMonitorInfo(monitor)
+                mon_rect = mon_info['Monitor']
+                mon_x = mon_rect[0]
+                mon_w = mon_rect[2] - mon_rect[0]
+            except:
+                mon_x = self.v_x
+                mon_w = self.v_width
+            self.hooh_target_x = mon_x + (mon_w // 2) - self.size_w // 2
+
+        target_y = self.v_y + 40 
+        
+        dx = self.hooh_target_x - self.x
+        dy = target_y - self.y
+        dist = math.sqrt(dx**2 + dy**2)
+        
+        if getattr(self, 'hooh_phase', 0) == 0:
+            self.is_facing_right = (dx > 0)
+            fly_speed = self.speed * 1.5
+            
+            if dist > fly_speed:
+                self.x += (dx/dist) * fly_speed
+                self.y += (dy/dist) * fly_speed
+            else:
+                self.x = self.hooh_target_x
+                self.y = target_y
+                self.hooh_phase = 1
+                
+                # FIX ESTRUCTURAL: Secuestro en el Momento Cero.
+                # Ahora que Ho-Oh está en posición, interrumpimos violentamente a todos los objetivos.
+                active_targets = []
+                for target in getattr(self, 'hooh_targets', []):
+                    # Volvemos a validar por si los atraparon/borraron durante el vuelo de Ho-Oh
+                    if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                        
+                        if target.current_state.startswith('dark_'):
+                            target.cancel_dark_arts()
+                        elif target.current_state.startswith('mewtwo_'):
+                            target.cancel_mewtwo_arts()
+                        elif target.current_state == 'tk_channeling':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_target', None):
+                                if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                    
+                                    # FIX: Forzar la limpieza de partículas del objeto/víctima flotante
+                                    t_targ = target.tk_target
+                                    t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    
+                                    t_targ.current_state = 'falling'
+                                    if hasattr(t_targ, 'tk_master'):
+                                        t_targ.tk_master = None
+                            target.tk_target = None
+                        elif target.current_state == 'tk_lifted':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_master', None):
+                                target.tk_master.tk_target = None
+                                target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                target.tk_master.current_state = 'falling'
+                            target.tk_master = None
+                        elif target.current_state == 'bubbled':
+                            target.manage_bubble_vfx(False)
+                            target.show_bubble_burst_vfx()
+                            
+                        if getattr(target, 'is_glitching', False):
+                            target.is_glitching = False
+                            target.glitch_teleports_left = 0
+                            target.glitch_cooldown = 12000
+                            
+                        target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                        target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                        try: target.window.attributes('-alpha', 1.0)
+                        except: pass
+                        
+                        target.current_state = 'panic_run'
+                        target.panic_timer = self.hooh_timer 
+                        target.hooh_master = self
+                        target.is_facing_right = random.choice([True, False])
+                        active_targets.append(target)
+                
+                self.hooh_targets = active_targets
+        else:
+            self.hooh_timer -= 1
+            self.y = target_y + math.sin(self.hooh_timer * 0.2) * 5.0
+            
+            if self.hooh_timer % 3 == 0:
+                self.show_fire_vfx(is_master=True)
+                
+            if self.hooh_timer <= 0:
+                if getattr(self, 'is_flying', False):
+                    # FIX: Eliminamos el recálculo defectuoso. 
+                    # El Pokémon ya recuerda su 'target_floor_y' original perfectamente.
+                    self.floor_y = self.y 
+                    self.current_state = 'ascending'
+                else:
+                    self.current_state = 'falling'
+                    
+                self.hooh_targets = []
+                if hasattr(self, 'hooh_target_x'): delattr(self, 'hooh_target_x')
+                
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+        
+    def _fsm_panic_run(self):
+        master = getattr(self, 'hooh_master', None)
+        if not master or master.current_state != 'hooh_channeling' or not master.window.winfo_exists():
+            self.cancel_hooh_arts()
+            self.window.after(30, self.physics_loop)
+            return
+
+        self.panic_timer -= 1
+        if self.panic_timer <= 0:
+            self.current_state = 'idle'
+            self.hooh_master = None
+            self.window.after(30, self.physics_loop)
+            return
+            
+        speed = self.speed * 1.5
+        
+        # Predictor de rebote horizontal para ventanas
+        if getattr(self, 'anchored_rect', None):
+            rect = self.anchored_rect
+            if self.x > rect[2] - self.size_w:
+                self.x = rect[2] - self.size_w
+                self.is_facing_right = False
+            elif self.x < rect[0]:
+                self.x = rect[0]
+                self.is_facing_right = True
+            else:
+                if self.is_facing_right and self.x + speed > rect[2] - self.size_w:
+                    self.is_facing_right = False
+                elif not self.is_facing_right and self.x - speed < rect[0]:
+                    self.is_facing_right = True
+
+        self.x += speed if self.is_facing_right else -speed
+        
+        if getattr(self, 'can_screen_wrap', False):
+            if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
+            elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
+        else:
+            if self.x <= self.v_x:
+                self.x = self.v_x
+                self.is_facing_right = True
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = (self.v_x + self.v_width) - self.size_w
+                self.is_facing_right = False
+
+        # FIX: Evaluación de físicas en Y (Caída Lemming interna y saltitos esporádicos)
+        if not self.is_flying:
+            current_env, _ = self.get_window_environment()
+            physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+            
+            # Si le quitan el suelo (ej: ventana minimizada) o ya estaba saltando
+            if self.y < physical_floor - 15 or getattr(self, 'v_y_velocity', 0) > 0:
+                self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + 1.5
+                self.y += self.v_y_velocity
+                if self.y >= physical_floor:
+                    self.y = physical_floor
+                    self.floor_y = physical_floor
+                    self.v_y_velocity = 0.0
+                    if current_env['hwnd']:
+                        self.anchored_hwnd = current_env['hwnd']
+                        self.anchored_rect = current_env['rect']
+            else:
+                self.y = physical_floor
+                self.floor_y = physical_floor
+                self.v_y_velocity = 0.0
+                
+                # Gatillo de saltos erráticos de pánico (aprox 6% de probabilidad por tick)
+                if random.randint(1, 100) <= 6:
+                    self.v_y_velocity = -9.0 # FIX: Altura del salto drásticamente aumentada
+                    self.y += self.v_y_velocity
+                    self.anchored_hwnd = None
+        else:
+            self.fly_amplitude += 0.3
+            self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
+            
+        if self.panic_timer % 3 == 0:
+            self.show_fire_vfx(is_master=False)
+
+        self.update_position()
+        self.window.after(30, self.physics_loop) # FIX: Hilo ajustado a 30ms para no desfasarse de Ho-Oh
+
+    def show_fire_vfx(self, is_master=False):
+        particles = []
+        cx = self.size_w // 2
+        
+        # El maestro genera fuego desde su centro, las víctimas desde los pies
+        cy = self.size_h // 2 if is_master else self.size_h
+        
+        count = random.randint(4, 8) if is_master else random.randint(2, 4)
+        speed_mult = 2.0 if is_master else 1.0
+        base_life = 15 if is_master else 10
+            
+        for _ in range(count):
+            # FIX MATEMÁTICO: Ho-Oh emite en 360 grados reales. Las víctimas mantienen el arco superior.
+            if is_master:
+                angle = random.uniform(0, 2 * math.pi)
+            else:
+                angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2) 
+                
+            speed = random.uniform(2.0, 5.0) * speed_mult
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            
+            size = random.choice([2, 3])
+            color = random.choice(["#E74C3C", "#E67E22", "#F1C40F", "#D35400"]) 
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_fire")
+            
+            # Almacenamos su identidad para aplicarle físicas distintas
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(base_life, base_life + 10), 'is_master': is_master})
+            
+        def animate_fire():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    
+                    # FIX FÍSICO: Gravedad y fricción independientes
+                    if p['is_master']:
+                        # Expansión radial (Nova) con fricción intensa y una levísima tendencia térmica al final
+                        p['vx'] *= 0.85
+                        p['vy'] *= 0.85
+                        p['vy'] -= 0.05 
+                    else:
+                        # Fuego de suelo (Ascenso forzado por convección)
+                        p['vx'] *= 0.9 
+                        p['vy'] -= 0.5 
+                    
+                    if p['life'] < 5:
+                        self.canvas.itemconfig(p['id'], fill="#555555", outline="#555555") 
+                        
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_fire)
+                
+        animate_fire()
+
+    def show_rain_vfx(self):
+        particles = []
+        w, h = self.size_w, self.size_h
+        
+        for _ in range(random.randint(3, 5)):
+            x = random.randint(-w, w * 2)
+            y = random.randint(-h, 0)
+            length = random.randint(10, 20)
+            color = random.choice(["#3498DB", "#5DADE2", "#85C1E9"]) 
+            
+            # Diagonal estética de tormenta fuerte
+            pid = self.canvas.create_line(x, y, x - length, y + length*2, fill=color, width=2, tags="vfx_rain")
+            particles.append({'id': pid, 'vx': -6.0, 'vy': 12.0, 'life': 8})
+            
+        def animate_rain():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            alive_count = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    p['life'] -= 1
+                    alive_count += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive_count > 0:
+                self.window.after(30, animate_rain)
+                
+        animate_rain()
+
+    def cancel_kyogre_arts(self):
+        if self.current_state not in ['dragged', 'exiting']:
+            self.current_state = 'falling'
+            
+        targets = getattr(self, 'kyogre_targets', [])
+        self.kyogre_targets = []
+        for target in targets:
+            if target and target.window.winfo_exists():
+                target.kyogre_master = None
+                if target.current_state == 'deluge_float' and target.current_state not in ['dragged', 'exiting']:
+                    target.current_state = 'falling'
+                    
+        if hasattr(self, 'flood_overlay') and self.flood_overlay:
+            self.flood_overlay.destroy()
+            self.flood_overlay = None
+            
+        master = getattr(self, 'kyogre_master', None)
+        self.kyogre_master = None
+        if master and master.window.winfo_exists():
+            master.cancel_kyogre_arts()
+
+    def _fsm_kyogre_channeling(self):
+        if not hasattr(self, 'kyogre_target_x'):
+            try:
+                monitor = win32api.MonitorFromPoint((int(self.x), int(self.y)), win32con.MONITOR_DEFAULTTONEAREST)
+                mon_info = win32api.GetMonitorInfo(monitor)
+                self.kyogre_target_x = mon_info['Monitor'][0] + ((mon_info['Monitor'][2] - mon_info['Monitor'][0]) // 2) - self.size_w // 2
+            except:
+                self.kyogre_target_x = self.v_x + (self.v_width // 2) - self.size_w // 2
+
+        target_y = self.v_y + 40 
+        dx = self.kyogre_target_x - self.x
+        dy = target_y - self.y
+        dist = math.sqrt(dx**2 + dy**2)
+        
+        if getattr(self, 'kyogre_phase', 0) == 0:
+            self.is_facing_right = (dx > 0)
+            fly_speed = self.speed * 1.5
+            
+            if dist > fly_speed:
+                self.x += (dx/dist) * fly_speed
+                self.y += (dy/dist) * fly_speed
+            else:
+                self.x = self.kyogre_target_x
+                self.y = target_y
+                self.kyogre_phase = 1 
+                
+                if not hasattr(self, 'flood_overlay') or not self.flood_overlay:
+                    self.flood_overlay = FloodOverlay(self.window.master, self.v_x, self.v_y, self.v_width, self.v_height)
+                
+                active_targets = []
+                for target in getattr(self, 'kyogre_targets', []):
+                    if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                        
+                        if target.current_state.startswith('dark_'): target.cancel_dark_arts()
+                        elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
+                        elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
+                        elif target.current_state == 'tk_channeling':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_target', None):
+                                if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                    t_targ = target.tk_target
+                                    t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                    target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    t_targ.current_state = 'falling'
+                                    if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                            target.tk_target = None
+                        elif target.current_state == 'tk_lifted':
+                            target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                            if getattr(target, 'tk_master', None):
+                                target.tk_master.tk_target = None
+                                target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                target.tk_master.current_state = 'falling'
+                            target.tk_master = None
+                        elif target.current_state == 'bubbled':
+                            target.manage_bubble_vfx(False)
+                            target.show_bubble_burst_vfx()
+                            
+                        if getattr(target, 'is_glitching', False):
+                            target.is_glitching = False
+                            target.glitch_teleports_left = 0
+                            target.glitch_cooldown = 12000
+                            
+                        target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                        target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                        try: target.window.attributes('-alpha', 1.0)
+                        except: pass
+                        
+                        target.current_state = 'deluge_float'
+                        target.kyogre_master = self
+                        target.anchored_hwnd = None
+                        active_targets.append(target)
+                
+                self.kyogre_targets = active_targets
+                
+        elif self.kyogre_phase == 1:
+            self.kyogre_timer -= 1
+            self.y = target_y + math.sin(self.kyogre_timer * 0.2) * 5.0
+            
+            if self.kyogre_timer <= 0:
+                self.kyogre_phase = 2 
+                if hasattr(self, 'flood_overlay') and self.flood_overlay:
+                    self.flood_overlay.is_draining = True
+                    
+        elif self.kyogre_phase == 2:
+            self.kyogre_timer -= 1
+            self.y = target_y + math.sin(self.kyogre_timer * 0.2) * 5.0
+            
+            if not hasattr(self, 'flood_overlay') or not self.flood_overlay or not getattr(self.flood_overlay, 'active', False):
+                
+                for target in getattr(self, 'kyogre_targets', []):
+                    if target and target.window.winfo_exists():
+                        target.kyogre_master = None
+                        if target.current_state == 'deluge_float':
+                            target.current_state = 'falling'
+                self.kyogre_targets = []
+                
+                if getattr(self, 'is_flying', False) or self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre":
+                    # FIX MATEMÁTICO: Recalcular explícitamente el porcentaje de altura del PC
+                    pct = self.pet_data.get("flying_height_pct", 3.0)
+                    max_offset = self.v_height - self.size_h
+                    target_offset_y = int(max_offset * (pct / 100.0))
+                    self.target_floor_y = (self.v_y + self.v_height) - self.size_h - target_offset_y
+                    
+                    self.floor_y = self.y 
+                    self.current_state = 'ascending'
+                else:
+                    self.current_state = 'falling'
+                    
+                if hasattr(self, 'kyogre_target_x'): delattr(self, 'kyogre_target_x')
+                
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_deluge_float(self):
+        master = getattr(self, 'kyogre_master', None)
+        if not master or master.current_state != 'kyogre_channeling' or not master.window.winfo_exists():
+            self.cancel_kyogre_arts()
+            self.window.after(30, self.physics_loop)
+            return
+
+        if getattr(master, 'kyogre_phase', 0) == 0:
+            self.update_position()
+            self.window.after(30, self.physics_loop)
+            return
+
+        overlay = getattr(master, 'flood_overlay', None)
+        current_flood_h = overlay.current_flood_h if overlay and getattr(overlay, 'active', False) else 0
+        
+        flood_base_y = self.v_y + self.v_height - current_flood_h
+        target_y = flood_base_y - self.size_h + 15
+        
+        t = time.time() * 3.0
+        # FIX: Sincronizado a los Macro-bloques de 120 píxeles
+        wave_res = overlay.wave_resolution if overlay else 120 
+        block_idx = int(self.x) // wave_res
+        aligned_x = block_idx * wave_res
+        
+        wave_offset = int(math.sin(t + (aligned_x * 0.005)) * 6.0) 
+        
+        water_surface_y = target_y + wave_offset
+
+        if self.y < water_surface_y - 20: 
+            self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + 2.0
+            self.y += self.v_y_velocity
+            if self.y >= water_surface_y:
+                self.y = water_surface_y
+                self.v_y_velocity = 0.0
+        else:
+            self.y = water_surface_y
+            self.v_y_velocity = 0.0
+            
+            if random.randint(1, 100) <= 8:
+                self.is_facing_right = not self.is_facing_right
+            drift = 2.5 if self.is_facing_right else -2.5
+            self.x += drift
+
+            if getattr(self, 'can_screen_wrap', False):
+                if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
+                elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
+            else:
+                if self.x <= self.v_x:
+                    self.x = self.v_x
+                    self.is_facing_right = True
+                elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                    self.x = (self.v_x + self.v_width) - self.size_w
+                    self.is_facing_right = False
+
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+        
+    def cancel_groudon_arts(self):
+        # Al cancelar a Groudon, solo le afecta a él. Las víctimas ya no están vinculadas lógicamente.
+        if self.current_state not in ['dragged', 'exiting']:
+            self.current_state = 'falling'
+
+    def _fsm_groudon_channeling(self):
+        if self.groudon_phase == 'jumping':
+            # FÍSICAS: Gravedad supermasiva
+            gravity = 4.0
+            self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + gravity
+            self.y += self.v_y_velocity
+
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+
+            # FIX FÍSICO: Escaneo topográfico continuo.
+            # Si se elimina la ventana subyacente, Groudon detectará el vacío y su 'floor_y' pasará a ser
+            # la siguiente ventana inferior o la barra de tareas nativa.
+            current_env, _ = self.get_window_environment()
+            fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
+            self.floor_y = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.default_floor_y
+
+            # IMPACTO SÍSMICO (Aterrizaje y Propagación)
+            if self.y >= self.floor_y and self.v_y_velocity > 0:
+                self.y = self.floor_y
+                self.v_y_velocity = 0.0
+                
+                self.groudon_phase = 'shaking'
+                self.groudon_shake_timer = 50 
+
+                self.show_dirt_vfx()
+                self.window.after(100, self.show_dirt_vfx)
+
+                # ONDA EXPANSIVA INSTANTÁNEA (Solo ocurre en 1 fotograma)
+                if getattr(self, 'get_all_pets', None):
+                    for target in self.get_all_pets():
+                        if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                            
+                            target_env, _ = target.get_window_environment()
+                            physical_floor = target_env['y'] if target.y <= target_env['y'] + 15 else target.default_floor_y
+                            
+                            # Condición de impacto: Solo si tocan el suelo son afectados por el terremoto
+                            if not getattr(target, 'is_flying', False) and target.y >= physical_floor - 15:
+                                
+                                # LIMPIEZA DE EVENTOS (Severing) ÚNICAMENTE SI SON GOLPEADOS
+                                if target.current_state.startswith('dark_'): target.cancel_dark_arts()
+                                elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
+                                elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
+                                elif target.current_state in ['kyogre_channeling', 'deluge_float']: target.cancel_kyogre_arts()
+                                elif target.current_state == 'tk_channeling':
+                                    target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_target', None):
+                                        if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                            t_targ = target.tk_target
+                                            t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                            t_targ.current_state = 'falling'
+                                            if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                                    target.tk_target = None
+                                elif target.current_state == 'tk_lifted':
+                                    target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_master', None):
+                                        target.tk_master.tk_target = None
+                                        target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                        target.tk_master.current_state = 'falling'
+                                    target.tk_master = None
+                                elif target.current_state == 'bubbled':
+                                    target.manage_bubble_vfx(False)
+                                    target.show_bubble_burst_vfx()
+
+                                if getattr(target, 'is_glitching', False):
+                                    target.is_glitching = False
+                                    target.glitch_teleports_left = 0
+                                    target.glitch_cooldown = 12000
+
+                                target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                                target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                                try: target.window.attributes('-alpha', 1.0)
+                                except: pass
+                                
+                                # Aplicar física de rebote a la víctima
+                                target.current_state = 'jumping_arc'
+                                target.jump_target_y = physical_floor
+                                target.v_y_velocity = random.uniform(-10.0, -16.0) 
+                                target.v_x_velocity = 0.0
+                                target.anchored_hwnd = None
+                                target.show_dirt_vfx() 
+                            elif getattr(target, 'is_flying', False):
+                                # Perturbación aerodinámica para los voladores (no cancela sus estados, solo los empuja)
+                                target.y += random.uniform(8.0, 20.0)
+
+                # TEMBLOR DE VENTANA MAESTRA
+                if self.game_controller and hasattr(self.game_controller, 'root'):
+                    pc = self.game_controller.root
+                    try:
+                        if not getattr(self.game_controller, 'is_shaking', False):
+                            self.game_controller.is_shaking = True
+                            ox = pc.winfo_x()
+                            oy = pc.winfo_y()
+                            shake_x = random.choice([-15, 15])
+                            shake_y = random.choice([-15, 15])
+                            pc.geometry(f"+{ox + shake_x}+{oy + shake_y}")
+                            
+                            def restore_pc():
+                                if pc.winfo_exists():
+                                    pc.geometry(f"+{ox}+{oy}")
+                                    self.game_controller.is_shaking = False
+                                    
+                            self.window.after(60, restore_pc)
+                    except: pass
+
+        elif self.groudon_phase == 'shaking':
+            self.groudon_shake_timer -= 1
+            
+            # Desplazamiento caótico del propio Groudon mientras hace temblar la tierra
+            offset_x = random.choice([-8, 0, 8])
+            self.canvas.coords(self.canvas_image_id, (self.size_w//2) + offset_x, self.size_h//2)
+            
+            if self.groudon_shake_timer <= 0:
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+                self.groudon_jumps_left -= 1
+                
+                # Evaluación de continuidad: Salta de nuevo o se detiene
+                if self.groudon_jumps_left > 0:
+                    self.groudon_phase = 'jumping'
+                    self.v_y_velocity = -28.0 
+                else:
+                    self.current_state = 'idle'
+                    
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def cancel_dark_arts(self):
+        self.dark_mode = False
+        self.canvas.itemconfig(self.canvas_image_id, state='normal')
+        self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+        try: self.window.attributes('-alpha', 1.0)
+        except: pass
+        
+        # Solo cambiamos a falling si no está siendo arrastrado en este mismo milisegundo
+        if self.current_state not in ['dragged', 'exiting']:
+            self.current_state = 'falling'
+        
+        target = getattr(self, 'dark_target', None)
+        self.dark_target = None # Prevención de recursividad infinita
+        if target and target.window.winfo_exists():
+            target.dark_master = None 
+            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+            target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+            try: target.window.attributes('-alpha', 1.0)
+            except: pass
+            if target.current_state not in ['dragged', 'exiting']:
+                target.current_state = 'falling'
+            
+        master = getattr(self, 'dark_master', None)
+        self.dark_master = None 
+        if master and master.window.winfo_exists():
+            master.cancel_dark_arts()
+
+    def _fsm_dark_victim_frozen(self):
+        self.window.after(50, self.physics_loop) 
+
+    def _fsm_dark_dash(self):
+        target = getattr(self, 'dark_target', None)
+        if not target or target.current_state != 'dark_victim_frozen' or not target.window.winfo_exists():
+            self.cancel_dark_arts()
+            self.window.after(30, self.physics_loop) 
+            return
+
+        self.is_facing_right = (target.x > self.x)
+        dist_x = abs(self.x - target.x)
+        dist_y = target.y - self.y
+        dash_speed = self.speed * 4
+        
+        if dist_x > dash_speed:
+            self.x += dash_speed if self.is_facing_right else -dash_speed
+            # FIX: Interpolación matemática. El eje Y avanza proporcionalmente a lo que avanza el X.
+            self.y += (dist_y / dist_x) * dash_speed
+        else:
+            self.x = target.x 
+            self.y = target.y 
+            self.current_state = 'dark_sink'
+            target.current_state = 'dark_victim_sink'
+            self.dark_step = 0
+            target.dark_step = 0
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_dark_sink(self):
+        self.dark_step += 1
+        desplazamiento = self.dark_step * 5
+        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        if desplazamiento >= self.size_h // 2 + 10:
+            self.current_state = 'dark_hidden'
+            self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_dark_victim_sink(self):
+        self.dark_step += 1
+        desplazamiento = self.dark_step * 5
+        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        if desplazamiento >= self.size_h // 2 + 10:
+            self.current_state = 'dark_victim_hidden'
+            self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_dark_victim_hidden(self):
+        self.window.after(50, self.physics_loop) 
+
+    def _fsm_dark_hidden(self):
+        target = getattr(self, 'dark_target', None)
+        if not target or not target.window.winfo_exists() or target.current_state not in ['dark_victim_sink', 'dark_victim_hidden']:
+            self.cancel_dark_arts()
+            self.window.after(30, self.physics_loop) 
+            return
+
+        # Sincronización: Esperar a que la víctima termine de hundirse
+        if target.current_state == 'dark_victim_sink':
+            self.window.after(30, self.physics_loop)
+            return
+
+        if not getattr(self, 'dark_timer_started', False):
+            self.dark_timer = 20 # FIX: Exactamente 1 segundo de espera
+            self.dark_timer_started = True
+
+        self.dark_timer -= 1
+        if self.dark_timer <= 0:
+            self.dark_timer_started = False
+            
+            self.x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.size_w - 50)
+            self.y = self.v_y 
+            current_env, _ = self.get_window_environment()
+            
+            if current_env['hwnd']:
+                self.anchored_hwnd = current_env['hwnd']
+                self.anchored_rect = current_env['rect']
+                self.floor_y = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
+            else:
+                self.anchored_hwnd = None
+                self.anchored_rect = None
+                self.floor_y = self.default_floor_y
+            
+            self.y = self.floor_y
+            self.is_facing_right = random.choice([True, False])
+            
+            target.anchored_hwnd = self.anchored_hwnd
+            target.anchored_rect = getattr(self, 'anchored_rect', None)
+            target.floor_y = target.anchored_rect[1] - target.size_h - getattr(target, 'offset_y', 0) if target.anchored_hwnd else target.default_floor_y
+            target.y = target.floor_y
+            
+            if self.is_facing_right:
+                target.x = self.x + self.size_w - 20
+                target.is_facing_right = False
+            else:
+                target.x = self.x - target.size_w + 20
+                target.is_facing_right = True
+            
+            self.current_state = 'dark_emerge'
+            target.current_state = 'dark_victim_emerge'
+            self.dark_step = (self.size_h // 2 + 10) // 4
+            target.dark_step = (target.size_h // 2 + 10) // 4
+            
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+            self.dark_alpha = 0.0
+            target.dark_alpha = 0.0
+            
+        self.update_position()
+        if target: target.update_position()
+        self.window.after(50, self.physics_loop)
+
+    def _fsm_dark_emerge(self):
+        target = getattr(self, 'dark_target', None)
+        if not target or not target.window.winfo_exists() or target.current_state not in ['dark_victim_emerge', 'thrown', 'falling']:
+            self.cancel_dark_arts()
+            self.window.after(30, self.physics_loop) # FIX CRÍTICO
+            return
+
+        if self.dark_step > 0:
+            self.dark_step -= 1
+            desplazamiento = self.dark_step * 4
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+            
+            self.dark_alpha = min(0.7, self.dark_alpha + 0.05)
+            try: self.window.attributes('-alpha', self.dark_alpha)
+            except: pass
+        
+        if self.dark_step <= 0:
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            
+            # FIX Sincronización: Esperar a que la víctima termine de emerger para lanzarlo
+            if target.current_state == 'dark_victim_emerge' and target.dark_step > 0:
+                self.window.after(30, self.physics_loop)
+                return
+                
+            self.current_state = 'dark_throw'
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_dark_victim_emerge(self):
+        if self.dark_step > 0:
+            self.dark_step -= 1
+            desplazamiento = self.dark_step * 4
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+            
+            self.dark_alpha = min(1.0, self.dark_alpha + 0.05)
+            try: self.window.attributes('-alpha', self.dark_alpha)
+            except: pass
+        
+        if self.dark_step <= 0:
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
+    def _fsm_dark_throw(self):
+        target = getattr(self, 'dark_target', None)
+        self.dark_mode = False
+        try: self.window.attributes('-alpha', 1.0)
+        except: pass
+        self.current_state = 'idle'
+        self.dark_target = None
+        
+        if target and target.window.winfo_exists():
+            target.dark_master = None
+            try: target.window.attributes('-alpha', 1.0)
+            except: pass
+            
+            target.current_state = 'thrown'
+            push_dir = 1 if self.is_facing_right else -1
+            
+            # FIX: Inercia bruta multiplicada x2
+            target.v_x_velocity = push_dir * random.uniform(40.0, 60.0)
+            target.v_y_velocity = random.uniform(-20.0, -30.0)
+            
+        self.update_position()
+        self.window.after(30, self.physics_loop)
+
     def trigger_landing_shake(self):
         self.current_state = 'landing_shake'
         self.shake_timer = 25
@@ -1342,6 +2820,19 @@ class DesktopPet:
 
     def start_wild_despawn(self):
         if self.current_state in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']: return
+        
+        # FIX ESTRUCTURAL: Liberar víctima antes de desaparecer en la hierba/nube
+        if self.current_state.startswith('dark_'):
+            self.cancel_dark_arts()
+        elif self.current_state.startswith('mewtwo_'):
+            self.cancel_mewtwo_arts()
+        elif self.current_state in ['hooh_channeling', 'panic_run']:
+            self.cancel_hooh_arts()
+        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
+        elif self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
+        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+            
         self.current_state = 'despawning_wild'
         self.animate_wild_despawn(step=0)
 
@@ -1434,6 +2925,19 @@ class DesktopPet:
     def handle_right_click(self, event):
         if self.is_egg: return
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
+            
+            # FIX ESTRUCTURAL: Liberar conexiones Siniestras si se guarda en la Pokéball
+            if self.current_state.startswith('dark_'):
+                self.cancel_dark_arts()
+            elif self.current_state.startswith('mewtwo_'):
+                self.cancel_mewtwo_arts()
+            elif self.current_state in ['hooh_channeling', 'panic_run']:
+                self.cancel_hooh_arts()
+            elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
+            elif self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
+            elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
+            elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+                
             if self.is_wild:
                 self.on_catch(self)
                 self.animate_vfx("catch")
@@ -1458,7 +2962,7 @@ class DesktopPet:
         if self.current_state == 'exiting': return 
         
         # Sincronización de Anclaje a 60 FPS (Física de Arrastre de Ventana)
-        if getattr(self, 'anchored_hwnd', None) and self.current_state in ['idle', 'walking', 'socializing', 'attacking']:
+        if getattr(self, 'anchored_hwnd', None) and self.current_state in ['idle', 'walking', 'socializing', 'attacking', 'digging', 'digging_in', 'digging_out']:
             try:
                 if HAS_WIN32 and win32gui.IsWindowVisible(self.anchored_hwnd) and not win32gui.IsIconic(self.anchored_hwnd):
                     new_rect = win32gui.GetWindowRect(self.anchored_hwnd)
@@ -1517,10 +3021,17 @@ class DesktopPet:
             elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating'] else self.frame_rate_idle
-            # Pasamos la variable is_glitching al motor gráfico
-            self.animator.update_animation(self.current_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False))
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim'] else self.frame_rate_idle
             
+            anim_state = self.current_state
+            if anim_state == 'hooh_channeling' and getattr(self, 'hooh_phase', 0) == 1:
+                anim_state = 'idle'
+            # FIX: Kyogre mira al frente mientras invoca la lluvia
+            if anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
+                anim_state = 'idle'
+                
+            self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
+                        
         self.window.after(16, self.animate_loop)
 
     def physics_loop(self):
@@ -2184,12 +3695,29 @@ class DesktopPet:
         self.dig_timer -= 1
         
         # --- NAVEGACIÓN ORGÁNICA ---
-        # 2% de probabilidad por ciclo (aprox. 1 cambio de sentido cada 2.5 segundos reales)
         if random.randint(1, 1000) <= 20:
             self.is_facing_right = not self.is_facing_right
         
-        # Aceleración estructural: x2 velocidad mientras no hay fricción del aire
         velocidad_excavacion = self.speed * 2
+
+        # FIX: Clampeo estricto y predictivo contra redimensionados de ventana bruscos
+        if getattr(self, 'anchored_rect', None):
+            rect = self.anchored_rect
+            
+            # 1. Clampeo de emergencia: Si la ventana lo ha dejado fuera, lo forzamos adentro
+            if self.x > rect[2] - self.size_w:
+                self.x = rect[2] - self.size_w
+                self.is_facing_right = False
+            elif self.x < rect[0]:
+                self.x = rect[0]
+                self.is_facing_right = True
+            # 2. Comprobación predictiva estándar: Rebotar antes de salir
+            else:
+                if self.is_facing_right and self.x + velocidad_excavacion > rect[2] - self.size_w:
+                    self.is_facing_right = False
+                elif not self.is_facing_right and self.x - velocidad_excavacion < rect[0]:
+                    self.is_facing_right = True
+
         self.x += velocidad_excavacion if self.is_facing_right else -velocidad_excavacion
         
         if getattr(self, 'can_screen_wrap', False):
@@ -2345,8 +3873,167 @@ class DesktopPet:
         self.tk_cooldown = max(0, getattr(self, 'tk_cooldown', 0) - 1)
         self.glitch_cooldown = max(0, getattr(self, 'glitch_cooldown', 0) - 1)
         self.bubble_cooldown = max(0, getattr(self, 'bubble_cooldown', 0) - 1)
-        self.dig_cooldown = max(0, getattr(self, 'dig_cooldown', 0) - 1) # NUEVO COOLDOWN
+        self.dig_cooldown = max(0, getattr(self, 'dig_cooldown', 0) - 1)
+        
+        # FIX: Inicialización y decaimiento del contador Siniestro por fotograma
+        self.dark_cooldown = max(0, getattr(self, 'dark_cooldown', 0) - 1) 
+        self.mewtwo_cooldown = max(0, getattr(self, 'mewtwo_cooldown', 0) - 1) 
+        self.hooh_cooldown = max(0, getattr(self, 'hooh_cooldown', 0) - 1) 
+        self.kyogre_cooldown = max(0, getattr(self, 'kyogre_cooldown', 0) - 1)
+        self.groudon_cooldown = max(0, getattr(self, 'groudon_cooldown', 0) - 1)
+        self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
+        self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1) # NUEVO
 
+        # --- MECÁNICA EXCLUSIVA: CICLÓN ESMERALDA DE RAYQUAZA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                if getattr(self, 'get_all_pets', None):
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                    if valid_targets:
+                        self.rayquaza_cooldown = 108000 # 1.5 horas
+                        self.current_state = 'rayquaza_channeling'
+                        self.rayquaza_phase = 0
+                        
+                        # FIX: Definir número de idas y vueltas y la duración inicial del barrido
+                        self.rayquaza_sweeps_total = random.randint(8, 10)
+                        self.rayquaza_sweeps_done = 0
+                        self.rayquaza_sweep_duration = 120 # Arranca lento (~3.6s el primer cruce)
+                        
+                        self.rayquaza_targets = valid_targets 
+                        self.window.after(50, self.physics_loop)
+                        return
+
+        # --- MECÁNICA EXCLUSIVA: VENDAVAL AEROBLÁSICO DE LUGIA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                self.lugia_cooldown = 108000 # 1.5 horas
+                self.current_state = 'lugia_channeling'
+                self.is_facing_right = random.choice([True, False]) # Decide hacia dónde va a barrer la pantalla
+                self.window.after(50, self.physics_loop)
+                return
+
+        # --- MECÁNICA EXCLUSIVA: TERREMOTO DE GROUDON ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                self.groudon_cooldown = 108000 # 1.5 horas
+                self.current_state = 'groudon_channeling'
+                # FIX LÓGICO: Definimos aleatoriedad de repeticiones (5 a 10) y la primera propulsión
+                self.groudon_jumps_left = random.randint(5, 10) 
+                self.groudon_phase = 'jumping'
+                self.v_y_velocity = -28.0 
+                self.window.after(50, self.physics_loop)
+                return
+
+        # --- MECÁNICA EXCLUSIVA: DILUVIO DE KYOGRE ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                if getattr(self, 'get_all_pets', None):
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                    if valid_targets:
+                        self.kyogre_cooldown = 108000 # 1.5 horas
+                        self.current_state = 'kyogre_channeling'
+                        self.kyogre_phase = 0
+                        self.kyogre_timer = 666 # 20 segundos exactos
+                        self.kyogre_targets = valid_targets 
+                        self.window.after(50, self.physics_loop)
+                        return
+
+        # --- MECÁNICA EXCLUSIVA: FUEGO SAGRADO DE HO-OH ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                if getattr(self, 'get_all_pets', None):
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                    if valid_targets:
+                        self.hooh_cooldown = 108000 
+                        self.current_state = 'hooh_channeling'
+                        self.hooh_phase = 0
+                        self.hooh_timer = 666 
+                        
+                        # FIX: Solo guardamos los objetivos en memoria, pero NO los interrumpimos aún.
+                        # Seguirán haciendo su vida normal durante el vuelo de preparación.
+                        self.hooh_targets = valid_targets 
+                        
+                        self.window.after(50, self.physics_loop)
+                        return
+
+        # --- MECÁNICA EXCLUSIVA: VÓRTICE PSÍQUICO DE MEWTWO ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking']:
+            if random.randint(1, 1000) <= 8: 
+                if getattr(self, 'get_all_pets', None):
+                    
+                    # FIX: Excluir estados de transición crítica (spawns y evoluciones) para evitar bucles paralelos
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                    if valid_targets:
+                        self.mewtwo_cooldown = 108000 # 1 hora y media
+                        self.current_state = 'mewtwo_channeling'
+                        self.mewtwo_timer = 0
+                        self.mewtwo_targets = valid_targets
+                        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+                        
+                        for i, target in enumerate(valid_targets):
+                            
+                            # FIX ESTRUCTURAL: Limpieza exhaustiva de vínculos de otras mecánicas para evitar escape de víctimas
+                            if target.current_state.startswith('dark_'):
+                                target.cancel_dark_arts()
+                                
+                            elif target.current_state == 'tk_channeling':
+                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_target', None):
+                                    if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                        
+                                        # FIX: Forzar la limpieza de partículas del objeto/víctima flotante
+                                        t_targ = target.tk_target
+                                        t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                        
+                                        t_targ.current_state = 'falling'
+                                        if hasattr(t_targ, 'tk_master'):
+                                            t_targ.tk_master = None
+                                target.tk_target = None
+                                
+                            elif target.current_state == 'tk_lifted':
+                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_master', None):
+                                    target.tk_master.tk_target = None
+                                    target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                    target.tk_master.current_state = 'falling'
+                                target.tk_master = None
+                                
+                            elif target.current_state == 'bubbled':
+                                target.manage_bubble_vfx(False)
+                                target.show_bubble_burst_vfx()
+                                
+                            # FIX: Cancelar el Glitch de los Fantasmas
+                            if getattr(target, 'is_glitching', False):
+                                target.is_glitching = False
+                                target.glitch_teleports_left = 0
+                                target.glitch_cooldown = 12000
+                                
+                            # Limpieza del renderizado visual
+                            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                            target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                            try: target.window.attributes('-alpha', 1.0)
+                            except: pass
+                            
+                            # Finalmente, el secuestro orbital
+                            target.current_state = 'mewtwo_victim'
+                            target.mewtwo_master = self
+                            target.mewtwo_orbit_offset = (i * (2 * math.pi / len(valid_targets))) 
+                            target.mewtwo_activation_tick = i * 33 
+                            target.anchored_hwnd = None 
+                            
+                        self.window.after(50, self.physics_loop)
+                        return
+                    
         # --- MECÁNICA: PACIFICACIÓN TIPO HADA ---
         if getattr(self, 'fairy_aura', False) and self.current_state in ['idle', 'walking']:
             if getattr(self, 'get_all_pets', None):
@@ -2381,6 +4068,27 @@ class DesktopPet:
                         self.window.after(50, self.physics_loop)
                         return
         
+        # --- MECÁNICA: EMBOSCADA TIPO SINIESTRO ---
+        if getattr(self, 'dark_arts', False) and self.dark_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+            if random.randint(1, 1000) <= 10: 
+                if getattr(self, 'get_all_pets', None):
+                    # FIX: Se inyecta la restricción de altura estricta "abs(p.y - self.y) < 80"
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and getattr(p, 'climbing_surface', 'floor') == 'floor' and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500 and abs(p.y - self.y) < 80]
+                    if valid_targets:
+                        target = random.choice(valid_targets)
+                        self.dark_cooldown = 12000 
+                        self.current_state = 'dark_dash'
+                        self.dark_target = target
+                        self.dark_mode = True
+                        try: self.window.attributes('-alpha', 0.7)
+                        except: pass
+                        
+                        target.current_state = 'dark_victim_frozen'
+                        target.dark_master = self
+                        
+                        self.window.after(50, self.physics_loop)
+                        return
+
         # --- MECÁNICA: EXCAVACIÓN TIPO TIERRA ---
         if getattr(self, 'can_dig', False) and self.dig_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if random.randint(1, 1000) <= 10: 
@@ -2403,6 +4111,15 @@ class DesktopPet:
                         
                         # Disparamos el proyectil animado desde nuestro centro geométrico
                         def on_bubble_hit(hit_target):
+                            # FIX ESTRUCTURAL: Prevenir corrupción FSM si la burbuja impacta a un Siniestro
+                            if getattr(hit_target, 'current_state', '').startswith('dark_'):
+                                hit_target.cancel_dark_arts()
+                            elif getattr(hit_target, 'current_state', '').startswith('mewtwo_'):
+                                hit_target.cancel_mewtwo_arts()
+                            elif getattr(hit_target, 'current_state', '') in ['hooh_channeling', 'panic_run']:
+                                hit_target.cancel_hooh_arts()
+                            elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']: hit_target.cancel_lugia_arts()
+                                
                             hit_target.current_state = 'bubbled'
                             hit_target.bubble_max_time = random.randint(130, 200) 
                             hit_target.bubble_timer = hit_target.bubble_max_time
@@ -2897,6 +4614,124 @@ class BubbleProjectile:
         self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
         self.window.after(30, self.physics_loop)
 
+class FloodOverlay:
+    def __init__(self, parent_root, v_x, v_y, v_width, v_height):
+        self.window = tk.Toplevel(parent_root)
+        self.window.overrideredirect(True)
+        self.window.attributes('-topmost', True)
+        
+        CHROMA_KEY = '#00FF00'
+        self.window.config(bg=CHROMA_KEY)
+        
+        try: 
+            self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
+            self.window.wm_attributes('-alpha', 0.25) 
+        except tk.TclError: pass
+
+        self.v_x = v_x
+        self.v_y = v_y
+        self.v_width = v_width
+        self.v_height = v_height
+        
+        self.flood_h = int(v_height * 0.12) 
+        self.current_flood_h = 0.0 
+        
+        self.window.geometry(f"{v_width}x{v_height}+{int(v_x)}+{int(v_y)}")
+
+        self.canvas = tk.Canvas(self.window, width=v_width, height=v_height, bg=CHROMA_KEY, highlightthickness=0)
+        self.canvas.pack()
+
+        self.active = True
+        self.is_draining = False 
+        
+        self.wave_resolution = 120 
+        self.blocks_count = (v_width // self.wave_resolution) + 2
+        
+        self.rects_bg = []
+        self.rects_fg = []
+        for i in range(self.blocks_count):
+            x = i * self.wave_resolution
+            rbg = self.canvas.create_rectangle(x, v_height, x + self.wave_resolution, v_height, fill="#1B4F72", outline="", tags="wave")
+            rfg = self.canvas.create_rectangle(x, v_height, x + self.wave_resolution, v_height, fill="#2980B9", outline="", tags="wave")
+            self.rects_bg.append(rbg)
+            self.rects_fg.append(rfg)
+
+        self.rain_pool = []
+        colors = ["#3498DB", "#5DADE2", "#85C1E9"]
+        for _ in range(12): 
+            pid = self.canvas.create_line(-100, -100, -100, -100, fill=random.choice(colors), width=3, tags="global_rain")
+            self.rain_pool.append({'id': pid, 'active': False, 'x': -100, 'y': -100, 'length': random.randint(20, 35)})
+
+        # FIX ESTRUCTURAL (Condición de Carrera): 
+        # Esperamos 100ms para que Tkinter termine de crear la ventana física.
+        # Luego inyectamos los permisos de Click-Through directamente al SO.
+        self.window.after(100, self._apply_click_through)
+        
+        self.animate_environment()
+
+    def _apply_click_through(self):
+        if HAS_WIN32 and self.active:
+            try:
+                # Obtenemos el "Parent ID" real de la ventana de SO, no el contenedor interno de Tkinter
+                hwnd = win32gui.GetParent(self.window.winfo_id())
+                if not hwnd:
+                    hwnd = int(self.window.wm_frame())
+                    
+                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style | win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
+            except Exception as e:
+                print(f"[!] Error forzando Click-Through: {e}")
+
+    def animate_environment(self):
+        if not self.active: return
+        t = time.time() * 3.0
+
+        if getattr(self, 'is_draining', False):
+            self.current_flood_h -= 1.5
+            if self.current_flood_h <= 0:
+                self.destroy()
+                return
+        else:
+            self.current_flood_h = min(self.flood_h, self.current_flood_h + 1.5)
+
+        for i in range(self.blocks_count):
+            x = i * self.wave_resolution
+            
+            offset_bg = int(math.sin(t * 0.8 + (x * 0.004)) * 8.0 + math.cos(t * 0.6 + (x * 0.008)) * 4.0)
+            offset_fg = int(math.sin(t + (x * 0.005)) * 6.0)
+
+            y_bg = self.v_height - self.current_flood_h + offset_bg
+            y_fg = self.v_height - self.current_flood_h + offset_fg
+
+            self.canvas.coords(self.rects_bg[i], x, y_bg, x + self.wave_resolution, self.v_height)
+            self.canvas.coords(self.rects_fg[i], x, y_fg, x + self.wave_resolution, self.v_height)
+
+        if not getattr(self, 'is_draining', False):
+            spawns = random.randint(1, 2) 
+            for p in self.rain_pool:
+                if not p['active']:
+                    p['active'] = True
+                    p['x'] = random.randint(0, self.v_width + 500)
+                    p['y'] = random.randint(-100, -20)
+                    spawns -= 1
+                    if spawns <= 0: break
+                    
+        for p in self.rain_pool:
+            if p['active']:
+                p['x'] -= 15.0
+                p['y'] += 40.0
+                self.canvas.coords(p['id'], p['x'], p['y'], p['x'] - p['length']*0.5, p['y'] + p['length']*1.5)
+                
+                if p['y'] > self.v_height + 50:
+                    p['active'] = False
+                    self.canvas.coords(p['id'], -100, -100, -100, -100)
+
+        self.window.after(60, self.animate_environment)
+
+    def destroy(self):
+        self.active = False
+        self.window.destroy()
+
 # --- POKÉBALL INTERACTIVA ---
 class InteractivePokeball:
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
@@ -3270,6 +5105,12 @@ class InteractivePokeball:
                 if dist < min_dist:
                     force_multiplier = (p.size_w / 64.0) * (p.speed * 1.5 if p.current_state == 'walking' else 1.0)
                     
+                    # FIX ESTRUCTURAL: Evitar que la bola de juguete corrompa al tipo Siniestro y Legendarios
+                    if p.current_state.startswith('dark_'):
+                        p.cancel_dark_arts()
+                    elif p.current_state in ['lugia_channeling', 'lugia_dash']:
+                        p.cancel_lugia_arts()
+
                     if p.current_state == 'walking':
                         push_dir = 1 if p.is_facing_right else -1
                         self.v_x_velocity = push_dir * force_multiplier * 2.7

@@ -9,7 +9,8 @@
         "can_teleport": true,
         "heavy_fall": false,
         "aggressive": false,
-        "telekinetic": true
+        "telekinetic": true,
+        "dark_arts": true
     },
     "images": {
         "idle_is_animated": true,

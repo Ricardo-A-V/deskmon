@@ -9,7 +9,8 @@
         "can_teleport": false,
         "heavy_fall": false,
         "aggressive": false,
-        "bubble_blower": true
+        "bubble_blower": true,
+        "dark_arts": true
     },
     "images": {
         "idle_is_animated": true,
