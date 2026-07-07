@@ -24,6 +24,7 @@ dev_env/
 raw_shinys/
 dev_spawner.py
 climbing_configurator.py
+changes.txt
 
 # Releases empaquetados
 releases/
