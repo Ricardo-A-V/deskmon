@@ -36,8 +36,10 @@ from mechanics.shared_vfx import SharedVFX
 from mechanics.dialga import DialgaMechanics
 from mechanics.palkia import PalkiaMechanics
 from mechanics.giratina import GiratinaMechanics
+from mechanics.zekrom import ZekromMechanics
+from mechanics.reshiram import ReshiramMechanics
 
-class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -324,7 +326,12 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             'giratina_reappear': self._fsm_giratina_reappear,
             'giratina_victim_pulled': self._fsm_giratina_victim_pulled,
             'giratina_victim_fade': self._fsm_giratina_victim_fade,
-            'giratina_victim_absorbed': self._fsm_giratina_victim_absorbed
+            'giratina_victim_absorbed': self._fsm_giratina_victim_absorbed,
+            'zekrom_channeling': self._fsm_zekrom_channeling,
+            'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
+            'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
+            'reshiram_channeling': self._fsm_reshiram_channeling,
+            'reshiram_burn': self._fsm_reshiram_burn
         }            
         self.keep_on_top()
         self.animate_loop()
@@ -401,6 +408,12 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         # FIX: Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
+
+        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
+            self.cancel_zekrom_arts()
+
+        elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
+            self.cancel_reshiram_arts()
 
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
@@ -488,6 +501,12 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         # FIX: Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
+
+        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
+            self.cancel_zekrom_arts()
+
+        elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
+            self.cancel_reshiram_arts()
 
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
@@ -1147,6 +1166,8 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
             elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
             elif self.current_state.startswith('giratina_'): self.cancel_giratina_arts()
+            elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'): self.cancel_zekrom_arts()
+            elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'): self.cancel_reshiram_arts()
                 
             if self.is_wild:
                 self.on_catch(self)
@@ -1254,6 +1275,11 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
             if anim_state in ['giratina_dash_prep', 'giratina_dash']:
                 anim_state = 'walking'
+            if anim_state in ['zekrom_channeling', 'zekrom_paralyzed', 'reshiram_channeling']:
+                anim_state = 'idle'
+            if anim_state == 'reshiram_burn':
+                anim_state = 'walking'
+            
                 
             self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
                         
@@ -2124,6 +2150,24 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1)
         self.palkia_cooldown = max(0, getattr(self, 'palkia_cooldown', 0) - 1)
         self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
+        self.zekrom_cooldown = max(0, getattr(self, 'zekrom_cooldown', 0) - 1)
+        self.reshiram_cooldown = max(0, getattr(self, 'reshiram_cooldown', 0) - 1)
+
+        # --- MECÁNICA EXCLUSIVA: BLUE FLARE DE RESHIRAM ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "reshiram" and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.reshiram_cooldown = 72000 # 1 Hora
+                self.current_state = 'reshiram_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- MECÁNICA EXCLUSIVA: BOLT STRIKE DE ZEKROM ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "zekrom" and getattr(self, 'zekrom_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.zekrom_cooldown = 72000 # 1 Hora
+                self.current_state = 'zekrom_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
 
         # --- EXCLUSIVE MECHANIC: GIRATINA'S DISTORTION VORTEX ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
@@ -2985,7 +3029,9 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             'rayquaza_channeling', 
             'dialga_channeling', 
             'palkia_channeling',
-            'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear'
+            'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',
+            'zekrom_channeling',
+            'reshiram_channeling'
         ]
         
         # 3. Structural scan
