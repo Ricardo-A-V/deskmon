@@ -63,7 +63,13 @@ class DarkArtsMechanics:
     def _fsm_dark_sink(self):
         self.dark_step += 1
         desplazamiento = self.dark_step * 5
-        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        
+        # FIX: Dirección visual inversa para esconderse en el techo
+        if getattr(self, 'gravity_inverted', False):
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
+        else:
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+            
         if desplazamiento >= self.size_h // 2 + 10:
             self.current_state = 'dark_hidden'
             self.canvas.itemconfig(self.canvas_image_id, state='hidden')
@@ -73,7 +79,12 @@ class DarkArtsMechanics:
     def _fsm_dark_victim_sink(self):
         self.dark_step += 1
         desplazamiento = self.dark_step * 5
-        self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+        
+        if getattr(self, 'gravity_inverted', False):
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
+        else:
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+            
         if desplazamiento >= self.size_h // 2 + 10:
             self.current_state = 'dark_victim_hidden'
             self.canvas.itemconfig(self.canvas_image_id, state='hidden')
@@ -153,13 +164,17 @@ class DarkArtsMechanics:
         target = getattr(self, 'dark_target', None)
         if not target or not target.window.winfo_exists() or target.current_state not in ['dark_victim_emerge', 'thrown', 'falling']:
             self.cancel_dark_arts()
-            self.schedule_loop(30, self.physics_loop) # FIX CRÍTICO
+            self.schedule_loop(30, self.physics_loop) 
             return
 
         if self.dark_step > 0:
             self.dark_step -= 1
             desplazamiento = self.dark_step * 4
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+            
+            if getattr(self, 'gravity_inverted', False):
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, desplazamiento))
+            else:
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
             
             self.dark_alpha = min(0.7, self.dark_alpha + 0.05)
             try: self.window.attributes('-alpha', self.dark_alpha)
@@ -168,7 +183,6 @@ class DarkArtsMechanics:
         if self.dark_step <= 0:
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             
-            # FIX Sincronización: Esperar a que la víctima termine de emerger para lanzarlo
             if target.current_state == 'dark_victim_emerge' and target.dark_step > 0:
                 self.schedule_loop(30, self.physics_loop)
                 return
@@ -182,7 +196,11 @@ class DarkArtsMechanics:
         if self.dark_step > 0:
             self.dark_step -= 1
             desplazamiento = self.dark_step * 4
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+            
+            if getattr(self, 'gravity_inverted', False):
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, desplazamiento))
+            else:
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
             
             self.dark_alpha = min(1.0, self.dark_alpha + 0.05)
             try: self.window.attributes('-alpha', self.dark_alpha)
@@ -210,9 +228,12 @@ class DarkArtsMechanics:
             target.current_state = 'thrown'
             push_dir = 1 if self.is_facing_right else -1
             
-            # FIX: Inercia bruta multiplicada x2
             target.v_x_velocity = push_dir * random.uniform(40.0, 60.0)
-            target.v_y_velocity = random.uniform(-20.0, -30.0)
+            # FIX: Inversión paramétrica del lanzamiento (hacia el suelo de la habitación)
+            if getattr(self, 'gravity_inverted', False):
+                target.v_y_velocity = random.uniform(20.0, 30.0) 
+            else:
+                target.v_y_velocity = random.uniform(-20.0, -30.0) 
             
         self.update_position()
         self.schedule_loop(30, self.physics_loop)

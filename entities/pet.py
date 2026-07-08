@@ -35,8 +35,9 @@ from mechanics.dark_arts import DarkArtsMechanics
 from mechanics.shared_vfx import SharedVFX
 from mechanics.dialga import DialgaMechanics
 from mechanics.palkia import PalkiaMechanics
+from mechanics.giratina import GiratinaMechanics
 
-class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -73,7 +74,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         LEGENDARY_MATRIX = {
             "articuno", "zapdos", "moltres", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
-            "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
+            "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "keldeo", "meloetta", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
@@ -315,7 +316,15 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             'rayquaza_cyclone_victim': self._fsm_rayquaza_cyclone_victim, # NUEVO
             'palkia_channeling': self._fsm_palkia_channeling,
             'palkia_invert_transition': self._fsm_palkia_invert_transition,
-            'palkia_revert_transition': self._fsm_palkia_revert_transition
+            'palkia_revert_transition': self._fsm_palkia_revert_transition,
+            'giratina_channeling': self._fsm_giratina_channeling,
+            'giratina_dash_prep': self._fsm_giratina_dash_prep,
+            'giratina_dash': self._fsm_giratina_dash,
+            'giratina_wait_reappear': self._fsm_giratina_wait_reappear,
+            'giratina_reappear': self._fsm_giratina_reappear,
+            'giratina_victim_pulled': self._fsm_giratina_victim_pulled,
+            'giratina_victim_fade': self._fsm_giratina_victim_fade,
+            'giratina_victim_absorbed': self._fsm_giratina_victim_absorbed
         }            
         self.keep_on_top()
         self.animate_loop()
@@ -375,6 +384,12 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         if self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
 
+        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+            self.current_state = 'falling'
+
         # FIX: Interrumpir Fuego Sagrado de Ho-Oh
         if self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
@@ -382,6 +397,10 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
+
+        # FIX: Cancelar vórtice y restaurar opacidad si agarras a Giratina
+        elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
+            self.cancel_giratina_arts()
 
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
@@ -452,6 +471,12 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
 
+        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+            self.current_state = 'falling'
+
         # FIX: Interrumpir Fuego Sagrado de Ho-Oh
         if self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
@@ -459,6 +484,10 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
+
+        # FIX: Cancelar vórtice y restaurar opacidad si agarras a Giratina
+        elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
+            self.cancel_giratina_arts()
 
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
@@ -920,10 +949,15 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             self.start_evolution_vfx(random.choice(evolves_to), step=0)
 
     def load_config(self):
+        config_path = os.path.join(self.pet_dir, "config.json")
         try:
-            with open(os.path.join(self.pet_dir, "config.json"), "r", encoding="utf-8") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except Exception as e:
+            print(f"\n[!] ERROR CRÍTICO: El motor se ha detenido.")
+            print(f"[!] Fallo al leer el archivo: {config_path}")
+            print(f"[!] Motivo técnico: {e}\n")
+            import sys
             sys.exit(1)
 
     def animate_egg_spawn(self, step):
@@ -1112,6 +1146,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             elif self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
             elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
             elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+            elif self.current_state.startswith('giratina_'): self.cancel_giratina_arts()
                 
             if self.is_wild:
                 self.on_catch(self)
@@ -1217,6 +1252,8 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                 anim_state = 'idle'
             if anim_state == 'dialga_channeling':
                 anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
+            if anim_state in ['giratina_dash_prep', 'giratina_dash']:
+                anim_state = 'walking'
                 
             self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
                         
@@ -1735,7 +1772,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                     phase = (self.social_timer // 8) % 2
                     my_turn = (phase == 0) if self.is_facing_right else (phase == 1)
                     if my_turn and self.social_timer % 8 == 0:
-                        self.v_y_velocity = -5.0
+                        self.v_y_velocity = 5.0 if getattr(self, 'gravity_inverted', False) else -5.0
                         self.y += self.v_y_velocity
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
@@ -1760,6 +1797,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         target = self.attack_target
         dist = abs(self.x - target.x)
         push_dir = 1 if self.is_facing_right else -1
+        is_inv = getattr(self, 'gravity_inverted', False)
 
         if not hasattr(self, 'attack_phase'):
             self.attack_phase = 0
@@ -1786,17 +1824,17 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             if dist <= self.size_w * 0.4: 
                 advance_phase(2, pause=False)
                 self.v_x_velocity = -1.5 * push_dir
-                self.v_y_velocity = -5.0
+                self.v_y_velocity = 5.0 if is_inv else -5.0
 
         elif self.attack_phase == 2:
             target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
             
-            if self.y < target_y or self.v_y_velocity != 0:
-                self.v_y_velocity += 1.0
+            if (self.y > target_y if is_inv else self.y < target_y) or self.v_y_velocity != 0:
+                self.v_y_velocity += -1.0 if is_inv else 1.0
                 self.y += self.v_y_velocity
                 self.x += self.v_x_velocity
                 
-                if self.y >= target_y and self.v_y_velocity > 0:
+                if (self.y <= target_y and self.v_y_velocity < 0) if is_inv else (self.y >= target_y and self.v_y_velocity > 0):
                     self.y = target_y
                     self.v_y_velocity = 0
                     self.v_x_velocity = 0
@@ -1811,17 +1849,17 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             if dist <= self.size_w * 0.4: 
                 advance_phase(4, pause=False)
                 self.v_x_velocity = -2.0 * push_dir
-                self.v_y_velocity = -6.0
+                self.v_y_velocity = 6.0 if is_inv else -6.0
 
         elif self.attack_phase == 4:
             target_y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
             
-            if self.y < target_y or self.v_y_velocity != 0:
-                self.v_y_velocity += 1.0
+            if (self.y > target_y if is_inv else self.y < target_y) or self.v_y_velocity != 0:
+                self.v_y_velocity += -1.0 if is_inv else 1.0
                 self.y += self.v_y_velocity
                 self.x += self.v_x_velocity
                 
-                if self.y >= target_y and self.v_y_velocity > 0:
+                if (self.y <= target_y and self.v_y_velocity < 0) if is_inv else (self.y >= target_y and self.v_y_velocity > 0):
                     self.y = target_y
                     self.v_y_velocity = 0
                     self.v_x_velocity = 0
@@ -1839,20 +1877,17 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
             if dist <= self.size_w * 0.5 or has_crossed: 
                 self.attack_phase = 6
                 
-                # --- SISTEMA DE MASA Y POTENCIA RELATIVA ---
-                # Poder = Nivel + (Mitad del tamaño geométrico)
                 my_power = self.pet_data['level'] + (self.size_w * 0.5)
                 target_power = target.pet_data['level'] + (target.size_w * 0.5)
                 
-                # Ratio de impacto = Fuerza del enemigo / Mi propia masa
-                # Limitado matemáticamente entre 0.4x y 2.0x para evitar colapsar la pantalla
                 my_knockback_ratio = max(0.4, min(4.0, target_power / max(1, my_power)))
                 target_knockback_ratio = max(0.4, min(4.0, my_power / max(1, target_power)))
                 
                 target_is_soft = not getattr(target, 'heavy_fall', False) or not getattr(target, 'aggressive', False)
                 self_is_soft = not getattr(self, 'heavy_fall', False) or not getattr(self, 'aggressive', False)
                 
-                # Qué le ocurre al ATACANTE (self)
+                mult = 1 if not is_inv else -1
+                
                 if getattr(self, 'heavy_fall', False) and target_is_soft:
                     self.current_state = 'landing_shake'
                     self.shake_timer = 25 
@@ -1861,10 +1896,8 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                 else:
                     self.current_state = 'thrown' 
                     self.v_x_velocity = -(25.0 * my_knockback_ratio) * push_dir 
-                    # El eje Y se limita a 1.5 máximo para evitar que el salto rompa el radar de techo
-                    self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio))            
+                    self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio)) * mult            
                 
-                # Qué le ocurre al RECEPTOR (target)
                 if target and getattr(target, 'current_state', '') == 'attacking':
                     if getattr(target, 'heavy_fall', False) and self_is_soft:
                         target.current_state = 'landing_shake'
@@ -1874,7 +1907,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                     else:
                         target.current_state = 'thrown'
                         target.v_x_velocity = (25.0 * target_knockback_ratio) * push_dir 
-                        target.v_y_velocity = -(15.0 * min(1.5, target_knockback_ratio))
+                        target.v_y_velocity = -(15.0 * min(1.5, target_knockback_ratio)) * mult
                         
                     target.attack_target = None
                     target.attack_phase = 0
@@ -1913,7 +1946,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                         self.v_y_velocity = 0.0
                 else:
                     if self.eating_timer in [20, 10]:
-                        self.v_y_velocity = -4.0
+                        self.v_y_velocity = 4.0 if getattr(self, 'gravity_inverted', False) else -4.0
                         self.y += self.v_y_velocity
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
@@ -2090,16 +2123,94 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
         self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1) # NUEVO
         self.palkia_cooldown = max(0, getattr(self, 'palkia_cooldown', 0) - 1)
+        self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
 
-        # --- MECÁNICA EXCLUSIVA: INVERSIÓN ESPACIAL DE PALKIA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "palkia" and getattr(self, 'palkia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+        # --- MECÁNICA EXCLUSIVA: VÓRTICE DISTORSIÓN DE GIRATINA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                if getattr(self, 'get_all_pets', None):
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']
+                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                    if valid_targets:
+                        self.giratina_cooldown = 108000 # 1.5 horas
+                        self.current_state = 'giratina_channeling'
+                        
+                        # --- LIMPIEZA ABSOLUTA DE MECÁNICAS PREVIAS ---
+                        for target in valid_targets:
+                            # 1. Artes Siniestras
+                            if target.current_state.startswith('dark_'): 
+                                target.cancel_dark_arts()
+                                
+                            # 2. Telequinesis (Auras y Vínculos de Maestro/Víctima)
+                            elif target.current_state == 'tk_channeling':
+                                if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_target', None):
+                                    t_targ = target.tk_target
+                                    if hasattr(target, 'manage_tk_aura'):
+                                        t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                        target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    t_targ.current_state = 'falling'
+                                    if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                                target.tk_target = None
+                            elif target.current_state == 'tk_lifted':
+                                if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                if getattr(target, 'tk_master', None):
+                                    target.tk_master.tk_target = None
+                                    if hasattr(target.tk_master, 'manage_tk_aura'): target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                    target.tk_master.current_state = 'falling'
+                                target.tk_master = None
+                                
+                            # 3. Burbujas de Agua
+                            elif target.current_state == 'bubbled':
+                                if hasattr(target, 'manage_bubble_vfx'): target.manage_bubble_vfx(False)
+                                if hasattr(target, 'show_bubble_burst_vfx'): target.show_bubble_burst_vfx()
+                            
+                            # 4. FIX: Restaurar Coordenadas Base del Canvas para Excavación
+                            elif target.current_state in ['digging_in', 'digging', 'digging_out']:
+                                target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                                target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+
+                            # 5. FIX: Detener Hilo Asíncrono de Interferencia Fantasma (Glitch)
+                            if getattr(target, 'is_glitching', False):
+                                target.is_glitching = False
+                                target.glitch_teleports_left = 0
+                                target.glitch_cooldown = 12000
+
+                            # 6. Desconexión de Canalizadores Legendarios en curso
+                            if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'): target.cancel_mewtwo_arts()
+                            elif target.current_state in ['hooh_channeling', 'panic_run'] and hasattr(target, 'cancel_hooh_arts'): target.cancel_hooh_arts()
+                            elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'): target.cancel_kyogre_arts()
+                            elif target.current_state == 'groudon_channeling' and hasattr(target, 'cancel_groudon_arts'): target.cancel_groudon_arts()
+                            elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'): target.cancel_lugia_arts()
+                            elif target.current_state == 'rayquaza_channeling' and hasattr(target, 'cancel_rayquaza_arts'): target.cancel_rayquaza_arts()
+                            elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'): target.cancel_dialga_arts()
+                            elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'): target.cancel_palkia_arts()
+
+                            # 7. Reseteo Visual Final y Asignación
+                            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                            try: target.window.attributes('-alpha', 1.0)
+                            except: pass
+                                
+                            target.current_state = 'giratina_victim_pulled'
+                            target.giratina_master = self
+                            target.anchored_hwnd = None
+                        # ------------------------------------------------
+                            
+                        self.giratina_targets = valid_targets
+                        self.schedule_loop(50, self.physics_loop)
+                        return
+
+       # --- MECÁNICA EXCLUSIVA: INVERSIÓN DE GRAVEDAD DE PALKIA ---
+        if self.pet_name.lower() == "palkia" and getattr(self, 'palkia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.current_state = 'palkia_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: CICLÓN ESMERALDA DE RAYQUAZA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking']:
+       # --- MECÁNICA EXCLUSIVA: CICLÓN ESMERALDA DE RAYQUAZA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
                     excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
@@ -2120,7 +2231,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                         return
 
         # --- MECÁNICA EXCLUSIVA: VENDAVAL AEROBLÁSICO DE LUGIA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 self.lugia_cooldown = 108000 # 1.5 horas
                 self.current_state = 'lugia_channeling'
@@ -2129,7 +2240,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                 return
 
         # --- MECÁNICA EXCLUSIVA: TERREMOTO DE GROUDON ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 self.groudon_cooldown = 108000 # 1.5 horas
                 self.current_state = 'groudon_channeling'
@@ -2141,7 +2252,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                 return
 
         # --- MECÁNICA EXCLUSIVA: DILUVIO DE KYOGRE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
                     excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
@@ -2158,13 +2269,14 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
 
 
         # --- MECÁNICA EXCLUSIVA: DISTORSIÓN TEMPORAL DE DIALGA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "dialga" and getattr(self, 'dialga_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower() == "dialga" and getattr(self, 'dialga_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.current_state = 'dialga_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
+            
         # --- MECÁNICA EXCLUSIVA: FUEGO SAGRADO DE HO-OH ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
                     excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
@@ -2184,7 +2296,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                         return
 
         # --- MECÁNICA EXCLUSIVA: VÓRTICE PSÍQUICO DE MEWTWO ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking']:
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
                     
@@ -2285,7 +2397,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                         # El hada da un pequeño salto de felicidad al detener la pelea
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
-                        self.v_y_velocity = -3.0
+                        self.v_y_velocity = 3.0 if getattr(self, 'gravity_inverted', False) else -3.0
                         self.schedule_loop(50, self.physics_loop)
                         return
         
@@ -2351,7 +2463,7 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
                         # El Pokémon que lanza la burbuja hace un pequeño salto de invocación
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
-                        self.v_y_velocity = -4.0
+                        self.v_y_velocity = 4.0 if getattr(self, 'gravity_inverted', False) else -4.0
                         self.schedule_loop(50, self.physics_loop)
                         return
 
@@ -2804,3 +2916,81 @@ class DesktopPet(DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMecha
         def wrapper():
             func(*args)
         return self.window.after(int(delay * multiplier), wrapper)
+    
+    def manual_alter_form(self):
+        name = self.pet_name.lower().replace("_", "").replace("-", "")
+        if name == "giratina1":
+            self.swap_giratina_form("giratina")
+            self.current_state = 'falling'
+            self.play_shiny_sound() 
+            self.show_alter_form_vfx() # FIX: Inyección de explosión visual
+        elif name == "giratina":
+            self.swap_giratina_form("giratina_1")
+            self.current_state = 'ascending'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx() # FIX: Inyección de explosión visual
+
+    def show_alter_form_vfx(self):
+        if getattr(self, 'current_state', 'exiting') == 'exiting': return
+        
+        particles = []
+        cx = self.size_w // 2
+        cy = self.size_h // 2
+        
+        # Generar entre 15 y 20 partículas para la explosión
+        for _ in range(random.randint(15, 20)):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(6.0, 12.0) # Explosión inicial fuerte
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            
+            size = random.choice([3, 4, 5])
+            color = random.choice(["#000000", "#1A1A1A", "#4B0082", "#2C003E", "#8A2BE2"])
+            
+            pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_alter")
+            particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(15, 25)})
+            
+        def animate_explosion():
+            if getattr(self, 'current_state', 'exiting') == 'exiting': return
+            alive = 0
+            for p in particles:
+                if p['life'] > 0:
+                    self.canvas.move(p['id'], p['vx'], p['vy'])
+                    # Fricción del aire (0.85) para un efecto de frenado rápido y cinético
+                    p['vx'] *= 0.85 
+                    p['vy'] *= 0.85
+                    p['life'] -= 1
+                    alive += 1
+                elif p['life'] == 0:
+                    self.canvas.delete(p['id'])
+                    p['life'] = -1
+                    
+            if alive > 0:
+                self.window.after(30, animate_explosion)
+                
+        animate_explosion()
+
+    def is_global_mechanic_active(self):
+        # 1. Si no hay sistema de mascotas vinculado, no hay bloqueo
+        if not getattr(self, 'get_all_pets', None):
+            return False
+            
+        # 2. Lista estricta de estados "Maestros" (excluye estados de víctimas para evitar falsos positivos)
+        blocking_states = [
+            'mewtwo_channeling', 
+            'hooh_channeling', 
+            'kyogre_channeling',
+            'groudon_channeling', 
+            'lugia_channeling', 'lugia_dash',
+            'rayquaza_channeling', 
+            'dialga_channeling', 
+            'palkia_channeling',
+            'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear'
+        ]
+        
+        # 3. Escaneo estructural
+        for p in self.get_all_pets():
+            if p.current_state in blocking_states:
+                return True
+                
+        return False

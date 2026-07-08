@@ -247,6 +247,9 @@ class TelekinesisMechanics:
                         
                         # Calcula un arco parabólico estrictamente superior (entre 180 y 360 grados)
                         launch_angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)
+                        # Si está invertido, fuerza el disparo hacia el suelo natural
+                        if getattr(self, 'gravity_inverted', False):
+                            launch_angle = random.uniform(0.2, math.pi - 0.2)
                         
                         # ASIGNACIÓN DE FUERZA MASIVA SEGÚN LA MASA DEL OBJETIVO
                         if is_toy:

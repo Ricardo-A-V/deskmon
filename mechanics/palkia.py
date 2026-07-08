@@ -159,6 +159,7 @@ class PalkiaMechanics:
         elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
         elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
         elif self.current_state == 'dialga_channeling': self.cancel_dialga_arts()
+        elif self.current_state.startswith('giratina_'): self.cancel_giratina_arts()
         
         self.gravity_inversion_end = time.time() + duration_secs
         self.gravity_inverted = True

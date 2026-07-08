@@ -281,6 +281,13 @@ class GameController:
 
     def on_combo_select(self, event=None):
         pet = self.get_selected_pet()
+        
+        # Limpieza estricta: Destruir el botón anterior si existe
+        if hasattr(self, 'btn_alter') and self.btn_alter:
+            self.btn_alter.pack_forget()
+            self.btn_alter.destroy()
+            self.btn_alter = None
+
         if pet:
             self.everstone_var.set(pet.get("everstone", False))
             
@@ -290,9 +297,52 @@ class GameController:
                 self.fly_height_var.set(pet.get("flying_height_pct", 3.0))
             else:
                 self.fly_row.pack_forget()
+
+            # --- INYECCIÓN LÓGICA: BOTÓN ALTER EXCLUSIVO ---
+            nombre_normalizado = pet["species"].lower().replace("_", "").replace("-", "")
+            
+            # Solo se habilita si es la Forma Origen
+            if nombre_normalizado == "giratina1":
+                self.btn_alter = tk.Button(
+                    self.fly_wrapper, 
+                    text="Alter Form", 
+                    font=("Segoe UI", 8, "bold"), 
+                    bg="#8E44AD", 
+                    fg="white", 
+                    bd=0, 
+                    pady=2,
+                    command=lambda pid=pet["id"]: self.trigger_alter_form(pid)
+                )
+                self.btn_alter.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=(4, 0))
+                
         else:
             self.everstone_var.set(False)
             self.fly_row.pack_forget()
+
+    def trigger_alter_form(self, pet_id):
+        # 1. Buscar en la memoria viva
+        active_pet = next((p for p in self.active_instances if p.pet_data["id"] == pet_id), None)
+        
+        if active_pet:
+            # 2. Ejecutar la transformación física
+            active_pet.manual_alter_form()
+            
+            # 3. CRÍTICO: Guardar el cambio estructural en el disco
+            self.save_mgr.save_data()
+            
+            # 4. Refrescar la UI para evitar cuelgues del desplegable
+            self.update_pc_ui()
+            
+            # 5. Seleccionar automáticamente el nuevo nombre en el PC
+            nuevo_nombre = f"{active_pet.pet_data['species'].capitalize()}"
+            for idx, val in enumerate(self.combo['values']):
+                if val.lower().startswith(nuevo_nombre.lower()):
+                    self.combo.current(idx)
+                    self.on_combo_select()
+                    break
+        else:
+            import tkinter.messagebox as mb
+            mb.showwarning("Forma Alterna", "Giratina debe estar fuera del PC (Spawn) para poder cambiar su forma.")
 
     def on_everstone_toggle(self):
         pet = self.get_selected_pet()
