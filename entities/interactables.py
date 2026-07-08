@@ -14,7 +14,7 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-# --- POKÉBALL INTERACTIVA ---
+# --- INTERACTIVE POKEBALL ---
 class InteractivePokeball:
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
         self.window = tk.Toplevel(parent_root)
@@ -94,34 +94,34 @@ class InteractivePokeball:
             cx, cy = w / 2, h / 2
             base_radius = max(w, h) * 0.6
             
-            # Enjambre de 24 partículas psíquicas generadas matemáticamente en tiempo real
+            # Swarm of 24 psychic particles generated mathematically in real time
             for i in range(24):
-                # 1. Velocidad asimétrica (Algunas partículas van rápido, otras lento, otras al revés)
+                # 1. Asymmetrical velocity (Some particles go fast, others slow, others in reverse)
                 speed = 1.5 + (math.sin(i * 7.1) * 2.0)
                 angle = (t * speed) + (i * 0.8)
                 
-                # 2. Dispersión del radio (Rompe la circunferencia para crear una nube caótica)
+                # 2. Radius dispersion (Breaks the circumference to create a chaotic cloud)
                 scatter = math.cos(i * 13.3) * (base_radius * 0.5)
                 r = base_radius + scatter
                 
                 px = cx + math.cos(angle) * r
                 py = cy + math.sin(angle) * r
                 
-                # 3. Fase de parpadeo individual basada en el tiempo
+                # 3. Individual blink phase based on time
                 blink_phase = math.sin(t * 12.0 + i * 3.14)
                 
                 if blink_phase > 0.5:
-                    color = "#FFFFFF" # Destello blanco intenso
+                    color = "#FFFFFF" # Intense white flash
                     size = 2
                 elif blink_phase > -0.3:
-                    color = "#D24DFF" # Morado de energía base
+                    color = "#D24DFF" # Base energy purple
                     size = 1
                 else:
-                    continue # Partícula invisible (simula que se apaga del todo)
+                    continue # Invisible particle (simulates turning off completely)
                 
                 canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
                 
-            canvas.tag_lower("tk_aura") # Forzar la nube por detrás del sprite
+            canvas.tag_lower("tk_aura") # Force the cloud behind the sprite
         else:
             canvas.delete("tk_aura")
 
@@ -137,7 +137,7 @@ class InteractivePokeball:
     def on_drag_start(self, event):
         if self.current_state == 'exiting': return
         
-        # FIX: Liberar el objeto de la telequinesis y avisar al Maestro para que pare
+        # FIX: Release the object from telekinesis and tell the Master to stop
         if self.current_state == 'tk_controlled':
             self.current_state = 'falling'
             self.manage_tk_aura(self.canvas, self.size, self.size, False)
@@ -217,7 +217,7 @@ class InteractivePokeball:
             try:
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
                 if pid == CURRENT_PID:
-                    # FIX EXCEPCIÓN: Permitir colisión con Bill's PC
+                    # FIX EXCEPTION: Allow collision with Bill's PC
                     title = win32gui.GetWindowText(hwnd)
                     if title != "Bill's PC":
                         return
@@ -313,7 +313,7 @@ class InteractivePokeball:
             self.window.after(30, self.physics_loop)
             return
         
-        # FIX: Control Telequinético para el Juguete
+        # FIX: Telekinetic Control for the Toy
         if self.current_state == 'tk_controlled':
             if not hasattr(self, 'tk_master') or not self.tk_master.window.winfo_exists() or self.tk_master.current_state != 'tk_channeling':
                 self.current_state = 'falling'
@@ -372,7 +372,7 @@ class InteractivePokeball:
             ball_cy = self.y + self.size/2
             
             for p in self.get_pets():
-                # FIX: La Pokéball ahora ignora físicamente a los huevos
+                # FIX: The Pokeball now physically ignores eggs
                 if p.current_state in ['falling_egg', 'falling_pokeball', 'exiting', 'dragged'] or getattr(p, 'is_egg', False): continue
                 
                 p_cx = p.x + p.size_w/2
@@ -387,7 +387,7 @@ class InteractivePokeball:
                 if dist < min_dist:
                     force_multiplier = (p.size_w / 64.0) * (p.speed * 1.5 if p.current_state == 'walking' else 1.0)
                     
-                    # FIX ESTRUCTURAL: Evitar que la bola de juguete corrompa al tipo Siniestro y Legendarios
+                    # STRUCTURAL FIX: Prevent the toy ball from corrupting Dark type and Legendaries
                     if p.current_state.startswith('dark_'):
                         p.cancel_dark_arts()
                     elif p.current_state in ['lugia_channeling', 'lugia_dash']:
@@ -412,7 +412,7 @@ class InteractivePokeball:
         self.window.after(30, self.physics_loop)
 
 
-# --- INYECCIÓN: BAYA CONSUMIBLE ---
+# --- INJECTION: CONSUMABLE BERRY ---
 class InteractiveBerry(InteractivePokeball):
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
         self.window = tk.Toplevel(parent_root)
@@ -492,7 +492,7 @@ class InteractiveBerry(InteractivePokeball):
             self.window.after(30, self.physics_loop)
             return
 
-        # FIX: Control Telequinético para la Baya
+        # FIX: Telekinetic Control for the Berry
         if self.current_state == 'tk_controlled':
             if not hasattr(self, 'tk_master') or not self.tk_master.window.winfo_exists() or self.tk_master.current_state != 'tk_channeling':
                 self.current_state = 'falling'
@@ -544,7 +544,7 @@ class InteractiveBerry(InteractivePokeball):
         self.update_position()
         self.window.after(30, self.physics_loop)
 
-# --- PROYECTIL DE BURBUJA DE AGUA ---
+# --- WATER BUBBLE PROJECTILE ---
 class BubbleProjectile:
     def __init__(self, parent_root, base_dir, start_x, start_y, target, on_hit_callback):
         self.window = tk.Toplevel(parent_root)
@@ -597,7 +597,7 @@ class BubbleProjectile:
         dy = t_cy - my_cy
         dist = math.sqrt(dx**2 + dy**2)
         
-        # Al tocar al objetivo, explota el proyectil y activa el estado de la burbuja gigante
+        # Upon touching the target, the projectile explodes and activates the giant bubble state
         if dist < 20:
             self.on_hit(self.target)
             self.destroy()

@@ -16,7 +16,7 @@ class MewtwoMechanics:
             if target and target.window.winfo_exists():
                 target.mewtwo_master = None
                 target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                # FIX: Limpieza visual de emergencia si se cancela la habilidad
+                # FIX: Emergency visual cleanup if ability is canceled
                 target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                 if target.current_state not in ['dragged', 'exiting']:
                     target.current_state = 'falling'
@@ -34,7 +34,7 @@ class MewtwoMechanics:
 
         self.mewtwo_timer += 1
         
-        # FIX: Levitación con onda senoidal de amplitud baja (4 píxeles)
+        # FIX: Levitation with low amplitude sine wave (4 pixels)
         target_y = self.default_floor_y - 140
         if not hasattr(self, 'mewtwo_base_y'):
             self.mewtwo_base_y = self.y
@@ -55,7 +55,7 @@ class MewtwoMechanics:
             for target in self.mewtwo_targets:
                 if target and target.window.winfo_exists():
                     target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                    # FIX: Limpieza visual al salir expulsados
+                    # FIX: Visual cleanup upon being ejected
                     target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                     target.mewtwo_master = None
                     target.current_state = 'thrown'
@@ -97,11 +97,11 @@ class MewtwoMechanics:
 
         active_timer = timer - activation_tick
 
-        # MATEMÁTICA ORBITAL FIX 2.0:
-        # Distancia masiva: Empieza a 1600px y se cierra hasta mantener un anillo de 800px de radio (Casi ocupa toda la pantalla)
+        # ORBITAL MATH FIX 2.0:
+        # Massive distance: Starts at 1600px and closes to maintain an 800px radius ring (Almost occupies entire screen)
         orbit_radius = max(800, 1600 - (active_timer * 1.5))
         
-        # Velocidad exponencial: Inicia a (0.002) y usa el cuadrado del tiempo para que la aceleración real ocurra al final
+        # Exponential speed: Starts at (0.002) and uses square of time so real acceleration occurs at end
         angular_speed = 0.002 + ((timer ** 2) * 0.0000008)
         offset = getattr(self, 'mewtwo_orbit_offset', 0)
         current_angle = (timer * angular_speed) + offset
@@ -130,7 +130,7 @@ class MewtwoMechanics:
         cx = self.size_w // 2
         cy = self.size_h // 2
         
-        # Generamos 30 partículas de alta velocidad de energía psíquica
+        # Generate 30 high-speed particles of psychic energy
         for _ in range(30):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(10.0, 25.0)
@@ -149,7 +149,7 @@ class MewtwoMechanics:
             for p in particles:
                 if p['life'] > 0:
                     self.canvas.move(p['id'], p['vx'], p['vy'])
-                    # Fricción para crear el efecto de "estallido y parada súbita" en el aire
+                    # Friction to create "burst and sudden stop" effect in mid-air
                     p['vx'] *= 0.88  
                     p['vy'] *= 0.88
                     p['life'] -= 1

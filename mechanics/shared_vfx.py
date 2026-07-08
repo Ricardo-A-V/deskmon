@@ -49,7 +49,7 @@ class SharedVFX:
         cx = self.size_w // 2
         cy = self.size_h // 2
         
-        # Generar 6-9 chispas de luz
+        # Generate 6-9 sparks of light
         for _ in range(random.randint(6, 9)):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(2.0, 5.0)
@@ -57,7 +57,7 @@ class SharedVFX:
             vy = math.sin(angle) * speed
             
             size = random.choice([1, 2])
-            color = random.choice(["#FFB6C1", "#FF69B4", "#FF1493", "#F08080", "#FFFFFF"]) # Gama de rosas y blanco
+            color = random.choice(["#FFB6C1", "#FF69B4", "#FF1493", "#F08080", "#FFFFFF"]) # Range of pinks and white
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_fairy")
             particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(20, 35)})
@@ -70,14 +70,14 @@ class SharedVFX:
                 if p['life'] > 0:
                     self.canvas.move(p['id'], p['vx'], p['vy'])
                     
-                    # Físicas mágicas: Frenado horizontal y elevación vertical constante
+                    # Magical physics: Horizontal braking and constant vertical elevation
                     p['vx'] *= 0.85 
                     p['vy'] *= 0.85 
                     p['vy'] -= 0.3 
                     
                     p['life'] -= 1
                     
-                    # Parpadeo estroboscópico en sus últimos frames de vida
+                    # Stroboscopic blinking in its last frames of life
                     if p['life'] < 10 and p['life'] % 2 == 0:
                         self.canvas.itemconfig(p['id'], state='hidden')
                     else:

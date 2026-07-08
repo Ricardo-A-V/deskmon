@@ -11,7 +11,7 @@ from entities.pet import DesktopPet
 from entities.interactables import InteractiveBerry, InteractivePokeball
 from ui.menus import StarterSelectionWindow
 
-# --- CONTROLADOR CENTRAL DEL JUEGO ---
+# --- CENTRAL GAME CONTROLLER ---
 class GameController:
     def __init__(self):
         self.save_mgr = SaveManager()
@@ -28,7 +28,7 @@ class GameController:
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
         
-        # Aumentamos la altura de 205 a 250 para acomodar el buscador sin aplastar
+        # Increased height from 205 to 250 to accommodate the search bar without squeezing
         w, h = 280, 250 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
@@ -43,7 +43,7 @@ class GameController:
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False) 
         
-        # --- LÓGICA DE ARRASTRE DE VENTANA ---
+        # --- WINDOW DRAG LOGIC ---
         self._drag_data = {"x": 0, "y": 0}
         def drag_start(event):
             self._drag_data["x"] = event.x
@@ -72,7 +72,7 @@ class GameController:
         content_frame = tk.Frame(self.root, bg=bg_main)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Barra de búsqueda
+        # Search bar
         search_row = tk.Frame(content_frame, bg=bg_main)
         search_row.pack(fill=tk.X, padx=10, pady=(8, 0))
         
@@ -102,17 +102,17 @@ class GameController:
         self.allow_wild_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_wild"])
         self.allow_breed_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_breeding"])
         
-        chk_wild = tk.Checkbutton(settings_row, text="Salvajes", font=("Segoe UI", 8), variable=self.allow_wild_var, bg=bg_main, command=self.sync_settings)
+        chk_wild = tk.Checkbutton(settings_row, text="Wild", font=("Segoe UI", 8), variable=self.allow_wild_var, bg=bg_main, command=self.sync_settings)
         chk_wild.pack(side=tk.LEFT, expand=True)
         
-        chk_breed = tk.Checkbutton(settings_row, text="Crianza", font=("Segoe UI", 8), variable=self.allow_breed_var, bg=bg_main, command=self.sync_settings)
+        chk_breed = tk.Checkbutton(settings_row, text="Breeding", font=("Segoe UI", 8), variable=self.allow_breed_var, bg=bg_main, command=self.sync_settings)
         chk_breed.pack(side=tk.RIGHT, expand=True)
 
         self.fly_wrapper = tk.Frame(content_frame, bg=bg_main)
         self.fly_wrapper.pack(fill=tk.X, padx=10, pady=(0, 4))
         
         self.fly_row = tk.Frame(self.fly_wrapper, bg=bg_main)
-        tk.Label(self.fly_row, text="Alt. Vuelo", font=("Segoe UI", 8), bg=bg_main).pack(side=tk.LEFT)
+        tk.Label(self.fly_row, text="Fly Alt.", font=("Segoe UI", 8), bg=bg_main).pack(side=tk.LEFT)
         
         self.fly_height_var = tk.DoubleVar(value=3.0)
         self.slider_fly = ttk.Scale(self.fly_row, from_=0, to=100, variable=self.fly_height_var, orient=tk.HORIZONTAL, command=self.sync_fly_height)
@@ -123,7 +123,7 @@ class GameController:
 
         toy_row = tk.Frame(content_frame, bg=bg_main)
         toy_row.pack(fill=tk.X, padx=10, pady=(0, 5))
-        self.btn_toy = tk.Button(toy_row, text="Juguete (Pokéball)", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
+        self.btn_toy = tk.Button(toy_row, text="Toy (Pokéball)", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
         self.btn_toy.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 0))
 
         bottom_row = tk.Frame(content_frame, bg=bg_main)
@@ -138,7 +138,7 @@ class GameController:
         btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
-        # --- INYECCIÓN DISCORD RPC ---
+        # --- DISCORD RPC INJECTION ---
         self.discord_rpc = DiscordRPC("1517136709039685685") 
         self.discord_rpc.update_loop(self.root)
 
@@ -170,12 +170,12 @@ class GameController:
         else:
             base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             self.active_toy = InteractivePokeball(self.root, base_dir, self.get_all_pets, self.clear_toy)
-            self.btn_toy.config(text="Eliminar Juguete", bg="#E74C3C")
+            self.btn_toy.config(text="Remove Toy", bg="#E74C3C")
             
     def clear_toy(self):
         self.active_toy = None
         if hasattr(self, 'btn_toy') and self.btn_toy.winfo_exists():
-            self.btn_toy.config(text="Juguete (Pokéball)", bg="#E67E22")
+            self.btn_toy.config(text="Toy (Pokéball)", bg="#E67E22")
 
     def get_all_pets(self):
         return self.active_instances + self.wild_instances + self.overflow_instances
@@ -236,7 +236,7 @@ class GameController:
                         self.evo_parents[evo] = species
 
             except Exception as e:
-                print(f"[!] Error leyendo config de {species}: {e}")
+                print(f"[!] Error reading config for {species}: {e}")
 
     def get_base_form(self, species):
         current = species
@@ -249,7 +249,7 @@ class GameController:
     def hide_pc_ui(self):
         if len(self.active_instances) == 0 and len(self.wild_instances) == 0:
             import tkinter.messagebox as mb
-            mb.showwarning("Seguridad", "No puedes ocultar el PC si no hay Pokémon en pantalla.\nTe quedarías sin forma de volver a abrirlo.")
+            mb.showwarning("Security", "You cannot hide the PC if there are no Pokémon on screen.\nYou would have no way to open it again.")
             return
         self.root.withdraw()
 
@@ -268,7 +268,7 @@ class GameController:
 
     def get_selected_pet(self):
         selection = self.combo_var.get()
-        if selection == "(Vacio)" or not selection: return None
+        if selection == "(Empty)" or not selection: return None
         base_str = selection.split(" (x")[0]
         parts = base_str.split(" - lvl.")
         raw_species = parts[0]
@@ -282,7 +282,7 @@ class GameController:
     def on_combo_select(self, event=None):
         pet = self.get_selected_pet()
         
-        # Limpieza estricta: Destruir el botón anterior si existe
+        # Strict cleanup: Destroy the previous button if it exists
         if hasattr(self, 'btn_alter') and self.btn_alter:
             self.btn_alter.pack_forget()
             self.btn_alter.destroy()
@@ -298,10 +298,10 @@ class GameController:
             else:
                 self.fly_row.pack_forget()
 
-            # --- INYECCIÓN LÓGICA: BOTÓN ALTER EXCLUSIVO ---
+            # --- LOGIC INJECTION: EXCLUSIVE ALTER BUTTON ---
             nombre_normalizado = pet["species"].lower().replace("_", "").replace("-", "")
             
-            # Solo se habilita si es la Forma Origen
+            # Only enabled if it is the Origin Form
             if nombre_normalizado == "giratina1":
                 self.btn_alter = tk.Button(
                     self.fly_wrapper, 
@@ -320,20 +320,20 @@ class GameController:
             self.fly_row.pack_forget()
 
     def trigger_alter_form(self, pet_id):
-        # 1. Buscar en la memoria viva
+        # 1. Search in live memory
         active_pet = next((p for p in self.active_instances if p.pet_data["id"] == pet_id), None)
         
         if active_pet:
-            # 2. Ejecutar la transformación física
+            # 2. Execute physical transformation
             active_pet.manual_alter_form()
             
-            # 3. CRÍTICO: Guardar el cambio estructural en el disco
+            # 3. CRITICAL: Save structural change to disk
             self.save_mgr.save_data()
             
-            # 4. Refrescar la UI para evitar cuelgues del desplegable
+            # 4. Refresh UI to prevent dropdown crashes
             self.update_pc_ui()
             
-            # 5. Seleccionar automáticamente el nuevo nombre en el PC
+            # 5. Automatically select new name in PC
             nuevo_nombre = f"{active_pet.pet_data['species'].capitalize()}"
             for idx, val in enumerate(self.combo['values']):
                 if val.lower().startswith(nuevo_nombre.lower()):
@@ -342,7 +342,7 @@ class GameController:
                     break
         else:
             import tkinter.messagebox as mb
-            mb.showwarning("Forma Alterna", "Giratina debe estar fuera del PC (Spawn) para poder cambiar su forma.")
+            mb.showwarning("Alternate Form", "Giratina must be outside the PC (Spawn) to change its form.")
 
     def on_everstone_toggle(self):
         pet = self.get_selected_pet()
@@ -386,9 +386,9 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
-        # Esta función ahora solo construye la lista maestra (sin filtrar)
+        # This function now only builds the master list (unfiltered)
         if not self.save_mgr.data["inventory"]:
-            self.full_display_list = ["(Vacio)"]
+            self.full_display_list = ["(Empty)"]
         else:
             formatted_list = []
             for p in self.save_mgr.data["inventory"]:
@@ -398,7 +398,7 @@ class GameController:
                 formatted_list.append(f"{p['species'].capitalize()}{shiny_tag} - lvl.{p['level']}")
             
             if not formatted_list:
-                self.full_display_list = ["(Vacio)"]
+                self.full_display_list = ["(Empty)"]
             else:
                 unique_owned = sorted(list(set(formatted_list)))
                 display_list = []
@@ -410,7 +410,7 @@ class GameController:
                         display_list.append(p_str)
                 self.full_display_list = display_list
                 
-        # Llama al filtro para aplicar la búsqueda (o mostrar todos si está en blanco)
+        # Calls the filter to apply the search (or show all if blank)
         self.filter_pc_list()
 
     def filter_pc_list(self, *args):
@@ -423,11 +423,11 @@ class GameController:
         if not search_query:
             filtered = self.full_display_list
         else:
-            # Filtra ignorando mayúsculas y acentos
+            # Filters ignoring case and accents
             filtered = [item for item in self.full_display_list if search_query in item.lower()]
             
         if not filtered:
-            filtered = ["(No hay resultados)"]
+            filtered = ["(No results)"]
             
         self.combo['values'] = filtered
         
@@ -440,12 +440,12 @@ class GameController:
 
     def spawn_from_pc(self):
         selection = self.combo_var.get()
-        if selection == "(Vacio)" or not selection: return
+        if selection == "(Empty)" or not selection: return
         
         active_pets_only = len([p for p in self.active_instances if not getattr(p, 'is_egg', False)])
         if active_pets_only >= 6:
             import tkinter.messagebox as mb
-            mb.showwarning("Límite de Equipo", "No puedes tener más de 6 Pokémon fuera del PC al mismo tiempo.")
+            mb.showwarning("Team Limit", "You cannot have more than 6 Pokémon outside the PC at the same time.")
             return
 
         base_str = selection.split(" (x")[0]
@@ -464,7 +464,7 @@ class GameController:
         if available_pet:
             self.spawn_entity(available_pet, is_wild=False)
         else:
-            print(f"[!] Ya tienes todos tus {target_species} (lvl.{target_level}) en pantalla.")
+            print(f"[!] You already have all your {target_species} (lvl.{target_level}) on screen.")
 
     def release_from_pc(self):
         pet_to_release = self.get_selected_pet()
@@ -473,15 +473,15 @@ class GameController:
         active_ids = [pet.pet_data["id"] for pet in self.active_instances]
         if pet_to_release["id"] in active_ids:
             import tkinter.messagebox as mb
-            mb.showwarning("Operación Denegada", "Debes guardar a este Pokémon en el PC antes de liberarlo.")
+            mb.showwarning("Operation Denied", "You must store this Pokémon in the PC before releasing it.")
             return
 
         species_name = pet_to_release['species'].capitalize()
-        if messagebox.askyesno("Liberar Entidad", f"¿Estás seguro de que quieres liberar a este {species_name}?\nEsta acción destruirá sus datos para siempre."):
+        if messagebox.askyesno("Release Entity", f"Are you sure you want to release this {species_name}?\nThis action will destroy its data forever."):
             self.save_mgr.data["inventory"] = [p for p in self.save_mgr.data["inventory"] if p["id"] != pet_to_release["id"]]
             self.save_mgr.save_data()
             self.update_pc_ui()
-            print(f"[+] Entidad {species_name} eliminada de la base de datos local.")
+            print(f"[+] Entity {species_name} removed from local database.")
 
     def restore_active_pets(self):
         active_ids = self.save_mgr.data.get("active_pets", [])
@@ -505,7 +505,7 @@ class GameController:
     def spawn_entity(self, pet_data, is_wild, coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False):
         pet_dir = os.path.join(self.pets_directory, pet_data["species"])
         if not os.path.exists(os.path.join(pet_dir, "config.json")):
-            print(f"Error: No existen assets para {pet_data['species']}")
+            print(f"Error: No assets exist for {pet_data['species']}")
             return
             
         pet = DesktopPet(
@@ -521,7 +521,7 @@ class GameController:
         else: 
             self.active_instances.append(pet)
             self.sync_save_state()
-            # FIX: El último Pokémon del PC captura la atención de Discord
+            # FIX: The last Pokémon from the PC captures Discord's attention
             if hasattr(self, 'discord_rpc'):
                 self.discord_rpc.set_target(pet)
 
@@ -607,36 +607,36 @@ class GameController:
 
     def on_pet_evolve(self, pet_instance, new_species, is_mid_evo=False, evo_channel=None):
         if getattr(pet_instance, 'is_egg', False):
-            # 1. Quitarle el estado de huevo y asegurar sus datos en el Inventario (PC)
+            # 1. Remove egg status and secure data in Inventory (PC)
             pet_instance.pet_data["is_egg"] = False
             self.save_mgr.save_data()
             
-            # 2. Contar cuántos Pokémon patrullando hay (excluyendo el huevo que acaba de romperse)
+            # 2. Count patrolling Pokémon (excluding the egg that just hatched)
             active_count = len([p for p in self.active_instances if not getattr(p, 'is_egg', False) and p != pet_instance])
             
-            # 3. Extraer coordenadas y destruir la instancia del huevo
+            # 3. Extract coordinates and destroy egg instance
             target_coords = (pet_instance.x, pet_instance.y)
             if pet_instance in self.active_instances:
                 self.active_instances.remove(pet_instance)
-                # CRÍTICO: Sincronizar aquí borra temporalmente al Pokémon de la lista de "Activos" en el JSON
+                # CRITICAL: Syncing here temporarily removes the Pokémon from the "Active" list in JSON
                 self.sync_save_state()
             pet_instance.window.destroy()
 
-            # 4. Decisión de Spawn basada en el límite de campo (6)
+            # 4. Spawn decision based on field limit (6)
             if active_count >= 6:
-                # OVERFLOW (Caminar hacia la derecha y guardarse):
-                # Al pasar is_overflow=True, el FSM lo obligará a caminar e irse.
-                # Como NO se añade a active_instances, se queda guardado de forma segura únicamente en el PC.
+                # OVERFLOW (Walk right and store):
+                # Passing is_overflow=True will force FSM to walk and leave.
+                # Since it is NOT added to active_instances, it remains safely stored only in PC.
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel, is_overflow=True)
             else:
-                # ESPACIO DISPONIBLE:
-                # Nace normal, entra en active_instances y se vuelve a sincronizar como Activo en el JSON.
+                # AVAILABLE SPACE:
+                # Hatches normally, enters active_instances and syncs as Active in JSON.
                 self.spawn_entity(pet_instance.pet_data, is_wild=False, coords=target_coords, is_mid_evo=is_mid_evo, evo_channel=evo_channel)
             
             self.update_pc_ui()
             return
 
-        # === LÓGICA PARA EVOLUCIONES DE POKÉMON NORMALES (NO HUEVOS) ===
+        # === LOGIC FOR NORMAL POKÉMON EVOLUTIONS (NON-EGGS) ===
         pet_instance.pet_data["species"] = new_species
         pet_instance.pet_data["last_evolution_level"] = pet_instance.pet_data["level"]
         self.save_mgr.save_data()

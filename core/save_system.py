@@ -1,12 +1,10 @@
-import sys
-
 import os
+import sys
 import json
 import uuid
 import random
 from tkinter import messagebox
 
-# --- GESTOR DE DATOS (SAVE MANAGER) ---
 class SaveManager:
     def __init__(self, save_file="save_data.json"):
         if getattr(sys, 'frozen', False):
@@ -44,17 +42,19 @@ class SaveManager:
                         data["active_pets"] = [] 
                     
                     for p in data.get("inventory", []):
-                        if "last_evolution_level" not in p: p["last_evolution_level"] = p["level"]
-                        if "flying_height_pct" not in p: p["flying_height_pct"] = 3.0
-                        if "xp_boost_expiry" not in p: p["xp_boost_expiry"] = 0
+                        p.setdefault("last_evolution_level", p.get("level", 1))
+                        p.setdefault("flying_height_pct", 3.0)
+                        p.setdefault("xp_boost_expiry", 0)
                             
-                    if "active_pets" not in data: data["active_pets"] = []
-                    if "settings" not in data: data["settings"] = {"allow_wild": True, "allow_breeding": True}
-                    if "flying_height_pct" in data["settings"]: del data["settings"]["flying_height_pct"]
+                    data.setdefault("active_pets", [])
+                    data.setdefault("settings", {"allow_wild": True, "allow_breeding": True})
+                    
+                    if "flying_height_pct" in data.get("settings", {}):
+                        del data["settings"]["flying_height_pct"]
                         
                     return data
             except json.JSONDecodeError:
-                messagebox.showerror("Error Crítico", "save_data.json corrupto. Creando nueva partida.")
+                messagebox.showerror("Critical Error", "save_data.json is corrupted. Creating a new save file.")
         
         self.save_data(self.default_data)
         return self.default_data
@@ -82,5 +82,7 @@ try:
     import ctypes
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except Exception:
-    try: ctypes.windll.user32.SetProcessDPIAware()
-    except Exception: pass
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass

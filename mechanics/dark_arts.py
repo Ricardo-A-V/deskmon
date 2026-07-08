@@ -10,12 +10,12 @@ class DarkArtsMechanics:
         try: self.window.attributes('-alpha', 1.0)
         except: pass
         
-        # Solo cambiamos a falling si no está siendo arrastrado en este mismo milisegundo
+        # Only change to falling if not being dragged in this exact millisecond
         if self.current_state not in ['dragged', 'exiting']:
             self.current_state = 'falling'
         
         target = getattr(self, 'dark_target', None)
-        self.dark_target = None # Prevención de recursividad infinita
+        self.dark_target = None # Prevent infinite recursion
         if target and target.window.winfo_exists():
             target.dark_master = None 
             target.canvas.itemconfig(target.canvas_image_id, state='normal')
@@ -47,7 +47,7 @@ class DarkArtsMechanics:
         
         if dist_x > dash_speed:
             self.x += dash_speed if self.is_facing_right else -dash_speed
-            # FIX: Interpolación matemática. El eje Y avanza proporcionalmente a lo que avanza el X.
+            # FIX: Mathematical interpolation. Y axis advances proportionally to X axis.
             self.y += (dist_y / dist_x) * dash_speed
         else:
             self.x = target.x 
@@ -62,15 +62,15 @@ class DarkArtsMechanics:
 
     def _fsm_dark_sink(self):
         self.dark_step += 1
-        desplazamiento = self.dark_step * 5
+        displacement = self.dark_step * 5
         
-        # FIX: Dirección visual inversa para esconderse en el techo
+        # FIX: Reverse visual direction to hide in the ceiling
         if getattr(self, 'gravity_inverted', False):
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - displacement)
         else:
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + displacement)
             
-        if desplazamiento >= self.size_h // 2 + 10:
+        if displacement >= self.size_h // 2 + 10:
             self.current_state = 'dark_hidden'
             self.canvas.itemconfig(self.canvas_image_id, state='hidden')
         self.update_position()
@@ -78,14 +78,14 @@ class DarkArtsMechanics:
 
     def _fsm_dark_victim_sink(self):
         self.dark_step += 1
-        desplazamiento = self.dark_step * 5
+        displacement = self.dark_step * 5
         
         if getattr(self, 'gravity_inverted', False):
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - displacement)
         else:
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + displacement)
             
-        if desplazamiento >= self.size_h // 2 + 10:
+        if displacement >= self.size_h // 2 + 10:
             self.current_state = 'dark_victim_hidden'
             self.canvas.itemconfig(self.canvas_image_id, state='hidden')
         self.update_position()
@@ -115,7 +115,7 @@ class DarkArtsMechanics:
             
             self.x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.size_w - 50)
             
-            # FIX: El escáner empieza desde la parte opuesta de la pantalla dependiendo de la gravedad
+            # FIX: The scanner starts from the opposite side of the screen depending on gravity
             self.y = self.default_floor_y if getattr(self, 'gravity_inverted', False) else self.v_y 
             current_env, _ = self.get_window_environment()
             
@@ -169,12 +169,12 @@ class DarkArtsMechanics:
 
         if self.dark_step > 0:
             self.dark_step -= 1
-            desplazamiento = self.dark_step * 4
+            displacement = self.dark_step * 4
             
             if getattr(self, 'gravity_inverted', False):
-                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, desplazamiento))
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, displacement))
             else:
-                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, displacement))
             
             self.dark_alpha = min(0.7, self.dark_alpha + 0.05)
             try: self.window.attributes('-alpha', self.dark_alpha)
@@ -195,12 +195,12 @@ class DarkArtsMechanics:
     def _fsm_dark_victim_emerge(self):
         if self.dark_step > 0:
             self.dark_step -= 1
-            desplazamiento = self.dark_step * 4
+            displacement = self.dark_step * 4
             
             if getattr(self, 'gravity_inverted', False):
-                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, desplazamiento))
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - max(0, displacement))
             else:
-                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, desplazamiento))
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + max(0, displacement))
             
             self.dark_alpha = min(1.0, self.dark_alpha + 0.05)
             try: self.window.attributes('-alpha', self.dark_alpha)
@@ -229,7 +229,7 @@ class DarkArtsMechanics:
             push_dir = 1 if self.is_facing_right else -1
             
             target.v_x_velocity = push_dir * random.uniform(40.0, 60.0)
-            # FIX: Inversión paramétrica del lanzamiento (hacia el suelo de la habitación)
+            # FIX: Parametric inversion of the throw (towards the room floor)
             if getattr(self, 'gravity_inverted', False):
                 target.v_y_velocity = random.uniform(20.0, 30.0) 
             else:

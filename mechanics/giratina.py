@@ -11,7 +11,7 @@ class GiratinaMechanics:
         self.canvas.delete("vfx_g_vortex")
         self.canvas.delete("vfx_g_eyes")
 
-        # CRÍTICO: Restaurar la opacidad y la visibilidad del Canvas inmediatamente
+        # CRITICAL: Restore opacity and Canvas visibility immediately
         try: self.window.attributes('-alpha', 1.0)
         except: pass
         self.canvas.itemconfig(self.canvas_image_id, state='normal')
@@ -35,14 +35,14 @@ class GiratinaMechanics:
                     target.canvas.itemconfig(target.canvas_image_id, state='normal')
 
     def _fsm_giratina_channeling(self):
-        # 1. PREPARACIÓN (Cero rastro del vórtice aquí)
+        # 1. PREPARATION (Zero trace of vortex here)
         if not hasattr(self, 'giratina_phase'):
             self.giratina_phase = 0
             self.giratina_timer = 0
             self.giratina_center_x = self.x + self.size_w / 2
             self.giratina_center_y = self.y + self.size_h / 2
 
-        # 2. FASE 0: Desvanecimiento de Giratina
+        # 2. PHASE 0: Giratina fade
         if self.giratina_phase == 0:
             current_alpha = self.window.attributes('-alpha')
             if current_alpha > 0.0:
@@ -52,7 +52,7 @@ class GiratinaMechanics:
                 self.swap_giratina_form("giratina_1")
                 self.window.attributes('-alpha', 1.0) 
                 
-                # --- FIX: EL VÓRTICE NACE ESTRICTAMENTE AQUÍ ---
+                # --- FIX: THE VORTEX IS STRICTLY BORN HERE ---
                 self.giratina_vortex_active = True
                 self.giratina_vortex_radius = 1.0
                 self.giratina_vortex_loop()
@@ -61,7 +61,7 @@ class GiratinaMechanics:
                 self.giratina_phase = 1
                 self.giratina_timer = 200 
 
-        # 3. FASE 1: Absorción de Víctimas (Máximo 10s)
+        # 3. PHASE 1: Absorption of Victims (Max 10s)
         elif self.giratina_phase == 1:
             self.giratina_timer -= 1 
             all_absorbed = True
@@ -72,7 +72,7 @@ class GiratinaMechanics:
                     break
 
             if all_absorbed or self.giratina_timer <= 0:
-                # Liberación de seguridad si alguien se atasca
+                # Safety release if someone gets stuck
                 for target in getattr(self, 'giratina_targets', []):
                     if target and target.window.winfo_exists() and target.current_state != 'giratina_victim_absorbed':
                         if target.current_state in ['giratina_victim_pulled', 'giratina_victim_fade']:
@@ -82,16 +82,16 @@ class GiratinaMechanics:
                             except: pass
 
                 self.giratina_phase = 2
-                self.giratina_timer = 80 # 4 Segundos exactos de vórtice estable 
+                self.giratina_timer = 80 # Exactly 4 seconds of stable vortex 
 
-        # 4. FASE 2: Vórtice Estable
+        # 4. PHASE 2: Stable Vortex
         elif self.giratina_phase == 2:
             self.giratina_timer -= 1
             if self.giratina_timer <= 0:
                 self.giratina_phase = 3
-                self.giratina_timer = 100 # 5 Segundos de encogimiento progresivo
+                self.giratina_timer = 100 # 5 Seconds of progressive shrinking
 
-        # 5. FASE 3: Disipación del Vórtice
+        # 5. PHASE 3: Vortex Dissipation
         elif self.giratina_phase == 3:
             self.giratina_timer -= 1
             self.giratina_vortex_radius = max(0.0, self.giratina_timer / 100.0)
@@ -101,9 +101,9 @@ class GiratinaMechanics:
                 self.canvas.delete("vfx_g_eyes")
                 self.canvas.delete("vfx_g_vortex")
                 self.giratina_phase = 4
-                self.giratina_timer = 200 # 10 Segundos de vacío absoluto antes del dash
+                self.giratina_timer = 200 # 10 Seconds of absolute vacuum before dash
 
-        # 6. FASE 4: Silencio y Arranque del Vuelo
+        # 6. PHASE 4: Silence and Flight Start
         elif self.giratina_phase == 4:
             self.giratina_timer -= 1
             if self.giratina_timer <= 0:
@@ -150,7 +150,7 @@ class GiratinaMechanics:
             self.x = random.randint(self.v_x + 100, self.v_x + self.v_width - self.size_w - 100)
             self.y = random.randint(self.v_y + 50, self.v_y + int(self.v_height * 0.4))
             
-            # FIX DE GRAVEDAD: Sincronizar el vector del suelo con la aparición aérea
+            # GRAVITY FIX: Synchronize floor vector with aerial appearance
             self.floor_y = self.y 
             
             self.current_state = 'giratina_reappear'
@@ -165,7 +165,7 @@ class GiratinaMechanics:
             self.window.attributes('-alpha', min(1.0, current_alpha + 0.05))
         else:
             self.giratina_cooldown = 108000 
-            # FIX DE GRAVEDAD: Devolverle el FSM de levitación para que no se estrelle
+            # GRAVITY FIX: Return levitation FSM to prevent crashing
             if getattr(self, 'is_flying', False):
                 self.current_state = 'ascending'
             else:
@@ -381,7 +381,7 @@ class GiratinaMechanics:
         animate()
 
     def swap_giratina_form(self, form_name):
-        # Mantenemos intacto el núcleo central absoluto en la pantalla
+        # Keep absolute central core intact on screen
         old_cx = self.x + self.size_w / 2
         old_cy = self.y + self.size_h / 2
 
@@ -391,17 +391,17 @@ class GiratinaMechanics:
 
         self.config = self.load_config()
 
-        multiplicador_tamaño = 1.55
+        size_multiplier = 1.55
         if getattr(self, 'is_legendary', False):
-            multiplicador_tamaño *= 1.2
+            size_multiplier *= 1.2
 
         physics = self.config.get("physics", {})
-        self.size_w = int(physics.get("size", 64) * multiplicador_tamaño)
-        self.size_h = int(physics.get("size", 64) * multiplicador_tamaño)
+        self.size_w = int(physics.get("size", 64) * size_multiplier)
+        self.size_h = int(physics.get("size", 64) * size_multiplier)
         
-        # --- FIX ESPACIAL: REAJUSTE DE ANCLAJE ---
-        # Si la ventana se hace más grande, restamos el crecimiento a las coordenadas X e Y
-        # para que el centro exacto siga estando milimétricamente en el mismo sitio.
+        # --- SPATIAL FIX: ANCHOR REAJUSTMENT ---
+        # If window gets larger, subtract growth from X and Y coordinates
+        # so the exact center remains strictly in the same place.
         self.x = old_cx - (self.size_w / 2)
         self.y = old_cy - (self.size_h / 2)
 

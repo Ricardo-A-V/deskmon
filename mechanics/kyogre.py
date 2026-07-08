@@ -21,7 +21,7 @@ class KyogreMechanics:
             length = random.randint(10, 20)
             color = random.choice(["#3498DB", "#5DADE2", "#85C1E9"]) 
             
-            # Diagonal estética de tormenta fuerte
+            # Aesthetic diagonal of strong storm
             pid = self.canvas.create_line(x, y, x - length, y + length*2, fill=color, width=2, tags="vfx_rain")
             particles.append({'id': pid, 'vx': -6.0, 'vy': 12.0, 'life': 8})
             
@@ -161,7 +161,7 @@ class KyogreMechanics:
                 self.kyogre_targets = []
                 
                 if getattr(self, 'is_flying', False) or self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre":
-                    # FIX MATEMÁTICO: Recalcular explícitamente el porcentaje de altura del PC
+                    # MATHEMATICAL FIX: Explicitly recalculate PC height percentage
                     pct = self.pet_data.get("flying_height_pct", 3.0)
                     max_offset = self.v_height - self.size_h
                     target_offset_y = int(max_offset * (pct / 100.0))
@@ -196,7 +196,7 @@ class KyogreMechanics:
         target_y = flood_base_y - self.size_h + 15
         
         t = time.time() * 3.0
-        # FIX: Sincronizado a los Macro-bloques de 120 píxeles
+        # FIX: Synchronized to 120-pixel Macro-blocks
         wave_res = overlay.wave_resolution if overlay else 120 
         block_idx = int(self.x) // wave_res
         aligned_x = block_idx * wave_res

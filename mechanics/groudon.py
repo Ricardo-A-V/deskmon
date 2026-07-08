@@ -4,27 +4,27 @@ import os
 
 class GroudonMechanics:
     def cancel_groudon_arts(self):
-        # Al cancelar a Groudon, solo le afecta a él. Las víctimas ya no están vinculadas lógicamente.
+        # Canceling Groudon only affects him. Victims are no longer logically linked.
         if self.current_state not in ['dragged', 'exiting']:
             self.current_state = 'falling'
 
     def _fsm_groudon_channeling(self):
         if self.groudon_phase == 'jumping':
-            # FÍSICAS: Gravedad supermasiva
+            # PHYSICS: Supermassive gravity
             gravity = 4.0
             self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + gravity
             self.y += self.v_y_velocity
 
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
 
-            # FIX FÍSICO: Escaneo topográfico continuo.
-            # Si se elimina la ventana subyacente, Groudon detectará el vacío y su 'floor_y' pasará a ser
-            # la siguiente ventana inferior o la barra de tareas nativa.
+            # PHYSICAL FIX: Continuous topographic scan.
+            # If underlying window is deleted, Groudon detects void and its 'floor_y' becomes
+            # the next lower window or native taskbar.
             current_env, _ = self.get_window_environment()
             fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
             self.floor_y = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.default_floor_y
 
-            # IMPACTO SÍSMICO (Aterrizaje y Propagación)
+            # SEISMIC IMPACT (Landing and Propagation)
             if self.y >= self.floor_y and self.v_y_velocity > 0:
                 self.y = self.floor_y
                 self.v_y_velocity = 0.0
@@ -35,7 +35,7 @@ class GroudonMechanics:
                 self.show_dirt_vfx()
                 self.schedule_loop(100, self.show_dirt_vfx)
 
-                # ONDA EXPANSIVA INSTANTÁNEA (Solo ocurre en 1 fotograma)
+                # INSTANT SHOCKWAVE (Only occurs in 1 frame)
                 if getattr(self, 'get_all_pets', None):
                     for target in self.get_all_pets():
                         if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
@@ -43,10 +43,10 @@ class GroudonMechanics:
                             target_env, _ = target.get_window_environment()
                             physical_floor = target_env['y'] if target.y <= target_env['y'] + 15 else target.default_floor_y
                             
-                            # Condición de impacto: Solo si tocan el suelo son afectados por el terremoto
+                            # Impact condition: Only affected by earthquake if touching the ground
                             if not getattr(target, 'is_flying', False) and target.y >= physical_floor - 15:
                                 
-                                # LIMPIEZA DE EVENTOS (Severing) ÚNICAMENTE SI SON GOLPEADOS
+                                # EVENT CLEANUP (Severing) ONLY IF HIT
                                 if target.current_state.startswith('dark_'): target.cancel_dark_arts()
                                 elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
                                 elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
@@ -83,7 +83,7 @@ class GroudonMechanics:
                                 try: target.window.attributes('-alpha', 1.0)
                                 except: pass
                                 
-                                # Aplicar física de rebote a la víctima
+                                # Apply bounce physics to victim
                                 target.current_state = 'jumping_arc'
                                 target.jump_target_y = physical_floor
                                 target.v_y_velocity = random.uniform(-10.0, -16.0) 
@@ -91,10 +91,10 @@ class GroudonMechanics:
                                 target.anchored_hwnd = None
                                 target.show_dirt_vfx() 
                             elif getattr(target, 'is_flying', False):
-                                # Perturbación aerodinámica para los voladores (no cancela sus estados, solo los empuja)
+                                # Aerodynamic disturbance for flyers (does not cancel states, just pushes them)
                                 target.y += random.uniform(8.0, 20.0)
 
-                # TEMBLOR DE VENTANA MAESTRA
+                # MASTER WINDOW SHAKE
                 if self.game_controller and hasattr(self.game_controller, 'root'):
                     pc = self.game_controller.root
                     try:
@@ -117,7 +117,7 @@ class GroudonMechanics:
         elif self.groudon_phase == 'shaking':
             self.groudon_shake_timer -= 1
             
-            # Desplazamiento caótico del propio Groudon mientras hace temblar la tierra
+            # Chaotic displacement of Groudon while shaking the earth
             offset_x = random.choice([-8, 0, 8])
             self.canvas.coords(self.canvas_image_id, (self.size_w//2) + offset_x, self.size_h//2)
             
@@ -125,7 +125,7 @@ class GroudonMechanics:
                 self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
                 self.groudon_jumps_left -= 1
                 
-                # Evaluación de continuidad: Salta de nuevo o se detiene
+                # Continuity evaluation: Jump again or stop
                 if self.groudon_jumps_left > 0:
                     self.groudon_phase = 'jumping'
                     self.v_y_velocity = -28.0 

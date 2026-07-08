@@ -4,7 +4,7 @@ import sys
 import random
 from PIL import Image, ImageOps, ImageTk
 
-# --- MOTOR DE ANIMACIÓN ---
+# --- ANIMATION ENGINE ---
 class DesktopPetAnimator:
     def __init__(self, canvas_widget, config_img, size_idle, size_walk, pet_dir):
         self.canvas = canvas_widget
@@ -51,11 +51,11 @@ class DesktopPetAnimator:
                     self.frames_walk_left.append(load_frame(f"{pref_l}{i}{suf}", size_walk))
                 
         except FileNotFoundError as e:
-            print(f"Error cargando assets: {e}")
+            print(f"Error loading assets: {e}")
             sys.exit(1)
 
     def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False):
-        # FIX: Congelar el motor visual durante eventos estáticos
+        # FIX: Freeze the visual engine during static events
         if state in ['exiting', 'landing_shake', 'dark_victim_frozen', 'dark_victim_hidden']: return
         
         current_time = time.time()
@@ -74,8 +74,8 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        # FIX: deluge_float movido aquí para forzar la animación de caída/flote
-        # FIX VISUAL: groudon_channeling movido a 'idle' para forzar sprite frontal
+        # FIX: deluge_float moved here to force fall/float animation
+        # FIX VISUAL: groudon_channeling moved to 'idle' to force frontal sprite
         if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling']:
             render_state = 'idle'
             
@@ -115,26 +115,26 @@ class DesktopPetAnimator:
             white_layer.putalpha(processed_image.split()[3]) 
             processed_image = Image.blend(processed_image, white_layer, blend_factor)
 
-        # --- NUEVO: EFECTO DE INTERFERENCIA (GLITCH VECTORIAL) ---
-        # Alterna entre el sprite normal y el roto basándose en los milisegundos del reloj
+        # --- NEW: INTERFERENCE EFFECT (VECTOR GLITCH) ---
+        # Alternates between normal and broken sprite based on clock milliseconds
         if is_glitching and int(time.time() * 15) % 2 == 0:
             w, h = processed_image.size
             glitched = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            strip_h = max(1, h // 5) # Corta el sprite en 5 láminas horizontales
+            strip_h = max(1, h // 5) # Cut the sprite into 5 horizontal strips
             
             for i in range(5):
                 box = (0, i * strip_h, w, min(h, (i + 1) * strip_h))
                 strip = processed_image.crop(box)
-                offset_x = random.choice([-12, -6, 6, 12]) # Las desplaza aleatoriamente
+                offset_x = random.choice([-12, -6, 6, 12]) # Shift them randomly
                 glitched.paste(strip, (offset_x, i * strip_h))
                 
             processed_image = glitched
 
-        # --- NUEVO: MODO SINIESTRO (Silueta) ---
+        # --- NEW: DARK MODE (Silhouette) ---
         if is_darkened:
             black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))
             black_layer.putalpha(processed_image.split()[3])
-            # Se mezcla al 85% para mantener ligeros matices del cuerpo
+            # Mixed at 85% to maintain slight body nuances
             processed_image = Image.blend(processed_image, black_layer, 0.85)
 
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)

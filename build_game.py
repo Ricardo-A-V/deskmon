@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 
-# --- RUTAS ESTRUCTURALES ---
+# Structural Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_SCRIPT = os.path.join(BASE_DIR, "main.py")
 SPEC_FILE = os.path.join(BASE_DIR, "Deskmon.spec")
@@ -13,14 +13,13 @@ DIST_DIR = os.path.join(BASE_DIR, "dist")
 EXE_SOURCE = os.path.join(DIST_DIR, "Deskmon.exe")
 EXE_DESTINATION = os.path.join(BASE_DIR, "Deskmon.exe")
 
-# [NUEVO] RUTA ESTRICTA DEL ICONO
 ICON_PATH = os.path.join(BASE_DIR, "game_env", "ui", "icon.ico")
 
 def create_desktop_shortcut(exe_path, icon_path):
-    """Genera un acceso directo nativo usando el subsistema WScript de Windows."""
-    print("[+] Fase 5: Generando acceso directo en el Escritorio...")
+    """Generates a native shortcut using the Windows WScript subsystem."""
+    print("[+] Phase 5: Generating desktop shortcut...")
     
-    # Script visual basic incrustado para evitar dependencias de librerías externas
+    # Embedded Visual Basic script to avoid external library dependencies
     vbs_script = f"""
     Set ws = CreateObject("WScript.Shell")
     desktopPath = ws.SpecialFolders("Desktop")
@@ -36,61 +35,56 @@ def create_desktop_shortcut(exe_path, icon_path):
         f.write(vbs_script)
         
     try:
-        # Ejecuta el script de Windows de forma silenciosa
         subprocess.check_call(["cscript", "//nologo", vbs_path])
     except Exception as e:
-        print(f"[!] Fallo al crear el acceso directo: {e}")
+        print(f"[!] Failed to create shortcut: {e}")
     finally:
-        # Purga el script temporal
         if os.path.exists(vbs_path):
             os.remove(vbs_path)
 
 def compile_and_clean():
     if not os.path.exists(MAIN_SCRIPT):
-        print(f"[!] Error Crítico: No se encuentra '{MAIN_SCRIPT}' en el directorio base.")
+        print(f"[!] Critical Error: '{MAIN_SCRIPT}' not found in the base directory.")
         sys.exit(1)
 
-    print("[+] Fase 1: Iniciando compilación estricta (PyInstaller)...")
+    print("[+] Phase 1: Starting strict compilation (PyInstaller)...")
     
-    # Forzamos el nombre de salida a 'Deskmon'
     command = [sys.executable, "-m", "PyInstaller", "--windowed", "--onefile", "--clean", "--name=Deskmon"]
     
-    # Inyección estructural del icono en el binario
     if os.path.exists(ICON_PATH):
         command.append(f"--icon={ICON_PATH}")
-        print(f"    - Icono detectado e inyectado en el contrato de compilación.")
+        print(f"    - Icon detected and injected into the compilation contract.")
     else:
-        print(f"    [!] Advertencia: No se encontró '{ICON_PATH}'. Compilando sin icono personalizado.")
+        print(f"    [!] Warning: '{ICON_PATH}' not found. Compiling without custom icon.")
         
     command.append("main.py")
     
     try:
         subprocess.check_call(command)
     except subprocess.CalledProcessError as e:
-        print(f"\n[!] Fallo crítico en la compilación. Error: {e}")
+        print(f"\n[!] Critical compilation failure. Error: {e}")
         sys.exit(1)
 
-    print("\n[+] Fase 2: Verificando integridad del artefacto...")
+    print("\n[+] Phase 2: Verifying artifact integrity...")
     if not os.path.exists(EXE_SOURCE):
-        print("[!] Error: Compilación finalizada, pero no se generó el binario 'Deskmon.exe'.")
+        print("[!] Error: Compilation finished, but 'Deskmon.exe' binary was not generated.")
         sys.exit(1)
 
-    print("[+] Fase 3: Extrayendo ejecutable al directorio raíz...")
+    print("[+] Phase 3: Extracting executable to the root directory...")
     if os.path.exists(EXE_DESTINATION):
         os.remove(EXE_DESTINATION)
     shutil.move(EXE_SOURCE, BASE_DIR)
 
-    print("[+] Fase 4: Purgando caché y residuos del compilador...")
+    print("[+] Phase 4: Purging cache and compiler residues...")
     if os.path.exists(BUILD_DIR): shutil.rmtree(BUILD_DIR)
     if os.path.exists(DIST_DIR): shutil.rmtree(DIST_DIR)
     if os.path.exists(SPEC_FILE): os.remove(SPEC_FILE)
 
-    # Invocación de la creación del acceso directo (solo si el icono existe)
     if os.path.exists(ICON_PATH):
         create_desktop_shortcut(EXE_DESTINATION, ICON_PATH)
 
     print("-" * 50)
-    print("[+] OPERACIÓN EXITOSA: 'Deskmon.exe' generado y entorno purgado.")
+    print("[+] SUCCESSFUL OPERATION: 'Deskmon.exe' generated and environment purged.")
 
 if __name__ == "__main__":
     compile_and_clean()

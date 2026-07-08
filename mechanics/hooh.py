@@ -15,7 +15,7 @@ class HoOhMechanics:
         for target in targets:
             if target and target.window.winfo_exists():
                 target.hooh_master = None
-                # FIX: Solo cancelar la acción de la víctima si realmente ya había empezado a correr
+                # FIX: Only cancel victim's action if they had already started running
                 if target.current_state == 'panic_run' and target.current_state not in ['dragged', 'exiting']:
                     target.current_state = 'falling'
                     
@@ -55,11 +55,11 @@ class HoOhMechanics:
                 self.y = target_y
                 self.hooh_phase = 1
                 
-                # FIX ESTRUCTURAL: Secuestro en el Momento Cero.
-                # Ahora que Ho-Oh está en posición, interrumpimos violentamente a todos los objetivos.
+                # STRUCTURAL FIX: Hijack at Moment Zero.
+                # Now that Ho-Oh is in position, violently interrupt all targets.
                 active_targets = []
                 for target in getattr(self, 'hooh_targets', []):
-                    # Volvemos a validar por si los atraparon/borraron durante el vuelo de Ho-Oh
+                    # Re-validate in case they were caught/deleted during Ho-Oh's flight
                     if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
                         
                         if target.current_state.startswith('dark_'):
@@ -71,7 +71,7 @@ class HoOhMechanics:
                             if getattr(target, 'tk_target', None):
                                 if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
                                     
-                                    # FIX: Forzar la limpieza de partículas del objeto/víctima flotante
+                                    # FIX: Force cleanup of floating object/victim particles
                                     t_targ = target.tk_target
                                     t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
@@ -118,8 +118,8 @@ class HoOhMechanics:
                 
             if self.hooh_timer <= 0:
                 if getattr(self, 'is_flying', False):
-                    # FIX: Eliminamos el recálculo defectuoso. 
-                    # El Pokémon ya recuerda su 'target_floor_y' original perfectamente.
+                    # FIX: Remove defective recalculation. 
+                    # The Pokemon already perfectly remembers its original 'target_floor_y'.
                     self.floor_y = self.y 
                     self.current_state = 'ascending'
                 else:
@@ -147,7 +147,7 @@ class HoOhMechanics:
             
         speed = self.speed * 1.5
         
-        # Predictor de rebote horizontal para ventanas
+        # Horizontal bounce predictor for windows
         if getattr(self, 'anchored_rect', None):
             rect = self.anchored_rect
             if self.x > rect[2] - self.size_w:
@@ -175,12 +175,12 @@ class HoOhMechanics:
                 self.x = (self.v_x + self.v_width) - self.size_w
                 self.is_facing_right = False
 
-        # FIX: Evaluación de físicas en Y (Caída Lemming interna y saltitos esporádicos)
+        # FIX: Y physics evaluation (Internal Lemming fall and sporadic jumps)
         if not self.is_flying:
             current_env, _ = self.get_window_environment()
             physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
             
-            # Si le quitan el suelo (ej: ventana minimizada) o ya estaba saltando
+            # If ground is removed (e.g. minimized window) or was already jumping
             if self.y < physical_floor - 15 or getattr(self, 'v_y_velocity', 0) > 0:
                 self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + 1.5
                 self.y += self.v_y_velocity
@@ -196,9 +196,9 @@ class HoOhMechanics:
                 self.floor_y = physical_floor
                 self.v_y_velocity = 0.0
                 
-                # Gatillo de saltos erráticos de pánico (aprox 6% de probabilidad por tick)
+                # Erratic panic jumps trigger (approx 6% chance per tick)
                 if random.randint(1, 100) <= 6:
-                    self.v_y_velocity = -9.0 # FIX: Altura del salto drásticamente aumentada
+                    self.v_y_velocity = -9.0 # FIX: Drastically increased jump height
                     self.y += self.v_y_velocity
                     self.anchored_hwnd = None
         else:
@@ -209,13 +209,13 @@ class HoOhMechanics:
             self.show_fire_vfx(is_master=False)
 
         self.update_position()
-        self.schedule_loop(30, self.physics_loop) # FIX: Hilo ajustado a 30ms para no desfasarse de Ho-Oh
+        self.schedule_loop(30, self.physics_loop) # FIX: Thread adjusted to 30ms to not desync from Ho-Oh
 
     def show_fire_vfx(self, is_master=False):
         particles = []
         cx = self.size_w // 2
         
-        # El maestro genera fuego desde su centro, las víctimas desde los pies
+        # Master generates fire from center, victims from feet
         cy = self.size_h // 2 if is_master else self.size_h
         
         count = random.randint(4, 8) if is_master else random.randint(2, 4)
@@ -223,7 +223,7 @@ class HoOhMechanics:
         base_life = 15 if is_master else 10
             
         for _ in range(count):
-            # FIX MATEMÁTICO: Ho-Oh emite en 360 grados reales. Las víctimas mantienen el arco superior.
+            # MATHEMATICAL FIX: Ho-Oh emits in true 360 degrees. Victims keep upper arch.
             if is_master:
                 angle = random.uniform(0, 2 * math.pi)
             else:
@@ -238,7 +238,7 @@ class HoOhMechanics:
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_fire")
             
-            # Almacenamos su identidad para aplicarle físicas distintas
+            # Store their identity to apply different physics
             particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(base_life, base_life + 10), 'is_master': is_master})
             
         def animate_fire():
@@ -249,14 +249,14 @@ class HoOhMechanics:
                 if p['life'] > 0:
                     self.canvas.move(p['id'], p['vx'], p['vy'])
                     
-                    # FIX FÍSICO: Gravedad y fricción independientes
+                    # PHYSICAL FIX: Independent gravity and friction
                     if p['is_master']:
-                        # Expansión radial (Nova) con fricción intensa y una levísima tendencia térmica al final
+                        # Radial expansion (Nova) with intense friction and slight thermal tendency at the end
                         p['vx'] *= 0.85
                         p['vy'] *= 0.85
                         p['vy'] -= 0.05 
                     else:
-                        # Fuego de suelo (Ascenso forzado por convección)
+                        # Floor fire (Forced ascent by convection)
                         p['vx'] *= 0.9 
                         p['vy'] -= 0.5 
                     

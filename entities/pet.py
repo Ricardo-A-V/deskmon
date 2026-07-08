@@ -23,7 +23,7 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-# --- ENTIDAD FÍSICA (REFACCIONADA A MÁQUINA DE ESTADOS) ---
+# --- PHYSICAL ENTITY (REFACTORED TO STATE MACHINE) ---
 from mechanics.rayquaza import RayquazaMechanics
 from mechanics.lugia import LugiaMechanics
 from mechanics.mewtwo import MewtwoMechanics
@@ -46,7 +46,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.is_overflow = is_overflow
         self.game_controller = game_controller_ref
         
-        # CONFIGURADOR DE ESCALADA
+        # CLIMBING CONFIGURATOR
         self.climb_offset_x = 0  
         self.climb_offset_y = 0  
 
@@ -87,8 +87,8 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.is_legendary = (normalized_name in LEGENDARY_MATRIX) or rpg_data.get("is_legendary", False) or (rarity_str in ["legendary", "mythical", "legendario", "singular"])
 
         self.window = tk.Toplevel(parent_root)
-        wild_tag = "(SALVAJE)" if is_wild else f"Lv.{self.pet_data['level']}"
-        if self.is_egg: wild_tag = "(HUEVO)"
+        wild_tag = "(WILD)" if is_wild else f"Lv.{self.pet_data['level']}"
+        if self.is_egg: wild_tag = "(EGG)"
         self.window.title(f"{self.config.get('display_name', 'Pokemon')} {wild_tag}")
         self.window.overrideredirect(True)
         self.window.attributes('-topmost', True)
@@ -98,22 +98,22 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         try: self.window.wm_attributes('-transparentcolor', CHROMA_KEY)
         except tk.TclError: pass 
 
-        multiplicador_tamaño = 1.55
+        size_multiplier = 1.55
         if self.is_legendary:
-            multiplicador_tamaño *= 1.2 
+            size_multiplier *= 1.2 
 
-        multiplicador_velocidad = 2
+        speed_multiplier = 2
         physics = self.config.get("physics", {})
         
-        self.size_w = int(physics.get("size", 64) * multiplicador_tamaño)
-        self.size_h = int(physics.get("size", 64) * multiplicador_tamaño)
+        self.size_w = int(physics.get("size", 64) * size_multiplier)
+        self.size_h = int(physics.get("size", 64) * size_multiplier)
         
         base_speed = physics.get("movement_speed", 2)
-        self.speed = max(1, int(base_speed * multiplicador_velocidad))
+        self.speed = max(1, int(base_speed * speed_multiplier))
         self.is_flying = physics.get("is_flying", False)
         self.is_climbing = physics.get("is_climbing", False) and not self.is_flying 
         
-        # --- MECÁNICAS DE COMPORTAMIENTO HARDCODEADAS ---
+        # --- HARDCODED BEHAVIOR MECHANICS ---
         self.can_screen_wrap = physics.get("can_screen_wrap", False)
         self.can_teleport = physics.get("can_teleport", False)
         self.heavy_fall = physics.get("heavy_fall", False)
@@ -121,7 +121,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.bubble_blower = physics.get("bubble_blower", False) 
         self.can_dig = physics.get("can_dig", False)
         self.fairy_aura = physics.get("fairy_aura", False)
-        self.dark_arts = physics.get("dark_arts", False) # NUEVA
+        self.dark_arts = physics.get("dark_arts", False)
         self.aggressive = physics.get("aggressive", False)
         self.teleport_cooldown = 0
 
@@ -141,7 +141,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.is_flying = False  
             self.offset_y = 0      
             
-            # FIX: Anular mecánicas avanzadas para que el huevo no herede comportamientos de adulto
+            # FIX: Nullify advanced mechanics so the egg doesn't inherit adult behaviors
             self.heavy_fall = False
             self.can_screen_wrap = False
             self.can_teleport = False
@@ -217,24 +217,24 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if spawn_coords:
             self.x = spawn_coords[0]
             self.y = spawn_coords[1]
-            self.floor_y = spawn_coords[1] # FIX CRÍTICO: Sincronizar el suelo local con la altura de aparición
+            self.floor_y = spawn_coords[1] # CRITICAL FIX: Synchronize local floor with spawn height
             if is_mid_evo:
                 self.evo_channel = evo_channel
                 self.current_state = 'evolving_finish'
                 self.finish_evolution_vfx(step=0)
             else:
                 if self.is_egg:
-                    # FIX: Inyectamos el huevo en el estado 'thrown' para que tenga gravedad y rebotes reales
+                    # FIX: Inject the egg into the 'thrown' state so it has real gravity and bounces
                     self.current_state = 'thrown'
                     self.v_x_velocity = random.choice([-2.0, 2.0])
-                    self.v_y_velocity = -4.0 # Pequeño salto parabólico al ser puesto por la madre
+                    self.v_y_velocity = -4.0 # Small parabolic jump when laid by the mother
                 else:
                     self.current_state = 'idle'
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             if self.is_egg:
                 self.y = self.v_y - self.size_h
-                self.current_state = 'thrown' # Cae rebotando al iniciar la app
+                self.current_state = 'thrown' # Falls bouncing when starting the app
                 self.v_x_velocity = random.choice([-2.0, 2.0])
                 self.v_y_velocity = 2.0
             elif self.is_wild:
@@ -247,7 +247,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     self.current_state = 'ascending' 
                     self.play_shiny_sound() 
                 else:
-                    # FIX: Los voladores salvajes ahora aparecen en el cielo (target_floor_y), no en el suelo
+                    # FIX: Wild flyers now spawn in the sky (target_floor_y), not on the ground
                     self.y = getattr(self, 'target_floor_y', self.floor_y) if self.is_flying else self.floor_y
                     self.current_state = 'spawning_wild'
                     self.canvas.itemconfig(self.canvas_image_id, state='hidden')
@@ -273,7 +273,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             despawn_time = random.randint(120000, 300000) 
             self.despawn_timer = self.schedule_loop(despawn_time, self.start_wild_despawn)
             
-        # DICCIONARIO FSM (Finite State Machine)
+        # FSM DICTIONARY (Finite State Machine)
         self.fsm = {
             'exiting': self._fsm_exiting,
             'egg_idle': self._fsm_wait,
@@ -312,8 +312,8 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             'groudon_channeling': self._fsm_groudon_channeling,
             'lugia_channeling': self._fsm_lugia_channeling,
             'lugia_dash': self._fsm_lugia_dash,
-            'rayquaza_channeling': self._fsm_rayquaza_channeling, # NUEVO
-            'rayquaza_cyclone_victim': self._fsm_rayquaza_cyclone_victim, # NUEVO
+            'rayquaza_channeling': self._fsm_rayquaza_channeling,
+            'rayquaza_cyclone_victim': self._fsm_rayquaza_cyclone_victim,
             'palkia_channeling': self._fsm_palkia_channeling,
             'palkia_invert_transition': self._fsm_palkia_invert_transition,
             'palkia_revert_transition': self._fsm_palkia_revert_transition,
@@ -339,7 +339,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
     def on_drag_start(self, event):
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
         
-        # FIX: Destrucción total del vínculo telequinético si se hace clic en el Maestro
+        # FIX: Total destruction of the telekinetic link if the Master is clicked
         if self.current_state == 'tk_channeling':
             self.current_state = 'idle'
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
@@ -352,7 +352,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 target.tk_master = None
             self.tk_target = None
                 
-        # FIX: Destrucción del vínculo si se hace clic en la víctima (Pokémon)
+        # FIX: Destruction of the link if the victim (Pokemon) is clicked
         if self.current_state == 'tk_lifted':
             self.current_state = 'falling'
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
@@ -363,24 +363,24 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 master.tk_target = None
             self.tk_master = None
                 
-        # FIX: Explotar la burbuja manualmente si agarras al objetivo
+        # FIX: Pop the bubble manually if you grab the target
         if self.current_state == 'bubbled':
             self.manage_bubble_vfx(False)
             self.show_bubble_burst_vfx()
             self.current_state = 'thrown' if getattr(self, 'is_flying', False) else 'falling'
 
-        # FIX: Interrumpir la excavación manualmente restaurando las coordenadas internas
+        # FIX: Interrupt digging manually by restoring internal coordinates
         if self.current_state in ['digging', 'digging_in', 'digging_out']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            # Reset estricto al centro geométrico del Canvas
+            # Strict reset to the geometric center of the Canvas
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2) 
             self.current_state = 'falling'
 
-        # FIX: Destruir interacción de las Sombras si intervienes
+        # FIX: Destroy Shadows interaction if you intervene
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
 
-        # FIX: Interrumpir el Vórtice Psíquico de Mewtwo
+        # FIX: Interrupt Mewtwo's Psychic Vortex
         if self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
 
@@ -390,15 +390,15 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             except: pass
             self.current_state = 'falling'
 
-        # FIX: Interrumpir Fuego Sagrado de Ho-Oh
+        # FIX: Interrupt Ho-Oh's Sacred Fire
         if self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
-        # FIX: Solo cancelar Kyogre si agarras al Maestro (Kyogre). 
-        # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
+        # FIX: Only cancel Kyogre if you grab the Master (Kyogre). 
+        # Victims can be dragged and will still be affected by the flood when released.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
-        # FIX: Cancelar vórtice y restaurar opacidad si agarras a Giratina
+        # FIX: Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
 
@@ -445,7 +445,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
             self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
 
-        # FIX: Destrucción del vínculo si se hace clic en la víctima de telequinesis
+        # FIX: Destruction of the link if the telekinesis victim is clicked
         if self.current_state == 'tk_lifted':
             self.current_state = 'falling'
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
@@ -456,18 +456,18 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 master.tk_target = None
             self.tk_master = None
             
-        # FIX: Explotar la burbuja manualmente si agarras al objetivo
+        # FIX: Pop the bubble manually if you grab the target
         if self.current_state == 'bubbled':
             self.manage_bubble_vfx(False)
             self.show_bubble_burst_vfx()
             self.current_state = 'falling'
 
-        # FIX: Interrumpir la excavación manualmente si agarras al objetivo
+        # FIX: Interrupt digging manually if you grab the target
         if self.current_state == 'digging':
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             self.current_state = 'falling'
 
-        # FIX: Destruir interacción de las Sombras si intervienes
+        # FIX: Destroy Shadows interaction if you intervene
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
 
@@ -477,15 +477,15 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             except: pass
             self.current_state = 'falling'
 
-        # FIX: Interrumpir Fuego Sagrado de Ho-Oh
+        # FIX: Interrupt Ho-Oh's Sacred Fire
         if self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
-        # FIX: Solo cancelar Kyogre si agarras al Maestro (Kyogre). 
-        # Las víctimas pueden ser arrastradas y seguirán afectadas por la inundación al soltarlas.
+        # FIX: Only cancel Kyogre if you grab the Master (Kyogre). 
+        # Victims can be dragged and will still be affected by the flood when released.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
-        # FIX: Cancelar vórtice y restaurar opacidad si agarras a Giratina
+        # FIX: Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
 
@@ -495,7 +495,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
 
         elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
         
-        # ACTUALIZACIÓN DE VARIABLES PARA FÍSICAS (Sin alterar el offset del ratón)
+        # VARIABLE UPDATE FOR PHYSICS (Without altering mouse offset)
         self.last_mouse_x = pointer_x
         self.last_mouse_y = pointer_y
         self.last_drag_time = current_time
@@ -511,7 +511,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.v_x_velocity = max(-40.0, min(40.0, v_x))
             self.v_y_velocity = max(-40.0, min(40.0, v_y))
             
-            # FIX: Si está siendo inundado, vuelve al estado flotante en lugar de estrellarse contra el suelo
+            # FIX: If it is being flooded, return to floating state instead of crashing into the ground
             if getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
                 self.current_state = 'deluge_float'
             else:
@@ -637,7 +637,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             except: return
             
             if pid == CURRENT_PID:
-                # FIX EXCEPCIÓN: Permitir colisión con Bill's PC ignorando el resto de las mascotas
+                # FIX EXCEPTION: Allow collision with Bill's PC ignoring the rest of the pets
                 title = win32gui.GetWindowText(hwnd)
                 if title != "Bill's PC":
                     return
@@ -830,7 +830,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         font_config = ("Segoe UI", 10, "bold")
         x, y = self.size_w // 2, 15
         
-        # Agrupamos el borde y el centro bajo el mismo tag ("vfx_lvl_group")
+        # Group the border and the center under the same tag ("vfx_lvl_group")
         offsets = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
         for ox, oy in offsets:
             self.canvas.create_text(x + ox, y + oy, text="LEVEL UP!", fill="#000000", font=font_config, tags="vfx_lvl_group")
@@ -841,10 +841,10 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             if step < 20 and self.current_state != 'exiting':
                 self.canvas.move("vfx_lvl_group", 0, -1)
                 
-                # SOLUCIÓN MATEMÁTICA: Parpadeo de bloque entero.
-                # Al ocultar y mostrar ambos elementos a la vez, el rojo nunca interactúa con el verde.
-                estado = 'hidden' if (step // 2) % 2 == 0 else 'normal'
-                self.canvas.itemconfig("vfx_lvl_group", state=estado)
+                # MATHEMATICAL SOLUTION: Entire block blinking.
+                # By hiding and showing both elements at the same time, red never interacts with green.
+                blink_state = 'hidden' if (step // 2) % 2 == 0 else 'normal'
+                self.canvas.itemconfig("vfx_lvl_group", state=blink_state)
                     
                 self.schedule_loop(50, lambda: float_up(step+1))
             else:
@@ -852,7 +852,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         float_up(0)
 
     def show_heart_vfx(self):
-        # Matriz estructurada: 0 = Vacío, 1 = Rojo (Relleno), 2 = Negro (Borde)
+        # Structured matrix: 0 = Empty, 1 = Red (Fill), 2 = Black (Border)
         heart_matrix = [
             [0, 2, 2, 0, 2, 2, 0],
             [2, 1, 1, 2, 1, 1, 2],
@@ -921,15 +921,15 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.current_state = 'landing_shake'
         self.shake_timer = 25
         
-        # ONDA SÍSMICA (Seismic Shockwave)
+        # SEISMIC SHOCKWAVE
         if getattr(self, 'get_all_pets', None):
             for other in self.get_all_pets():
                 if other != self and other.current_state in ['idle', 'walking', 'socializing', 'attacking'] and not getattr(other, 'is_flying', False) and not getattr(other, 'is_egg', False):
-                    # FIX: Calcular el suelo físico real (las suelas de los pies), no el anclaje superior
+                    # FIX: Calculate the actual physical floor (soles of the feet), not the upper anchor
                     my_floor = self.floor_y + self.size_h + getattr(self, 'offset_y', 0)
                     other_floor = other.floor_y + other.size_h + getattr(other, 'offset_y', 0)
                     
-                    # Rango de impacto aumentado a 400px para que se note el efecto de masa
+                    # Impact range increased to 400px to emphasize the mass effect
                     if abs(my_floor - other_floor) < 25 and abs(other.x - self.x) < 400:
                         other.current_state = 'jumping_arc'
                         other.jump_target_y = other.floor_y
@@ -954,9 +954,9 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"\n[!] ERROR CRÍTICO: El motor se ha detenido.")
-            print(f"[!] Fallo al leer el archivo: {config_path}")
-            print(f"[!] Motivo técnico: {e}\n")
+            print(f"\n[!] CRITICAL ERROR: The engine has stopped.")
+            print(f"[!] Failed to read the file: {config_path}")
+            print(f"[!] Technical reason: {e}\n")
             import sys
             sys.exit(1)
 
@@ -1030,7 +1030,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
     def start_wild_despawn(self):
         if self.current_state in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']: return
         
-        # FIX ESTRUCTURAL: Liberar víctima antes de desaparecer en la hierba/nube
+        # STRUCTURAL FIX: Release victim before disappearing into the grass/cloud
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
         elif self.current_state.startswith('mewtwo_'):
@@ -1135,7 +1135,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if self.is_egg: return
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
             
-            # FIX ESTRUCTURAL: Liberar conexiones Siniestras si se guarda en la Pokéball
+            # STRUCTURAL FIX: Release Sinister connections if stored in the Pokeball
             if self.current_state.startswith('dark_'):
                 self.cancel_dark_arts()
             elif self.current_state.startswith('mewtwo_'):
@@ -1161,7 +1161,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 self.on_open_pc(None) 
             else: 
                 self.on_open_pc(self.pet_data)
-                # FIX: Al hacerle doble clic, se vuelve la estrella de Discord
+                # FIX: Double-clicking makes it the Discord star
                 if self.game_controller and hasattr(self.game_controller, 'discord_rpc'):
                     self.game_controller.discord_rpc.set_target(self)
 
@@ -1171,7 +1171,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
     def animate_loop(self):
         if self.current_state == 'exiting': return 
         
-        # Sincronización de Anclaje a 60 FPS (Física de Arrastre de Ventana)
+        # 60 FPS Anchor Synchronization (Window Drag Physics)
         if getattr(self, 'anchored_hwnd', None) and self.current_state in ['idle', 'walking', 'socializing', 'attacking', 'digging', 'digging_in', 'digging_out']:
             try:
                 if HAS_WIN32 and win32gui.IsWindowVisible(self.anchored_hwnd) and not win32gui.IsIconic(self.anchored_hwnd):
@@ -1183,7 +1183,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     delta_r = new_rect[2] - old_rect[2]
                     delta_b = new_rect[3] - old_rect[3]
 
-                    # FILTRO ANTI-TELETRANSPORTE (Si la ventana se minimiza o cambia de escritorio virtual)
+                    # ANTI-TELEPORT FILTER (If the window is minimized or changes virtual desktop)
                     if abs(delta_l) > 2000 or abs(delta_t) > 2000:
                         self.anchored_hwnd = None
                         self.anchored_rect = None
@@ -1192,7 +1192,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
 
                         if surface == 'floor':
                             self.x += delta_l
-                            # FIX: Seguir el borde inferior de la ventana si está invertido
+                            # FIX: Follow the bottom edge of the window if inverted
                             if getattr(self, 'gravity_inverted', False):
                                 self.y += delta_b
                                 self.floor_y += delta_b
@@ -1219,14 +1219,14 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
 
         blend = getattr(self, 'evo_blend', 0.0)
         
-        # INVERSIÓN VISUAL
+        # VISUAL INVERSION
         render_facing_right = self.is_facing_right
         if getattr(self, 'is_climbing', False):
             surface = getattr(self, 'climbing_surface', 'floor')
             if surface in ['screen_l', 'screen_r']:
                 render_facing_right = not self.is_facing_right
                 
-        # --- FIX: ANULAR MOONWALK EN GRAVEDAD INVERTIDA ---
+        # --- FIX: NULLIFY MOONWALK IN INVERTED GRAVITY ---
         if getattr(self, 'gravity_inverted', False):
             render_facing_right = not render_facing_right
 
@@ -1247,7 +1247,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             anim_state = self.current_state
             if anim_state == 'hooh_channeling' and getattr(self, 'hooh_phase', 0) == 1:
                 anim_state = 'idle'
-            # FIX: Kyogre mira al frente mientras invoca la lluvia
+            # FIX: Kyogre faces forward while summoning rain
             if anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
                 anim_state = 'idle'
             if anim_state == 'dialga_channeling':
@@ -1264,7 +1264,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.check_time_distortion()
         if hasattr(self, 'check_gravity_inversion'):
             self.check_gravity_inversion()
-        # Motor dinámico: Si el estado no está en el diccionario, lo busca por nombre
+        # Dynamic engine: If the state is not in the dictionary, it looks for it by name
         handler = self.fsm.get(self.current_state)
         if handler:
             handler()
@@ -1382,16 +1382,16 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.anchored_hwnd = current_env['hwnd']
                         self.anchored_rect = current_env['rect']
         else:
-            # --- PARCHE ESTRUCTURAL: GRAVEDAD NEGATIVA (HACIA ARRIBA) EN LANZAMIENTOS ---
+            # --- STRUCTURAL PATCH: NEGATIVE GRAVITY (UPWARDS) IN THROWS ---
             if getattr(self, 'gravity_inverted', False):
-                # La gravedad ahora tira hacia los números negativos (arriba en Tkinter)
+                # Gravity now pulls towards negative numbers (up in Tkinter)
                 gravity = -4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity <= 0.5 else -1.5
                 self.v_y_velocity += gravity
                 self.v_x_velocity *= 0.95 
                 self.y += self.v_y_velocity
                 self.x += self.v_x_velocity
 
-                # Límites laterales
+                # Lateral limits
                 if getattr(self, 'can_screen_wrap', False):
                     if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
                     elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
@@ -1405,14 +1405,14 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.v_x_velocity *= -0.7
                         self.is_facing_right = False
 
-                # FIX: Inyectar el Radar de Ventanas para lanzamientos
+                # FIX: Inject the Window Radar for throws
                 current_env, _ = self.get_window_environment()
                 fall_tolerance = max(15, abs(int(self.v_y_velocity)) + 15) if self.v_y_velocity < 0 else 15
                 
                 target_y = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.v_y
                 if getattr(self, 'is_flying', False): target_y += getattr(self, 'target_offset_y', 0)
 
-                # Si su velocidad es negativa (subiendo) y choca contra el techo/ventana
+                # If its velocity is negative (going up) and hits the ceiling/window
                 if self.v_y_velocity < 0 and self.y <= target_y:
                     self.y = target_y
                     self.floor_y = target_y
@@ -1462,17 +1462,17 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
 
             current_env, _ = self.get_window_environment()
             
-            # FIX ANTITRASPASO: Absorbe la tolerancia calculada en get_window_environment
+            # ANTI-PASS-THROUGH FIX: Absorbs the tolerance calculated in get_window_environment
             fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
             physical_floor = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.default_floor_y
 
-            # (El resto de _fsm_thrown queda igual, cambia solo este último bloque)
+            # (The rest of _fsm_thrown remains the same, only this last block changes)
             if self.v_y_velocity > 0 and self.y >= physical_floor:
                 self.y = physical_floor
                 self.floor_y = physical_floor
                 self.v_x_velocity = 0
                 
-                # GATILLO DE VIBRACIÓN INTERNA DEL POKÉMON (Ajustado a 0.75s)
+                # INTERNAL VIBRATION TRIGGER OF THE POKEMON (Adjusted to 0.75s)
                 if getattr(self, 'heavy_fall', False) and self.v_y_velocity > 15:
                     self.trigger_landing_shake()
                 else:
@@ -1568,29 +1568,29 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if self.teleport_step <= 0:
             self.window.attributes('-alpha', 0.0)
             
-            # 1. Elegimos la nueva coordenada X al azar
+            # 1. We choose the new X coordinate at random
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             
-            # 2. Lógica de reubicación en Y
+            # 2. Y relocation logic
             if getattr(self, 'is_flying', False):
                 self.y = getattr(self, 'target_floor_y', self.default_floor_y)
                 self.floor_y = self.y
                 self.anchored_hwnd = None
                 self.anchored_rect = None
             else:
-                # TRUCO DEL RADAR: Movemos temporalmente al Pokémon al límite superior del monitor 
-                # para que el escáner barra toda la pantalla hacia abajo buscando ventanas.
+                # RADAR TRICK: We temporarily move the Pokemon to the upper limit of the monitor 
+                # so that the scanner sweeps the entire screen downwards looking for windows.
                 self.y = self.v_y 
                 current_env, _ = self.get_window_environment()
                 
                 if current_env['hwnd']:
-                    # Ha encontrado una ventana en esta X. Se ancla y aparece encima.
+                    # It found a window at this X. It anchors and appears on top.
                     self.anchored_hwnd = current_env['hwnd']
                     self.anchored_rect = current_env['rect']
                     self.floor_y = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
                     self.y = self.floor_y
                 else:
-                    # No hay ninguna ventana. Va al suelo base.
+                    # There is no window. It goes to the base floor.
                     self.anchored_hwnd = None
                     self.anchored_rect = None
                     self.floor_y = self.default_floor_y
@@ -1629,7 +1629,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             current_env, _ = self.get_window_environment()
             physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
             
-            # Efecto Lemming: Si pierden el suelo (ej: caen de una ventana mientras huyen), activan la caída libre
+            # Lemming Effect: If they lose the ground (e.g. they fall from a window while fleeing), they activate free fall
             if self.y < physical_floor - 15:
                 self.current_state = 'falling'
                 self.v_y_velocity = 0.0
@@ -1644,7 +1644,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         elif self.current_state == 'falling_legendary': 
             fall_speed = 20
 
-        # --- PARCHE ESTRUCTURAL: GRAVEDAD NEGATIVA (HACIA ARRIBA) ---
+        # --- STRUCTURAL PATCH: NEGATIVE GRAVITY (UPWARDS) ---
         if getattr(self, 'gravity_inverted', False):
             self.y -= fall_speed
             self.x += getattr(self, 'v_x_velocity', 0.0)
@@ -1655,7 +1655,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             else:
                 self.x = max(self.v_x, min(self.x, (self.v_x + self.v_width) - self.size_w))
 
-            # FIX: Inyectar el Radar de Ventanas para caída libre invertida
+            # FIX: Inject the Window Radar for inverted free fall
             current_env, _ = self.get_window_environment()
             fall_tolerance = max(15, fall_speed + 15)
             
@@ -1734,14 +1734,14 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 else:
                     self.v_y_velocity = -8.0
                     self.current_state = 'legendary_bounce'
-            # (El resto de _fsm_falling queda igual, cambia solo este último bloque tras los IF de legendarios)
+            # (The rest of _fsm_falling remains the same, only this last block changes after the legendary IFs)
             else:
                 if getattr(self, 'is_flying', False) and getattr(self, 'target_floor_y', self.y) != self.y:
                     self.floor_y = self.y
                     self.current_state = 'ascending'
                 else:
-                    # FIX: En estado de caída directa, la velocidad está bloqueada matemáticamente, 
-                    # por lo que no es necesario evaluar self.v_y_velocity.
+                    # FIX: In direct fall state, velocity is mathematically locked, 
+                    # so it is not necessary to evaluate self.v_y_velocity.
                     if getattr(self, 'heavy_fall', False):
                         self.trigger_landing_shake()
                     else:
@@ -1955,7 +1955,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if not getattr(self, 'is_glitching', False) or self.current_state == 'exiting':
             return
             
-        # Si el usuario lo agarra o está involucrado en telequinesis, pausamos los saltos
+        # If the user grabs it or it is involved in telekinesis, we pause the jumps
         if self.current_state in ['dragged', 'tk_controlled', 'tk_lifted']:
             self.schedule_loop(500, self.schedule_glitch_teleport)
             return
@@ -1963,7 +1963,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if getattr(self, 'glitch_teleports_left', 0) > 0:
             self.glitch_teleports_left -= 1
             
-            # Teletransporte caótico: Nueva coordenada X
+            # Chaotic teleportation: New X coordinate
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             
             if getattr(self, 'is_flying', False):
@@ -1986,10 +1986,10 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 
             self.update_position()
             
-            # Programar la siguiente interferencia entre 1.5 y 3 segundos
+            # Schedule the next interference between 1.5 and 3 seconds
             self.schedule_loop(random.randint(1500, 3000), self.schedule_glitch_teleport)
         else:
-            # Fin de la fase
+            # End of phase
             self.is_glitching = False
             self.glitch_cooldown = 12000
             try: self.window.attributes('-alpha', 1.0)
@@ -2007,7 +2007,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.show_dirt_vfx()
             
         if desplazamiento >= self.size_h // 2 + 10: 
-            # Totalmente oculto bajo el límite del Canvas
+            # Totally hidden under the Canvas limit
             self.current_state = 'digging'
             self.canvas.itemconfig(self.canvas_image_id, state='hidden')
             
@@ -2017,24 +2017,24 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
     def _fsm_digging(self):
         self.dig_timer -= 1
         
-        # --- NAVEGACIÓN ORGÁNICA ---
+        # --- ORGANIC NAVIGATION ---
         if random.randint(1, 1000) <= 20:
             self.is_facing_right = not self.is_facing_right
         
         velocidad_excavacion = self.speed * 2
 
-        # FIX: Clampeo estricto y predictivo contra redimensionados de ventana bruscos
+        # FIX: Strict and predictive clamping against sudden window resizing
         if getattr(self, 'anchored_rect', None):
             rect = self.anchored_rect
             
-            # 1. Clampeo de emergencia: Si la ventana lo ha dejado fuera, lo forzamos adentro
+            # 1. Emergency clamping: If the window left it out, we force it inside
             if self.x > rect[2] - self.size_w:
                 self.x = rect[2] - self.size_w
                 self.is_facing_right = False
             elif self.x < rect[0]:
                 self.x = rect[0]
                 self.is_facing_right = True
-            # 2. Comprobación predictiva estándar: Rebotar antes de salir
+            # 2. Standard predictive check: Bounce before exiting
             else:
                 if self.is_facing_right and self.x + velocidad_excavacion > rect[2] - self.size_w:
                     self.is_facing_right = False
@@ -2113,7 +2113,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.bubble_cooldown = max(0, getattr(self, 'bubble_cooldown', 0) - 1)
         self.dig_cooldown = max(0, getattr(self, 'dig_cooldown', 0) - 1)
         
-        # FIX: Inicialización y decaimiento del contador Siniestro por fotograma
+        # FIX: Initialization and decay of the Sinister counter per frame
         self.dark_cooldown = max(0, getattr(self, 'dark_cooldown', 0) - 1) 
         self.mewtwo_cooldown = max(0, getattr(self, 'mewtwo_cooldown', 0) - 1) 
         self.dialga_cooldown = max(0, getattr(self, 'dialga_cooldown', 0) - 1)
@@ -2121,11 +2121,11 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         self.kyogre_cooldown = max(0, getattr(self, 'kyogre_cooldown', 0) - 1)
         self.groudon_cooldown = max(0, getattr(self, 'groudon_cooldown', 0) - 1)
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
-        self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1) # NUEVO
+        self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1)
         self.palkia_cooldown = max(0, getattr(self, 'palkia_cooldown', 0) - 1)
         self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
 
-        # --- MECÁNICA EXCLUSIVA: VÓRTICE DISTORSIÓN DE GIRATINA ---
+        # --- EXCLUSIVE MECHANIC: GIRATINA'S DISTORTION VORTEX ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 if getattr(self, 'get_all_pets', None):
@@ -2133,16 +2133,16 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
-                        self.giratina_cooldown = 108000 # 1.5 horas
+                        self.giratina_cooldown = 108000 # 1.5 hours
                         self.current_state = 'giratina_channeling'
                         
-                        # --- LIMPIEZA ABSOLUTA DE MECÁNICAS PREVIAS ---
+                        # --- ABSOLUTE CLEANUP OF PREVIOUS MECHANICS ---
                         for target in valid_targets:
-                            # 1. Artes Siniestras
+                            # 1. Dark Arts
                             if target.current_state.startswith('dark_'): 
                                 target.cancel_dark_arts()
                                 
-                            # 2. Telequinesis (Auras y Vínculos de Maestro/Víctima)
+                            # 2. Telekinesis (Auras and Master/Victim Links)
                             elif target.current_state == 'tk_channeling':
                                 if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
                                 if getattr(target, 'tk_target', None):
@@ -2162,23 +2162,23 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                                     target.tk_master.current_state = 'falling'
                                 target.tk_master = None
                                 
-                            # 3. Burbujas de Agua
+                            # 3. Water Bubbles
                             elif target.current_state == 'bubbled':
                                 if hasattr(target, 'manage_bubble_vfx'): target.manage_bubble_vfx(False)
                                 if hasattr(target, 'show_bubble_burst_vfx'): target.show_bubble_burst_vfx()
                             
-                            # 4. FIX: Restaurar Coordenadas Base del Canvas para Excavación
+                            # 4. FIX: Restore Canvas Base Coordinates for Digging
                             elif target.current_state in ['digging_in', 'digging', 'digging_out']:
                                 target.canvas.itemconfig(target.canvas_image_id, state='normal')
                                 target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
 
-                            # 5. FIX: Detener Hilo Asíncrono de Interferencia Fantasma (Glitch)
+                            # 5. FIX: Stop Asynchronous Ghost Interference Thread (Glitch)
                             if getattr(target, 'is_glitching', False):
                                 target.is_glitching = False
                                 target.glitch_teleports_left = 0
                                 target.glitch_cooldown = 12000
 
-                            # 6. Desconexión de Canalizadores Legendarios en curso
+                            # 6. Disconnection of ongoing Legendary Channelers
                             if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'): target.cancel_mewtwo_arts()
                             elif target.current_state in ['hooh_channeling', 'panic_run'] and hasattr(target, 'cancel_hooh_arts'): target.cancel_hooh_arts()
                             elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'): target.cancel_kyogre_arts()
@@ -2188,7 +2188,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                             elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'): target.cancel_dialga_arts()
                             elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'): target.cancel_palkia_arts()
 
-                            # 7. Reseteo Visual Final y Asignación
+                            # 7. Final Visual Reset and Assignment
                             target.canvas.itemconfig(target.canvas_image_id, state='normal')
                             try: target.window.attributes('-alpha', 1.0)
                             except: pass
@@ -2202,14 +2202,14 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.schedule_loop(50, self.physics_loop)
                         return
 
-       # --- MECÁNICA EXCLUSIVA: INVERSIÓN DE GRAVEDAD DE PALKIA ---
+       # --- EXCLUSIVE MECHANIC: PALKIA'S GRAVITY INVERSION ---
         if self.pet_name.lower() == "palkia" and getattr(self, 'palkia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.current_state = 'palkia_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-       # --- MECÁNICA EXCLUSIVA: CICLÓN ESMERALDA DE RAYQUAZA ---
+       # --- EXCLUSIVE MECHANIC: RAYQUAZA'S EMERALD CYCLONE ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
@@ -2217,41 +2217,41 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
-                        self.rayquaza_cooldown = 108000 # 1.5 horas
+                        self.rayquaza_cooldown = 108000 # 1.5 hours
                         self.current_state = 'rayquaza_channeling'
                         self.rayquaza_phase = 0
                         
-                        # FIX: Definir número de idas y vueltas y la duración inicial del barrido
+                        # FIX: Define number of back and forths and the initial sweep duration
                         self.rayquaza_sweeps_total = random.randint(8, 10)
                         self.rayquaza_sweeps_done = 0
-                        self.rayquaza_sweep_duration = 120 # Arranca lento (~3.6s el primer cruce)
+                        self.rayquaza_sweep_duration = 120 # Starts slow (~3.6s the first crossing)
                         
                         self.rayquaza_targets = valid_targets 
                         self.schedule_loop(50, self.physics_loop)
                         return
 
-        # --- MECÁNICA EXCLUSIVA: VENDAVAL AEROBLÁSICO DE LUGIA ---
+        # --- EXCLUSIVE MECHANIC: LUGIA'S AEROBLAST GALE ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
-                self.lugia_cooldown = 108000 # 1.5 horas
+                self.lugia_cooldown = 108000 # 1.5 hours
                 self.current_state = 'lugia_channeling'
-                self.is_facing_right = random.choice([True, False]) # Decide hacia dónde va a barrer la pantalla
+                self.is_facing_right = random.choice([True, False]) # Decide where it's going to sweep the screen
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: TERREMOTO DE GROUDON ---
+        # --- EXCLUSIVE MECHANIC: GROUDON'S EARTHQUAKE ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
-                self.groudon_cooldown = 108000 # 1.5 horas
+                self.groudon_cooldown = 108000 # 1.5 hours
                 self.current_state = 'groudon_channeling'
-                # FIX LÓGICO: Definimos aleatoriedad de repeticiones (5 a 10) y la primera propulsión
+                # LOGICAL FIX: Define randomness of repetitions (5 to 10) and the first propulsion
                 self.groudon_jumps_left = random.randint(5, 10) 
                 self.groudon_phase = 'jumping'
                 self.v_y_velocity = -28.0 
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: DILUVIO DE KYOGRE ---
+        # --- EXCLUSIVE MECHANIC: KYOGRE'S DELUGE ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
@@ -2259,23 +2259,23 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
-                        self.kyogre_cooldown = 108000 # 1.5 horas
+                        self.kyogre_cooldown = 108000 # 1.5 hours
                         self.current_state = 'kyogre_channeling'
                         self.kyogre_phase = 0
-                        self.kyogre_timer = 666 # 20 segundos exactos
+                        self.kyogre_timer = 666 # exactly 20 seconds
                         self.kyogre_targets = valid_targets 
                         self.schedule_loop(50, self.physics_loop)
                         return
 
 
-        # --- MECÁNICA EXCLUSIVA: DISTORSIÓN TEMPORAL DE DIALGA ---
+        # --- EXCLUSIVE MECHANIC: DIALGA'S TIME DISTORTION ---
         if self.pet_name.lower() == "dialga" and getattr(self, 'dialga_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.current_state = 'dialga_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
             
-        # --- MECÁNICA EXCLUSIVA: FUEGO SAGRADO DE HO-OH ---
+        # --- EXCLUSIVE MECHANIC: HO-OH'S SACRED FIRE ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
@@ -2288,24 +2288,24 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.hooh_phase = 0
                         self.hooh_timer = 666 
                         
-                        # FIX: Solo guardamos los objetivos en memoria, pero NO los interrumpimos aún.
-                        # Seguirán haciendo su vida normal durante el vuelo de preparación.
+                        # FIX: We only keep the targets in memory, but DO NOT interrupt them yet.
+                        # They will continue their normal life during the preparation flight.
                         self.hooh_targets = valid_targets 
                         
                         self.schedule_loop(50, self.physics_loop)
                         return
 
-        # --- MECÁNICA EXCLUSIVA: VÓRTICE PSÍQUICO DE MEWTWO ---
+        # --- EXCLUSIVE MECHANIC: MEWTWO'S PSYCHIC VORTEX ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
                     
-                    # FIX: Excluir estados de transición crítica (spawns y evoluciones) para evitar bucles paralelos
+                    # FIX: Exclude critical transition states (spawns and evolutions) to avoid parallel loops
                     excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
-                        self.mewtwo_cooldown = 108000 # 1 hora y media
+                        self.mewtwo_cooldown = 108000 # 1.5 hours
                         self.current_state = 'mewtwo_channeling'
                         self.mewtwo_timer = 0
                         self.mewtwo_targets = valid_targets
@@ -2313,7 +2313,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         
                         for i, target in enumerate(valid_targets):
                             
-                            # FIX ESTRUCTURAL: Limpieza exhaustiva de vínculos de otras mecánicas para evitar escape de víctimas
+                            # STRUCTURAL FIX: Exhaustive cleanup of links from other mechanics to prevent victims from escaping
                             if target.current_state.startswith('dark_'):
                                 target.cancel_dark_arts()
                                 
@@ -2322,7 +2322,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                                 if getattr(target, 'tk_target', None):
                                     if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
                                         
-                                        # FIX: Forzar la limpieza de partículas del objeto/víctima flotante
+                                        # FIX: Force particle cleanup of the floating object/victim
                                         t_targ = target.tk_target
                                         t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                         t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
@@ -2345,19 +2345,19 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                                 target.manage_bubble_vfx(False)
                                 target.show_bubble_burst_vfx()
                                 
-                            # FIX: Cancelar el Glitch de los Fantasmas
+                            # FIX: Cancel Ghosts' Glitch
                             if getattr(target, 'is_glitching', False):
                                 target.is_glitching = False
                                 target.glitch_teleports_left = 0
                                 target.glitch_cooldown = 12000
                                 
-                            # Limpieza del renderizado visual
+                            # Visual render cleanup
                             target.canvas.itemconfig(target.canvas_image_id, state='normal')
                             target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                             try: target.window.attributes('-alpha', 1.0)
                             except: pass
                             
-                            # Finalmente, el secuestro orbital
+                            # Finally, the orbital abduction
                             target.current_state = 'mewtwo_victim'
                             target.mewtwo_master = self
                             target.mewtwo_orbit_offset = (i * (2 * math.pi / len(valid_targets))) 
@@ -2367,14 +2367,14 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.schedule_loop(50, self.physics_loop)
                         return
                     
-        # --- MECÁNICA: PACIFICACIÓN TIPO HADA ---
+        # --- MECHANIC: FAIRY TYPE PACIFICATION ---
         if getattr(self, 'fairy_aura', False) and self.current_state in ['idle', 'walking']:
             if getattr(self, 'get_all_pets', None):
                 for other in self.get_all_pets():
-                    # Si detecta a un Pokémon peleando y entra en su Hitbox (distancia menor al ancho del sprite)
+                    # If it detects a fighting Pokemon and enters its Hitbox (distance less than the sprite width)
                     if other != self and other.current_state == 'attacking' and abs(self.x - other.x) < self.size_w and abs(self.y - other.y) < self.size_h:
                         
-                        # Pacificar a su oponente de forma remota y aplicar gravedad
+                        # Remotely pacify its opponent and apply gravity
                         opponent = getattr(other, 'attack_target', None)
                         if opponent:
                             opponent.current_state = 'thrown' if getattr(opponent, 'is_flying', False) else 'falling'
@@ -2384,7 +2384,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                             opponent.attack_target = None
                             opponent.show_fairy_sparkles_vfx()
                             
-                        # Pacificar al objetivo primario y aplicar gravedad
+                        # Pacify primary target and apply gravity
                         other.current_state = 'thrown' if getattr(other, 'is_flying', False) else 'falling'
                         other.v_y_velocity = 0.0
                         other.v_x_velocity = 0.0
@@ -2401,11 +2401,11 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.schedule_loop(50, self.physics_loop)
                         return
         
-        # --- MECÁNICA: EMBOSCADA TIPO SINIESTRO ---
+        # --- MECHANIC: DARK TYPE AMBUSH ---
         if getattr(self, 'dark_arts', False) and self.dark_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if random.randint(1, 1000) <= 10: 
                 if getattr(self, 'get_all_pets', None):
-                    # FIX: Se inyecta la restricción de altura estricta "abs(p.y - self.y) < 80"
+                    # FIX: Inject strict height restriction "abs(p.y - self.y) < 80"
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and getattr(p, 'climbing_surface', 'floor') == 'floor' and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500 and abs(p.y - self.y) < 80]
                     if valid_targets:
                         target = random.choice(valid_targets)
@@ -2422,29 +2422,29 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         self.schedule_loop(50, self.physics_loop)
                         return
 
-        # --- MECÁNICA: EXCAVACIÓN TIPO TIERRA ---
+        # --- MECHANIC: GROUND TYPE DIG ---
         if getattr(self, 'can_dig', False) and self.dig_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if random.randint(1, 1000) <= 10: 
                 self.current_state = 'digging_in'
                 self.dig_step = 0
-                self.dig_timer = random.randint(200, 400) # Tiempo bajo tierra
-                self.dig_cooldown = 12000 # 10 minutos reales
+                self.dig_timer = random.randint(200, 400) # Time underground
+                self.dig_cooldown = 12000 # 10 real minutes
                 self.schedule_loop(50, self.physics_loop)
                 return
         
-        # --- MECÁNICA: BURBUJA DE AGUA ---
+        # --- MECHANIC: WATER BUBBLE ---
         if getattr(self, 'bubble_blower', False) and self.bubble_cooldown == 0 and self.current_state in ['idle', 'walking']:
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
-                    # FIX: Alcance muy reducido (150px horizontal, 60px vertical)
+                    # FIX: Greatly reduced range (150px horizontal, 60px vertical)
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 150 and abs(p.y - self.y) < 60]
                     if valid_targets:
                         target = random.choice(valid_targets)
                         self.bubble_cooldown = 12000 
                         
-                        # Disparamos el proyectil animado desde nuestro centro geométrico
+                        # We fire the animated projectile from our geometric center
                         def on_bubble_hit(hit_target):
-                            # FIX ESTRUCTURAL: Prevenir corrupción FSM si la burbuja impacta a un Siniestro
+                            # STRUCTURAL FIX: Prevent FSM corruption if the bubble hits a Dark type
                             if getattr(hit_target, 'current_state', '').startswith('dark_'):
                                 hit_target.cancel_dark_arts()
                             elif getattr(hit_target, 'current_state', '').startswith('mewtwo_'):
@@ -2460,36 +2460,36 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                         
                         BubbleProjectile(self.window.master, self.base_dir, self.x + self.size_w/2, self.y + self.size_h/2, target, on_bubble_hit)
                         
-                        # El Pokémon que lanza la burbuja hace un pequeño salto de invocación
+                        # The Pokemon throwing the bubble makes a small summoning jump
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
                         self.v_y_velocity = 4.0 if getattr(self, 'gravity_inverted', False) else -4.0
                         self.schedule_loop(50, self.physics_loop)
                         return
 
-        # --- FASE DE INTERFERENCIA PARA FANTASMAS (SCREEN WRAP) ---
+        # --- INTERFERENCE PHASE FOR GHOSTS (SCREEN WRAP) ---
         if getattr(self, 'can_screen_wrap', False) and self.glitch_cooldown == 0 and not getattr(self, 'is_glitching', False):
-            if random.randint(1, 1000) <= 10: # Aprox 1% de probabilidad
+            if random.randint(1, 1000) <= 10: # Approx 1% probability
                 self.is_glitching = True
-                self.glitch_teleports_left = random.randint(4, 10) # Número de teletransportes caóticos
-                try: self.window.attributes('-alpha', 0.5) # Baja la opacidad al 50%
+                self.glitch_teleports_left = random.randint(4, 10) # Number of chaotic teleports
+                try: self.window.attributes('-alpha', 0.5) # Lowers opacity to 50%
                 except: pass
                 self.schedule_glitch_teleport()
         
         if getattr(self, 'telekinetic', False) and self.tk_cooldown == 0 and self.current_state in ['idle', 'walking']:
-            if random.randint(1, 1000) <= 10: # Probabilidad de activar poderes
+            if random.randint(1, 1000) <= 10: # Probability of activating powers
                 target = None
                 if self.game_controller:
-                    # 1. Prioriza atraer Bayas (Alcance de 400 -> 800)
+                    # 1. Prioritize attracting Berries (Range of 400 -> 800)
                     for b in getattr(self.game_controller, 'active_berries', []):
                         if b.current_state not in ['exiting', 'tk_controlled'] and abs(b.x - self.x) < 800:
                             target = b; break
-                    # 2. Si no hay bayas, busca el Juguete (Alcance de 400 -> 800)
+                    # 2. If there are no berries, look for the Toy (Range of 400 -> 800)
                     if not target and getattr(self.game_controller, 'active_toy', None):
                         t = self.game_controller.active_toy
                         if t.current_state not in ['exiting', 'tk_controlled'] and abs(t.x - self.x) < 800:
                             target = t
-                # 3. Si no hay objetos, levanta a otro Pokémon cercano (Alcance de 250 -> 500)
+                # 3. If there are no objects, lift another nearby Pokemon (Range of 250 -> 500)
                 if not target and getattr(self, 'get_all_pets', None):
                     valid_pets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500]
                     if valid_pets: target = random.choice(valid_pets)
@@ -2497,9 +2497,9 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                 if target:
                     self.current_state = 'tk_channeling'
                     self.tk_target = target
-                    self.tk_timer = 150 # Levitar durante 5 segundos
+                    self.tk_timer = 150 # Levitate for 5 seconds
                     
-                    self.tk_orbit_started = False # FIX: Fuerza el reseteo de la fase orbital
+                    self.tk_orbit_started = False # FIX: Forces orbital phase reset
                     
                     target.tk_master = self
                     target.current_state = 'tk_controlled' if target.__class__.__name__ != 'DesktopPet' else 'tk_lifted'
@@ -2536,7 +2536,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
 
             if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
                 if getattr(self, 'gravity_inverted', False):
-                    # Suelo invertido = Borde inferior de la ventana
+                    # Inverted floor = Bottom edge of the window
                     current_physical_floor = self.anchored_rect[3] + getattr(self, 'offset_y', 0)
                 else:
                     current_physical_floor = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
@@ -2758,7 +2758,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.anchored_hwnd = None
             self.climbing_surface = 'floor'
             
-            # FIX VOLADORES: Mantener la rotación de 180 grados si la gravedad está invertida
+            # FLYERS FIX: Maintain 180 degree rotation if gravity is inverted
             self.surface_angle = 180 if getattr(self, 'gravity_inverted', False) else 0
             
             target = getattr(self, 'target_floor_y', self.floor_y)
@@ -2790,7 +2790,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                     
                     if getattr(self, 'climbing_surface', 'floor') == 'floor':
                         if getattr(self, 'can_screen_wrap', False):
-                            # MÁRGEN DE DESBORDAMIENTO (El Pokémon sale por completo antes de teletransportarse)
+                            # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
                             if self.x <= self.v_x - self.size_w:
                                 self.x = self.v_x + self.v_width
                                 if random.randint(1, 100) <= 25: self.is_facing_right = True 
@@ -2798,7 +2798,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                                 self.x = self.v_x - self.size_w
                                 if random.randint(1, 100) <= 25: self.is_facing_right = False
                         else:
-                            # LÍMITE SÓLIDO NORMAL
+                            # NORMAL SOLID LIMIT
                             if self.x <= self.v_x:
                                 self.x = self.v_x
                                 self.is_facing_right = True
@@ -2843,27 +2843,27 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
                                 other.is_facing_right = (self.x > other.x)
                                 break
 
-        # === INTERACCIÓN CON BAYAS (RADIAL Y DINÁMICA) ===
+        # === INTERACTION WITH BERRIES (RADIAL AND DYNAMIC) ===
         if self.current_state in ['idle', 'walking'] and not self.is_wild and not getattr(self, 'is_egg', False) and self.game_controller:
             for berry in getattr(self.game_controller, 'active_berries', []):
-                # Quitamos la restricción de 'dragged'. Si la baya existe, es comestible.
+                # We remove the 'dragged' restriction. If the berry exists, it is edible.
                 if berry.current_state != 'exiting':
-                    # Calculamos los centros geométricos reales de ambos objetos
+                    # We calculate the real geometric centers of both objects
                     my_cx = self.x + self.size_w / 2
                     my_cy = self.y + self.size_h / 2
                     berry_cx = berry.x + berry.size / 2
                     berry_cy = berry.y + berry.size / 2
                     
-                    # Distancia Euclidiana
+                    # Euclidean distance
                     dist = math.sqrt((my_cx - berry_cx)**2 + (my_cy - berry_cy)**2)
                     
-                    # Hitbox generosa (60% del tamaño del Pokémon)
+                    # Generous hitbox (60% of Pokemon size)
                     if dist < max(self.size_w, self.size_h) * 0.6:
                         self.current_state = 'eating'
                         self.eating_timer = 30
                         self.interaction_target = berry
-                        berry.destroy() # Destruye la baya visualmente
-                        self.show_heart_vfx() # Dispara el corazón pixelado
+                        berry.destroy() # Destroys the berry visually
+                        self.show_heart_vfx() # Triggers the pixelated heart
                         break
 
         if self.is_flying and self.current_state not in ['socializing', 'attacking', 'eating']:
@@ -2882,7 +2882,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         if self.v_y_velocity > 0 and self.y >= target_y:
             self.y = target_y
             self.floor_y = target_y
-            # FIX: Aseguramos el escape tras rebotar
+            # FIX: Ensure escape after bouncing
             if getattr(self, 'is_overflow', False):
                 self.current_state = 'walking_away'
                 self.is_facing_right = True
@@ -2895,7 +2895,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
     def _fsm_landing_shake(self):
         self.shake_timer -= 1
         if self.shake_timer <= 0:
-            # Restaurar el sprite a su centro original y perfecto
+            # Restore the sprite to its original and perfect center
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             if getattr(self, 'is_overflow', False):
                 self.current_state = 'walking_away'
@@ -2903,7 +2903,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             else:
                 self.current_state = 'idle'
         else:
-            # Desplazar la imagen un par de píxeles al azar para simular el temblor
+            # Shift the image a few random pixels to simulate the tremor
             offset_x = random.choice([-3, 0, 3])
             offset_y = random.choice([-2, 0, 2])
             self.canvas.coords(self.canvas_image_id, (self.size_w//2) + offset_x, (self.size_h//2) + offset_y)
@@ -2923,12 +2923,12 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             self.swap_giratina_form("giratina")
             self.current_state = 'falling'
             self.play_shiny_sound() 
-            self.show_alter_form_vfx() # FIX: Inyección de explosión visual
+            self.show_alter_form_vfx() # FIX: Injection of visual explosion
         elif name == "giratina":
             self.swap_giratina_form("giratina_1")
             self.current_state = 'ascending'
             self.play_shiny_sound()
-            self.show_alter_form_vfx() # FIX: Inyección de explosión visual
+            self.show_alter_form_vfx() # FIX: Injection of visual explosion
 
     def show_alter_form_vfx(self):
         if getattr(self, 'current_state', 'exiting') == 'exiting': return
@@ -2937,10 +2937,10 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         cx = self.size_w // 2
         cy = self.size_h // 2
         
-        # Generar entre 15 y 20 partículas para la explosión
+        # Generate between 15 and 20 particles for the explosion
         for _ in range(random.randint(15, 20)):
             angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(6.0, 12.0) # Explosión inicial fuerte
+            speed = random.uniform(6.0, 12.0) # Strong initial explosion
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
             
@@ -2956,7 +2956,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             for p in particles:
                 if p['life'] > 0:
                     self.canvas.move(p['id'], p['vx'], p['vy'])
-                    # Fricción del aire (0.85) para un efecto de frenado rápido y cinético
+                    # Air friction (0.85) for a fast and kinetic braking effect
                     p['vx'] *= 0.85 
                     p['vy'] *= 0.85
                     p['life'] -= 1
@@ -2971,11 +2971,11 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
         animate_explosion()
 
     def is_global_mechanic_active(self):
-        # 1. Si no hay sistema de mascotas vinculado, no hay bloqueo
+        # 1. If there is no pet system linked, there is no blocking
         if not getattr(self, 'get_all_pets', None):
             return False
             
-        # 2. Lista estricta de estados "Maestros" (excluye estados de víctimas para evitar falsos positivos)
+        # 2. Strict list of "Master" states (excludes victim states to avoid false positives)
         blocking_states = [
             'mewtwo_channeling', 
             'hooh_channeling', 
@@ -2988,7 +2988,7 @@ class DesktopPet(GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMe
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear'
         ]
         
-        # 3. Escaneo estructural
+        # 3. Structural scan
         for p in self.get_all_pets():
             if p.current_state in blocking_states:
                 return True

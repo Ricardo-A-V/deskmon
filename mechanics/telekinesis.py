@@ -14,34 +14,34 @@ class TelekinesisMechanics:
             cx, cy = w / 2, h / 2
             base_radius = max(w, h) * 0.6
             
-            # Enjambre de 24 partículas psíquicas generadas matemáticamente en tiempo real
+            # Swarm of 24 psychic particles generated mathematically in real time
             for i in range(24):
-                # 1. Velocidad asimétrica (Algunas partículas van rápido, otras lento, otras al revés)
+                # 1. Asymmetrical speed (Some particles go fast, others slow, others backwards)
                 speed = 1.5 + (math.sin(i * 7.1) * 2.0)
                 angle = (t * speed) + (i * 0.8)
                 
-                # 2. Dispersión del radio (Rompe la circunferencia para crear una nube caótica)
+                # 2. Radius dispersion (Breaks the circumference to create a chaotic cloud)
                 scatter = math.cos(i * 13.3) * (base_radius * 0.5)
                 r = base_radius + scatter
                 
                 px = cx + math.cos(angle) * r
                 py = cy + math.sin(angle) * r
                 
-                # 3. Fase de parpadeo individual basada en el tiempo
+                # 3. Individual time-based blinking phase
                 blink_phase = math.sin(t * 12.0 + i * 3.14)
                 
                 if blink_phase > 0.5:
-                    color = "#FFFFFF" # Destello blanco intenso
+                    color = "#FFFFFF" # Intense white flash
                     size = 2
                 elif blink_phase > -0.3:
-                    color = "#D24DFF" # Morado de energía base
+                    color = "#D24DFF" # Base energy purple
                     size = 1
                 else:
-                    continue # Partícula invisible (simula que se apaga del todo)
+                    continue # Invisible particle (simulates completely turning off)
                 
                 canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
                 
-            canvas.tag_lower("tk_aura") # Forzar la nube por detrás del sprite
+            canvas.tag_lower("tk_aura") # Force cloud behind the sprite
         else:
             canvas.delete("tk_aura")
 
@@ -49,7 +49,7 @@ class TelekinesisMechanics:
         if is_active:
             self.canvas.delete("vfx_bubble")
             
-            # Carga y limpieza de la imagen en memoria
+            # Image loading and cleanup in memory
             if not getattr(self, 'bubble_base_img', None):
                 try:
                     ui_dir = os.path.join(self.base_dir, "game_env", "ui")
@@ -59,36 +59,36 @@ class TelekinesisMechanics:
                     a = a.point(lambda p: 255 if p > 127 else 0)
                     self.bubble_base_img = Image.merge("RGBA", (r, g, b, a))
                 except Exception as e:
-                    print(f"[-] Error: Falta bubble.png en game_env/ui. {e}")
+                    print(f"[-] Error: Missing bubble.png in game_env/ui. {e}")
                     return
 
-            # FIX GEOMÉTRICO: Límite matemático estricto al borde del canvas
+            # GEOMETRIC FIX: Strict mathematical limit to the canvas edge
             canvas_limit = min(self.size_w, self.size_h)
-            # Reservamos 6 píxeles de margen (3 por lado) para que la oscilación no toque el borde
+            # Reserve 6 pixels margin (3 per side) so oscillation doesn't touch edge
             base_max_size = canvas_limit - 6 
             
-            # PULSO ORGÁNICO: Oscilación inyectada si la fase de crecimiento terminó
+            # ORGANIC PULSE: Injected oscillation if growth phase ended
             pulse_offset = 0
             if progress >= 1.0:
-                # math.sin genera una curva fluida entre -1 y 1. 
-                # Multiplicado por 3 da un crecimiento/decrecimiento dinámico de +/- 3 píxeles en bucle.
+                # math.sin generates a fluid curve between -1 and 1. 
+                # Multiplied by 3 gives a dynamic +/- 3 pixel growth/shrink in loop.
                 pulse_offset = int(math.sin(time.time() * 6.0) * 3)
 
             current_size = max(10, int(base_max_size * progress) + pulse_offset)
             
-            # Renderizado en tiempo real
+            # Real-time rendering
             resized_bubble = self.bubble_base_img.resize((current_size, current_size), Image.Resampling.NEAREST)
             self.bubble_tk = ImageTk.PhotoImage(resized_bubble)
             
             cx = self.size_w // 2
-            # FIX: Compensación de gravedad visual. Bajamos la burbuja un 15% para centrarla en el cuerpo.
+            # FIX: Visual gravity compensation. Lower the bubble 15% to center it on body.
             cy = (self.size_h // 2) + int(self.size_h * 0.05)
             
             self.canvas.create_image(cx, cy, image=self.bubble_tk, anchor=tk.CENTER, tags="vfx_bubble")
             self.canvas.tag_raise("vfx_bubble")
         else:
             self.canvas.delete("vfx_bubble")
-            # Liberación de punteros de Tkinter para evitar pérdidas de memoria (Memory Leaks)
+            # Release Tkinter pointers to avoid memory leaks
             if hasattr(self, 'bubble_tk'):
                 delattr(self, 'bubble_tk')
 
@@ -97,14 +97,14 @@ class TelekinesisMechanics:
         cx = self.size_w // 2
         cy = (self.size_h // 2) + int(self.size_h * 0.15)
         
-        # Generar 8 gotas/chispas de explosión
+        # Generate 8 drops/sparks of explosion
         for _ in range(8):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(3.0, 6.0)
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
             size = random.choice([1, 2])
-            color = random.choice(["#FFFFFF", "#D4E6F1", "#A9CCE3"]) # Blanco y tonos de agua
+            color = random.choice(["#FFFFFF", "#D4E6F1", "#A9CCE3"]) # White and water tones
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_bubble_burst")
             particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(10, 18)})
@@ -116,7 +116,7 @@ class TelekinesisMechanics:
             for p in particles:
                 if p['life'] > 0:
                     self.canvas.move(p['id'], p['vx'], p['vy'])
-                    p['vy'] += 0.4 # Gravedad individual para que caigan como agua
+                    p['vy'] += 0.4 # Individual gravity so they fall like water
                     p['life'] -= 1
                     alive_count += 1
                 elif p['life'] == 0:
@@ -132,7 +132,7 @@ class TelekinesisMechanics:
         max_time = getattr(self, 'bubble_max_time', 150)
         elapsed = max_time - self.bubble_timer
         
-        # FASE 1: Crecimiento y absorción
+        # PHASE 1: Growth and absorption
         if elapsed < 20: 
             self.manage_bubble_vfx(True, elapsed / 20.0)
         else:
@@ -140,18 +140,18 @@ class TelekinesisMechanics:
             
         self.bubble_timer -= 1
         
-        # FASE 2: Elevación con turbulencia fluida
+        # PHASE 2: Elevation with fluid turbulence
         self.y -= 1.8 
         self.x += math.sin(self.bubble_timer * 0.1) * 2.0 
         
         if self.y < self.v_y:
             self.y = self.v_y
 
-        # FASE 3: Explosión y reentrada al motor de gravedad
+        # PHASE 3: Explosion and reentry to gravity engine
         if self.bubble_timer <= 0:
             self.manage_bubble_vfx(False)
             self.show_bubble_burst_vfx() 
-            # FIX: Si es volador, se activa la recuperación de vuelo ("thrown") en lugar de la caída libre ("falling")
+            # FIX: If flying, flight recovery ("thrown") activates instead of free fall ("falling")
             self.current_state = 'thrown' if getattr(self, 'is_flying', False) else 'falling'
             self.v_y_velocity = 0.0 
             self.v_x_velocity = 0.0
@@ -238,20 +238,20 @@ class TelekinesisMechanics:
                 target.y = my_cy + math.sin(angle) * radius - t_h / 2 - 20
 
                 if self.tk_timer <= 0:
-                    # FIX: Lanzamiento orgánico en la mitad superior de la órbita (math.sin < -0.1)
-                    # El 20% de probabilidad hace que suelte el objeto en un punto distinto cada vez
+                    # FIX: Organic launch in upper half of orbit (math.sin < -0.1)
+                    # 20% probability makes it release object in different point each time
                     if math.sin(angle) < -0.1 and (random.randint(1, 100) <= 20 or math.cos(angle) > 0.9):
                         self.current_state = 'idle'
                         self.tk_cooldown = 12000
                         target.current_state = 'thrown'
                         
-                        # Calcula un arco parabólico estrictamente superior (entre 180 y 360 grados)
+                        # Calculate strictly superior parabolic arc (between 180 and 360 degrees)
                         launch_angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)
-                        # Si está invertido, fuerza el disparo hacia el suelo natural
+                        # If inverted, force shot towards natural floor
                         if getattr(self, 'gravity_inverted', False):
                             launch_angle = random.uniform(0.2, math.pi - 0.2)
                         
-                        # ASIGNACIÓN DE FUERZA MASIVA SEGÚN LA MASA DEL OBJETIVO
+                        # MASSIVE FORCE ASSIGNMENT ACCORDING TO TARGET MASS
                         if is_toy:
                             force = random.uniform(40.0, 55.0)
                         else:

@@ -29,7 +29,7 @@ class RayquazaMechanics:
 
     def _fsm_rayquaza_channeling(self):
         if not hasattr(self, 'rayquaza_start_x'):
-            # FIX: Extremos en 1/8 (12.5%) y 7/8 (87.5%) de la pantalla
+            # FIX: Extremes at 1/8 (12.5%) and 7/8 (87.5%) of screen
             is_left = random.choice([True, False])
             self.rayquaza_start_x = self.v_x + (self.v_width * 0.125) if is_left else self.v_x + (self.v_width * 0.875)
             self.rayquaza_end_x = self.v_x + (self.v_width * 0.875) if is_left else self.v_x + (self.v_width * 0.125)
@@ -53,7 +53,7 @@ class RayquazaMechanics:
                 self.rayquaza_phase = 1
                 
                 self.rayquaza_timer = self.rayquaza_sweep_duration 
-                self.rayquaza_global_timer = 0 # Cronómetro maestro constante para las víctimas
+                self.rayquaza_global_timer = 0 # Constant master chronometer for victims
                 
                 self.is_facing_right = (self.rayquaza_end_x > self.rayquaza_start_x)
                 
@@ -115,7 +115,7 @@ class RayquazaMechanics:
             
             self.x = current_target_x
             
-            # FIX MATEMÁTICO: Oscilación pronunciada. (80 px de recorrido a un ritmo suave de 0.05)
+            # MATHEMATICAL FIX: Pronounced oscillation. (80 px travel at soft 0.05 pace)
             self.y = self.rayquaza_target_y + math.sin(self.rayquaza_global_timer * 0.05) * 80.0
             
             if self.rayquaza_timer % 3 == 0:
@@ -164,7 +164,7 @@ class RayquazaMechanics:
         m_cx = master.x + master.size_w / 2
         m_cy = master.y + master.size_h / 2
         
-        # Ajustado para que el anillo máximo no exceda los límites de inercia
+        # Adjusted so max ring doesn't exceed inertia limits
         radius_x = max(200.0, (self.v_width * 0.4) - (elapsed * 1.5))
         radius_y = max(30.0, 100.0 - (elapsed * 0.2)) 
         
@@ -174,19 +174,19 @@ class RayquazaMechanics:
         target_x = m_cx + math.cos(self.rayquaza_angle_offset) * radius_x - self.size_w / 2
         target_y = m_cy + math.sin(self.rayquaza_angle_offset) * radius_y - self.size_h / 2 + 80 
         
-        # FIX FÍSICO: Eliminación del 'Rubber-banding'.
-        # Leemos qué tan rápido está yendo Rayquaza en este viaje en particular
+        # PHYSICAL FIX: 'Rubber-banding' elimination.
+        # Read how fast Rayquaza is going on this particular trip
         sweep_dur = getattr(master, 'rayquaza_sweep_duration', 120)
         
-        # Si Rayquaza acelera (sweep_dur baja), el multiplicador sube hasta un 400%
+        # If Rayquaza accelerates (sweep_dur drops), multiplier goes up to 400%
         speed_multiplier = 120.0 / float(max(1, sweep_dur)) 
         
         base_pull = min(0.15, 0.02 + (elapsed * 0.0005))
         
-        # Separación vectorial de tensores:
-        # Atracción ultra-agresiva en X para que no se queden atrás (hasta 90% de anclaje instantáneo)
+        # Vectorial separation of tensors:
+        # Ultra-aggressive X pull so they don't fall behind (up to 90% instant anchor)
         pull_strength_x = min(0.9, base_pull * speed_multiplier * 1.5) 
-        # Atracción suave en Y para mantener la sensación orgánica de levitación
+        # Soft Y pull to maintain organic levitation feel
         pull_strength_y = min(0.3, base_pull * speed_multiplier) 
         
         self.x += (target_x - self.x) * pull_strength_x
@@ -210,7 +210,7 @@ class RayquazaMechanics:
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(5.0, 10.0) if is_master else random.uniform(3.0, 6.0)
             
-            # Proyección achatada para emparejar con la elipse orbital
+            # Flattened projection to pair with orbital ellipse
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * (speed * 0.3) - 1.0
             

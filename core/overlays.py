@@ -57,9 +57,9 @@ class FloodOverlay:
             pid = self.canvas.create_line(-100, -100, -100, -100, fill=random.choice(colors), width=3, tags="global_rain")
             self.rain_pool.append({'id': pid, 'active': False, 'x': -100, 'y': -100, 'length': random.randint(20, 35)})
 
-        # FIX ESTRUCTURAL (Condición de Carrera): 
-        # Esperamos 100ms para que Tkinter termine de crear la ventana física.
-        # Luego inyectamos los permisos de Click-Through directamente al SO.
+        # STRUCTURAL FIX (Race Condition): 
+        # Wait 100ms for Tkinter to finish creating the physical window.
+        # Then inject Click-Through permissions directly to the OS.
         self.window.after(100, self._apply_click_through)
         
         self.animate_environment()
@@ -67,7 +67,7 @@ class FloodOverlay:
     def _apply_click_through(self):
         if HAS_WIN32 and self.active:
             try:
-                # Obtenemos el "Parent ID" real de la ventana de SO, no el contenedor interno de Tkinter
+                # Get the real "Parent ID" of the OS window, not the internal Tkinter container
                 hwnd = win32gui.GetParent(self.window.winfo_id())
                 if not hwnd:
                     hwnd = int(self.window.wm_frame())
@@ -75,7 +75,7 @@ class FloodOverlay:
                 ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
                 win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style | win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
             except Exception as e:
-                print(f"[!] Error forzando Click-Through: {e}")
+                print(f"[!] Error forcing Click-Through: {e}")
 
     def animate_environment(self):
         if not self.active: return
