@@ -170,13 +170,15 @@ class ZekromMechanics:
 
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
-                if target != self and target.current_state != 'exiting':
+                # FIX ESTRUCTURAL: Ignorar siempre a los huevos
+                if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
                     if dist <= impact_radius:
                         self.apply_paralysis(target)
 
     def trigger_global_shockwave(self, max_radius):
         wave_win = tk.Toplevel(self.window.master)
+        wave_win.title("VFX_Zekrom_Ignore")
         wave_win.overrideredirect(True)
         wave_win.attributes('-topmost', True)
         

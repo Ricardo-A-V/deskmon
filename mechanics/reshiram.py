@@ -28,6 +28,7 @@ class ReshiramMechanics:
             
             # 1. Spawn de la ventana independiente para el proyectil esférico
             self.res_win = tk.Toplevel(self.window.master)
+            self.res_win.title("VFX_Reshiram_Ignore") # FIX TÉCNICO: Evitar colisión física
             self.res_win.overrideredirect(True)
             self.res_win.attributes('-topmost', True)
             TRANS_COLOR = '#010101'
@@ -158,18 +159,25 @@ class ReshiramMechanics:
             self.res_canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, fill="#E67E22", outline="#E67E22", tags="vfx_res")
             self.res_canvas.create_oval(cx-r3, cy-r3, cx+r3, cy+r3, fill="#F1C40F", outline="#F1C40F", tags="vfx_res")
             
-            # Emisión de partículas de fuego ascendentes
+            # FIX LÓGICO: Emisión de partículas radiales en 360 grados
             for _ in range(4):
-                angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)
+                angle = random.uniform(0, 2 * math.pi)
                 dist = random.uniform(0, r1)
+                
                 px = cx + math.cos(angle) * dist
                 py = cy + math.sin(angle) * dist
+                
                 speed = random.uniform(2.0, 7.0)
+                
+                # Cálculo balístico direccional puro
+                vx = math.cos(angle) * speed
+                vy = math.sin(angle) * speed
+                
                 size = random.choice([3, 4, 5])
                 color = random.choice(["#E74C3C", "#E67E22", "#F1C40F", "#D35400"])
                 
                 pid = self.res_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_res_part")
-                self.res_particles.append({'id': pid, 'vx': math.cos(angle)*speed*0.5, 'vy': -speed, 'life': 15})
+                self.res_particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': 15})
 
         alive = []
         for p in self.res_particles:
@@ -189,13 +197,15 @@ class ReshiramMechanics:
 
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
-                if target != self and target.current_state != 'exiting':
+                # FIX ESTRUCTURAL: Ignorar siempre a los huevos
+                if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.res_target_x - target.x)**2 + (self.res_target_y - target.y)**2)
                     if dist <= impact_radius:
                         self.apply_burn(target)
 
     def trigger_reshiram_shockwave(self, max_radius):
         wave_win = tk.Toplevel(self.window.master)
+        wave_win.title("VFX_ResWave_Ignore") # FIX TÉCNICO: Evitar colisión física
         wave_win.overrideredirect(True)
         wave_win.attributes('-topmost', True)
         

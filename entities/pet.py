@@ -38,8 +38,9 @@ from mechanics.palkia import PalkiaMechanics
 from mechanics.giratina import GiratinaMechanics
 from mechanics.zekrom import ZekromMechanics
 from mechanics.reshiram import ReshiramMechanics
+from mechanics.kyurem import KyuremMechanics
 
-class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -331,7 +332,10 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
             'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
             'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
             'reshiram_channeling': self._fsm_reshiram_channeling,
-            'reshiram_burn': self._fsm_reshiram_burn
+            'reshiram_burn': self._fsm_reshiram_burn,
+            'reshiram_burn': self._fsm_reshiram_burn,
+            'kyurem_channeling': self._fsm_kyurem_channeling,
+            'kyurem_frozen': self._fsm_kyurem_frozen
         }            
         self.keep_on_top()
         self.animate_loop()
@@ -414,6 +418,9 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
 
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
+
+        elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
+            self.cancel_kyurem_arts()
 
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
@@ -508,6 +515,9 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
 
+        elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
+            self.cancel_kyurem_arts()
+
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
         elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
@@ -530,9 +540,20 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
             self.v_x_velocity = max(-40.0, min(40.0, v_x))
             self.v_y_velocity = max(-40.0, min(40.0, v_y))
             
-            # FIX: If it is being flooded, return to floating state instead of crashing into the ground
-            if getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
+            # --- FIX ESTRUCTURAL: RUTEO DE ESTADOS CON PRIORIDAD ABSOLUTA ---
+            # 1. El Hielo anula todo comportamiento físico
+            if getattr(self, 'kyurem_frozen_timer', 0) > 0:
+                self.current_state = 'kyurem_frozen'
+                
+            # 2. La Parálisis actúa igual que el hielo
+            elif getattr(self, 'zekrom_para_timer', 0) > 0:
+                self.current_state = 'zekrom_paralyzed'
+                
+            # 3. Flotabilidad forzada por la inundación de Kyogre
+            elif getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
                 self.current_state = 'deluge_float'
+                
+            # 4. Comportamiento balístico estándar
             else:
                 self.current_state = 'thrown'
 
@@ -1168,7 +1189,8 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
             elif self.current_state.startswith('giratina_'): self.cancel_giratina_arts()
             elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'): self.cancel_zekrom_arts()
             elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'): self.cancel_reshiram_arts()
-                
+            elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'): self.cancel_kyurem_arts()
+
             if self.is_wild:
                 self.on_catch(self)
                 self.animate_vfx("catch")
@@ -1261,27 +1283,39 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
             elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
+            # --- EVALUACIÓN DE VELOCIDAD DE FOTOGRAMAS ---
             target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling'] else self.frame_rate_idle
             if getattr(self, 'time_distorted', False):
                 target_ms = int(target_ms * 4.0)
             
+            # --- SOBRESCRITURA DE ESTADO VISUAL ---
             anim_state = self.current_state
-            if anim_state == 'hooh_channeling' and getattr(self, 'hooh_phase', 0) == 1:
-                anim_state = 'idle'
-            # FIX: Kyogre faces forward while summoning rain
-            if anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
-                anim_state = 'idle'
-            if anim_state == 'dialga_channeling':
-                anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
-            if anim_state in ['giratina_dash_prep', 'giratina_dash']:
-                anim_state = 'walking'
-            if anim_state in ['zekrom_channeling', 'zekrom_paralyzed', 'reshiram_channeling']:
-                anim_state = 'idle'
-            if anim_state == 'reshiram_burn':
-                anim_state = 'walking'
+            freeze_animation = False
             
+            # 1. Prioridad Absoluta: Congelación y Parálisis
+            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'kyurem_frozen']:
+                anim_state = 'idle'
+                freeze_animation = True
+                # FIX: Anclar matemáticamente el índice al fotograma cero
+                if hasattr(self, 'animator'):
+                    self.animator.current_frame = 0 
+                target_ms = 999999 
                 
-            self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, True, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
+            # 2. Reajustes de Canalización
+            elif anim_state in ['hooh_channeling'] and getattr(self, 'hooh_phase', 0) == 1:
+                anim_state = 'idle'
+            elif anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
+                anim_state = 'idle'
+            elif anim_state == 'dialga_channeling':
+                anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
+            elif anim_state in ['giratina_dash_prep', 'giratina_dash']:
+                anim_state = 'walking'
+            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling']:
+                anim_state = 'idle'
+            elif anim_state == 'reshiram_burn':
+                anim_state = 'walking'
+
+            self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, not freeze_animation, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
                         
         self.schedule_loop(16, self.animate_loop)
 
@@ -2152,6 +2186,15 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
         self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
         self.zekrom_cooldown = max(0, getattr(self, 'zekrom_cooldown', 0) - 1)
         self.reshiram_cooldown = max(0, getattr(self, 'reshiram_cooldown', 0) - 1)
+        self.kyurem_cooldown = max(0, getattr(self, 'kyurem_cooldown', 0) - 1)
+
+        # --- MECÁNICA EXCLUSIVA: GLACIATE DE KYUREM ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyurem" and getattr(self, 'kyurem_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.kyurem_cooldown = 108000 # 1.5 Horas
+                self.current_state = 'kyurem_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
 
         # --- MECÁNICA EXCLUSIVA: BLUE FLARE DE RESHIRAM ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "reshiram" and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
@@ -3031,7 +3074,8 @@ class DesktopPet(ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMe
             'palkia_channeling',
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',
             'zekrom_channeling',
-            'reshiram_channeling'
+            'reshiram_channeling',
+            'kyurem_channeling'
         ]
         
         # 3. Structural scan
