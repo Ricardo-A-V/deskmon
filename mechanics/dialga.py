@@ -19,22 +19,22 @@ class DialgaMechanics:
             self.dialga_phase = 0
             
         if self.dialga_phase == 0:
-            # Parabolic jump governed by inertia
+            # Salto parabólico regido por inercia
             self.v_y_velocity = -28.0
             self.dialga_phase = 1
             
         elif self.dialga_phase == 1:
-            # Heavy gravity
+            # Gravedad pesada
             gravity = 4.0
             self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + gravity
             self.y += self.v_y_velocity
 
-            # Topographic scan to land on taskbar or windows
+            # Escaneo topográfico para aterrizar en la barra de tareas o ventanas
             current_env, _ = self.get_window_environment()
             fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
             floor = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else getattr(self, 'default_floor_y', self.y)
 
-            # Impact against the floor (End of jump)
+            # Impacto contra el suelo (Fin del salto)
             if self.y >= floor and self.v_y_velocity > 0:
                 self.y = floor
                 self.v_y_velocity = 0.0
@@ -42,22 +42,22 @@ class DialgaMechanics:
                 self.dialga_timer = 0
                 self.trigger_landing_shake()
                 
-                # INSTANT DISTORTION PROPAGATION (Exactly 20 Seconds)
+                # PROPAGACIÓN INSTANTÁNEA DE LA DISTORSIÓN (20 Segundos exactos)
                 if getattr(self, 'get_all_pets', None):
                     for target in self.get_all_pets():
                         if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
                             target.apply_time_distortion(20) 
                 
-                # INSTANT VFX ACTIVATION FOR MASTER (Dialga)
+                # ACTIVACIÓN INSTANTÁNEA DEL VFX PARA EL MAESTRO (Dialga)
                 self.time_distorted_master = True
                 self.time_distortion_end = time.time() + 20
                 self.time_distortion_vfx_loop(is_master=True)
                 
         elif self.dialga_phase == 2:
             self.dialga_timer += 1
-            if self.dialga_timer > 60: # Post-impact recovery
+            if self.dialga_timer > 60: # Recuperación post-impacto
                 self.current_state = 'idle'
-                self.dialga_cooldown = 108000 # 1.5 hours
+                self.dialga_cooldown = 108000 # 1.5 horas
                 delattr(self, 'dialga_phase')
                 delattr(self, 'dialga_timer')
 
@@ -76,15 +76,15 @@ class DialgaMechanics:
                 self.time_distorted_master = False
 
     def time_distortion_vfx_loop(self, is_master=False):
-        # If the Pokemon is stored or time runs out, stop emission
+        # Si el Pokémon es guardado o el tiempo se acaba, detener emisión
         is_active = getattr(self, 'time_distorted', False) if not is_master else getattr(self, 'time_distorted_master', False)
-        if not is_active or getattr(self, 'current_state', 'exiting') == 'exiting':
+        if not is_active or getattr(self, 'current_state', 'exiting') == 'exiting': 
             return
 
-        # FIX: Strict cadence instead of probability (RNG).
+        # FIX: Cadencia estricta en lugar de probabilidad (RNG).
         self.show_time_distortion_vfx(is_master)
             
-        # Dialga emits a pulse every 90ms, victims every 150ms. Constant flow without cuts.
+        # Dialga emite un pulso cada 90ms, las víctimas cada 150ms. Flujo constante y sin cortes.
         delay = 90 if is_master else 150
         self.window.after(delay, lambda: self.time_distortion_vfx_loop(is_master))
 
@@ -94,8 +94,8 @@ class DialgaMechanics:
         particles = []
         cx = self.size_w // 2
         
-        # Anatomical displacement of the emission core
-        offset = int(self.size_h * 0.25) if is_master else int(self.size_h * 0.15)
+        # Desplazamiento anatómico del núcleo de emisión
+        offset = int(self.size_h * 0.15) if is_master else int(self.size_h * 0.075)
         cy = (self.size_h // 2) + offset
         
         count = random.randint(3, 4) if is_master else random.randint(1, 2)
