@@ -147,7 +147,6 @@ class HoOhMechanics:
             
         speed = self.speed * 1.5
         
-        # Horizontal bounce predictor for windows
         if getattr(self, 'anchored_rect', None):
             rect = self.anchored_rect
             if self.x > rect[2] - self.size_w:
@@ -215,7 +214,6 @@ class HoOhMechanics:
         particles = []
         cx = self.size_w // 2
         
-        # Master generates fire from center, victims from feet
         cy = self.size_h // 2 if is_master else self.size_h
         
         count = random.randint(4, 8) if is_master else random.randint(2, 4)
@@ -238,7 +236,6 @@ class HoOhMechanics:
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_fire")
             
-            # Store their identity to apply different physics
             particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(base_life, base_life + 10), 'is_master': is_master})
             
         def animate_fire():

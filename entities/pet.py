@@ -48,7 +48,7 @@ from mechanics.necrozma import NecrozmaMechanics
 from mechanics.zacian import ZacianMechanics
 from mechanics.zamazenta import ZamazentaMechanics
 
-class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, SolgaleoMechanics, LunalaMechanics, ZygardeMechanics, YveltalMechanics, XerneasMechanics, KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -422,33 +422,37 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
 
-        # FIX: Interrupt Mewtwo's Psychic Vortex
+        # Interrupt Mewtwo's Psychic Vortex
         if self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
 
-        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
-            self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            try: self.window.attributes('-alpha', 1.0)
-            except: pass
-            self.current_state = 'falling'
-
-        # FIX: Interrupt Ho-Oh's Sacred Fire
-        if self.current_state in ['hooh_channeling', 'panic_run']:
+        # Interrupt Ho-Oh's Sacred Fire
+        elif self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
-        # FIX: Only cancel Kyogre if you grab the Master (Kyogre). 
+
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']:
+            self.cancel_lugia_arts()
+
+        # Only cancel Kyogre if you grab the Master (Kyogre). 
         # Victims can be dragged and will still be affected by the flood when released.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
-        # FIX: Cancel vortex and restore opacity if you grab Giratina
+        elif self.current_state == 'groudon_channeling':
+            self.cancel_groudon_arts()
+
+        elif self.current_state == 'rayquaza_channeling':
+            self.cancel_rayquaza_arts()
+
+        # Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
 
-        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
-            self.cancel_zekrom_arts()
-
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
+
+        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
+            self.cancel_zekrom_arts()
 
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
@@ -462,26 +466,26 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
             self.cancel_zygarde_arts()
 
-        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
-            self.cancel_lunala_arts()
-
         elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
             self.cancel_solgaleo_arts()
 
+        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+            self.cancel_lunala_arts()
+
         elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
             self.cancel_necrozma_arts()
-
-        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
-
-        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
-
-        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
 
         elif self.current_state == 'zacian_channeling' and hasattr(self, 'cancel_zacian_arts'): 
             self.cancel_zacian_arts()
 
         elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
             self.cancel_zamazenta_arts()
+
+        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+            self.current_state = 'falling'
 
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
@@ -546,29 +550,37 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         if self.current_state.startswith('dark_'):
             self.cancel_dark_arts()
 
-        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
-            self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            try: self.window.attributes('-alpha', 1.0)
-            except: pass
-            self.current_state = 'falling'
+        # Interrupt Mewtwo's Psychic Vortex
+        if self.current_state.startswith('mewtwo_'):
+            self.cancel_mewtwo_arts()
 
-        # FIX: Interrupt Ho-Oh's Sacred Fire
-        if self.current_state in ['hooh_channeling', 'panic_run']:
+        # Interrupt Ho-Oh's Sacred Fire
+        elif self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
-        # FIX: Only cancel Kyogre if you grab the Master (Kyogre). 
+
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']:
+            self.cancel_lugia_arts()
+
+        # Only cancel Kyogre if you grab the Master (Kyogre). 
         # Victims can be dragged and will still be affected by the flood when released.
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
-        # FIX: Cancel vortex and restore opacity if you grab Giratina
+        elif self.current_state == 'groudon_channeling':
+            self.cancel_groudon_arts()
+
+        elif self.current_state == 'rayquaza_channeling':
+            self.cancel_rayquaza_arts()
+
+        # Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
             self.cancel_giratina_arts()
 
-        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
-            self.cancel_zekrom_arts()
-
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
+
+        elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
+            self.cancel_zekrom_arts()
 
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
@@ -582,26 +594,26 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
             self.cancel_zygarde_arts()
 
-        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
-            self.cancel_lunala_arts()
-
         elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
             self.cancel_solgaleo_arts()
 
+        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+            self.cancel_lunala_arts()
+
         elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
             self.cancel_necrozma_arts()
-
-        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
-
-        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
-
-        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
 
         elif self.current_state == 'zacian_channeling' and hasattr(self, 'cancel_zacian_arts'): 
             self.cancel_zacian_arts()
 
         elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'): 
             self.cancel_zamazenta_arts()
+
+        if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+            self.current_state = 'falling'
         
         # VARIABLE UPDATE FOR PHYSICS (Without altering mouse offset)
         self.last_mouse_x = pointer_x
@@ -619,16 +631,16 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
             self.v_x_velocity = max(-40.0, min(40.0, v_x))
             self.v_y_velocity = max(-40.0, min(40.0, v_y))
             
-            # --- FIX ESTRUCTURAL: RUTEO DE ESTADOS CON PRIORIDAD ABSOLUTA ---
-            # 1. El Hielo anula todo comportamiento físico
+            # --- STRUCTURAL FIX: STATE ROUTING WITH ABSOLUTE PRIORITY ---
+            # 1. Ice nullifies all physical behavior
             if getattr(self, 'kyurem_frozen_timer', 0) > 0:
                 self.current_state = 'kyurem_frozen'
                 
-            # 2. La Parálisis actúa igual que el hielo
+            # 2. Paralysis acts just like ice
             elif getattr(self, 'zekrom_para_timer', 0) > 0:
                 self.current_state = 'zekrom_paralyzed'
                 
-            # 3. Flotabilidad forzada por la inundación de Kyogre
+            # 3. Buoyancy forced by Kyogre's flood
             elif getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
                 self.current_state = 'deluge_float'
                 
@@ -1133,10 +1145,14 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
             self.cancel_mewtwo_arts()
         elif self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
-        elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
-        elif self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
-        elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
-        elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']:
+            self.cancel_lugia_arts()
+        elif self.current_state == 'kyogre_channeling':
+            self.cancel_kyogre_arts()
+        elif self.current_state == 'groudon_channeling':
+            self.cancel_groudon_arts()
+        elif self.current_state == 'rayquaza_channeling':
+            self.cancel_rayquaza_arts()
             
         self.current_state = 'despawning_wild'
         self.animate_wild_despawn(step=0)
@@ -1238,21 +1254,36 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                 self.cancel_mewtwo_arts()
             elif self.current_state in ['hooh_channeling', 'panic_run']:
                 self.cancel_hooh_arts()
-            elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
-            elif self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
-            elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
-            elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
-            elif self.current_state.startswith('giratina_'): self.cancel_giratina_arts()
-            elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'): self.cancel_zekrom_arts()
-            elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'): self.cancel_reshiram_arts()
-            elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'): self.cancel_kyurem_arts()
-            elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'): self.cancel_xerneas_arts()
-            elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'): self.cancel_yveltal_arts()
-            elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'): self.cancel_zygarde_arts()
-            elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'): self.cancel_lunala_arts()
-            elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):self.cancel_solgaleo_arts()
-            elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'): self.cancel_necrozma_arts()
-            elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'): self.cancel_zamazenta_arts()
+            elif self.current_state in ['lugia_channeling', 'lugia_dash']:
+                self.cancel_lugia_arts()
+            elif self.current_state == 'kyogre_channeling':
+                self.cancel_kyogre_arts()
+            elif self.current_state == 'groudon_channeling':
+                self.cancel_groudon_arts()
+            elif self.current_state == 'rayquaza_channeling':
+                self.cancel_rayquaza_arts()
+            elif self.current_state.startswith('giratina_'):
+                self.cancel_giratina_arts()
+            elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
+                self.cancel_reshiram_arts()
+            elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
+                self.cancel_zekrom_arts()
+            elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
+                self.cancel_kyurem_arts()
+            elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'):
+                self.cancel_xerneas_arts()
+            elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'):
+                self.cancel_yveltal_arts()
+            elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
+                self.cancel_zygarde_arts()
+            elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
+                self.cancel_solgaleo_arts()
+            elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+                self.cancel_lunala_arts()
+            elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
+                self.cancel_necrozma_arts()
+            elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
+                self.cancel_zamazenta_arts()
 
             if self.is_wild:
                 self.on_catch(self)
@@ -1325,16 +1356,16 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
 
         blend = getattr(self, 'evo_blend', 0.0)
         
-        # --- FIX GEOMÉTRICO: INVERSIÓN VISUAL PARA BORDES OPUESTOS ---
+        # --- GEOMETRIC FIX: VISUAL INVERSION FOR OPPOSITE EDGES ---
         render_facing_right = self.is_facing_right
         surface = getattr(self, 'climbing_surface', 'floor')
         
-        # Los bordes del monitor (screen_r: 90°, screen_l: 270°) son inversos a los bordes 
-        # de las ventanas (wall_r: 270°, wall_l: 90°). Requieren inversión espejo previa.
+        # Monitor borders (screen_r: 90°, screen_l: 270°) are the inverse of window borders 
+        # (wall_r: 270°, wall_l: 90°). They require prior mirror inversion.
         if surface in ['screen_l', 'screen_r']:
             render_facing_right = not self.is_facing_right
             
-        # La gravedad invertida de Palkia sobre un suelo estándar también requiere inversión
+        # Palkia's inverted gravity on a standard floor also requires inversion
         if getattr(self, 'gravity_inverted', False) and surface == 'floor':
             render_facing_right = not self.is_facing_right
 
@@ -1348,12 +1379,12 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
             elif getattr(self, 'egg_tk', None) and self.current_state != 'egg_wiggle':
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
-            # --- EVALUACIÓN DE VELOCIDAD DE FOTOGRAMAS ---
+            # --- FRAME RATE EVALUATION ---
             target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling'] else self.frame_rate_idle
             if getattr(self, 'time_distorted', False):
                 target_ms = int(target_ms * 4.0)
             
-            # --- SOBRESCRITURA DE ESTADO VISUAL ---
+            # --- VISUAL STATE OVERRIDE ---
             anim_state = self.current_state
             freeze_animation = False
             
@@ -1365,7 +1396,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                     self.animator.current_frame = getattr(self.animator, 'current_frame', 0) 
                 target_ms = 999999
                 
-            # 2. Reajustes de Canalización
+            # 2. Channeling Readjustments
             elif anim_state in ['hooh_channeling'] and getattr(self, 'hooh_phase', 0) == 1:
                 anim_state = 'idle'
             elif anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
@@ -1386,14 +1417,14 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                 else:
                     anim_state = 'walking'
 
-            # AÑADE ESTO PARA EL 50%
+            # ADD THIS FOR THE 50%
             elif anim_state == 'zygarde50_channeling':
                 if getattr(self, 'zygarde50_phase', 0) in [0, 1]:
-                    anim_state = 'idle' # O 'digging' si tienes la animación
+                    anim_state = 'idle' # Or 'digging' if you have the animation
                 else:
-                    anim_state = 'idle' # Se queda en idle disparando mientras mira al objetivo
+                    anim_state = 'idle' # Stays in idle shooting while looking at the target
 
-            # --- AÑADE ESTO PARA EL LANZAMIENTO TELÚRICO ---
+            # --- ADD THIS FOR LAND'S WRATH LAUNCH ---
             elif anim_state == 'zygarde_launched':
                 anim_state = 'falling'
 
@@ -1409,7 +1440,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
             elif anim_state == 'zamazenta_channeling':
                 anim_state = 'walking'
 
-            # --- MOTOR DE EXPANSIÓN FÍSICA Y GEOMÉTRICA ---
+            # --- PHYSICAL AND GEOMETRIC EXPANSION ENGINE ---
             if not hasattr(self, 'base_size_w'):
                 self.base_size_w = self.size_w
                 self.base_size_h = self.size_h
@@ -1422,22 +1453,22 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                 delta_w = target_w - self.size_w
                 delta_h = target_h - self.size_h
                 
-                # 1. Actualiza la hitbox absoluta para el escáner del motor de colisiones
+                # 1. Updates absolute hitbox for collision engine scanner
                 self.size_w = target_w
                 self.size_h = target_h
                 
-                # 2. Desplaza las coordenadas para que crezca desde el centro hacia los lados y de abajo hacia arriba
+                # 2. Shifts coordinates so it grows from center to sides and bottom to top
                 self.x -= delta_w / 2
                 self.y -= delta_h
                 
-                # 3. Recalcula la gravedad para no perforar el suelo físico de Windows
+                # 3. Recalculates gravity to not punch through Windows physical floor
                 self.default_floor_y = (self.v_y + self.v_height) - self.size_h - getattr(self, 'offset_y', 0)
                 
-                # 4. Expande la ventana y el Canvas nativo de Tkinter en tiempo real
+                # 4. Expands window and native Tkinter Canvas in real time
                 self.window.geometry(f"{self.size_w}x{self.size_h}+{int(self.x)}+{int(self.y)}")
                 self.canvas.config(width=self.size_w, height=self.size_h)
                 
-                # 5. Resitúa el ancla visual del sprite en el nuevo centro calculado
+                # 5. Repositions the visual anchor of the sprite to the new calculated center
                 if anim_state not in ['landing_shake', 'digging_in', 'digging_out']:
                     self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
                     
@@ -2220,7 +2251,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         if random.randint(1, 1000) <= 20:
             self.is_facing_right = not self.is_facing_right
         
-        velocidad_excavacion = self.speed * 2
+        dig_speed = self.speed * 2
 
         # FIX: Strict and predictive clamping against sudden window resizing
         if getattr(self, 'anchored_rect', None):
@@ -2235,12 +2266,12 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                 self.is_facing_right = True
             # 2. Standard predictive check: Bounce before exiting
             else:
-                if self.is_facing_right and self.x + velocidad_excavacion > rect[2] - self.size_w:
+                if self.is_facing_right and self.x + dig_speed > rect[2] - self.size_w:
                     self.is_facing_right = False
-                elif not self.is_facing_right and self.x - velocidad_excavacion < rect[0]:
+                elif not self.is_facing_right and self.x - dig_speed < rect[0]:
                     self.is_facing_right = True
 
-        self.x += velocidad_excavacion if self.is_facing_right else -velocidad_excavacion
+        self.x += dig_speed if self.is_facing_right else -dig_speed
         
         if getattr(self, 'can_screen_wrap', False):
             if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
@@ -2305,8 +2336,8 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         self.jump_cooldown = max(0, getattr(self, 'jump_cooldown', 0) - 1)
         self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
         self.attack_cooldown = max(0, getattr(self, 'attack_cooldown', 0) - 1)
-        self.teleport_cooldown = max(0, getattr(self, 'teleport_cooldown', 0) - 1)
 
+        self.teleport_cooldown = max(0, getattr(self, 'teleport_cooldown', 0) - 1)
         self.tk_cooldown = max(0, getattr(self, 'tk_cooldown', 0) - 1)
         self.glitch_cooldown = max(0, getattr(self, 'glitch_cooldown', 0) - 1)
         self.bubble_cooldown = max(0, getattr(self, 'bubble_cooldown', 0) - 1)
@@ -2381,7 +2412,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         # --- EXCLUSIVE MECHANIC: LAND'S WRATH / THOUSAND ARROWS (ZYGARDE 50%) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.zygarde_cooldown = 72000 # 1 hora
+                self.zygarde_cooldown = 72000 # 1 hour
                 self.current_state = 'zygarde50_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
@@ -2389,7 +2420,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
         # --- EXCLUSIVE MECHANIC: THOUSAND ARROWS (ZYGARDE 10%) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde1" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.zygarde_cooldown = 72000 # 1 hora
+                self.zygarde_cooldown = 72000 # 1 hour
                 self.current_state = 'zygarde_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
@@ -2402,10 +2433,10 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: GEOMANCY DE XERNEAS ---
+        # --- EXCLUSIVE MECHANIC: XERNEAS' GEOMANCY ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "xerneas" and getattr(self, 'xerneas_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.xerneas_cooldown = 72000 # 1 Hora
+                self.xerneas_cooldown = 72000 # 1 hour
                 self.current_state = 'xerneas_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
@@ -2491,14 +2522,22 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                                 target.glitch_cooldown = 12000
 
                             # 6. Disconnection of ongoing Legendary Channelers
-                            if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'): target.cancel_mewtwo_arts()
-                            elif target.current_state in ['hooh_channeling', 'panic_run'] and hasattr(target, 'cancel_hooh_arts'): target.cancel_hooh_arts()
-                            elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'): target.cancel_kyogre_arts()
-                            elif target.current_state == 'groudon_channeling' and hasattr(target, 'cancel_groudon_arts'): target.cancel_groudon_arts()
-                            elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'): target.cancel_lugia_arts()
-                            elif target.current_state == 'rayquaza_channeling' and hasattr(target, 'cancel_rayquaza_arts'): target.cancel_rayquaza_arts()
-                            elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'): target.cancel_dialga_arts()
-                            elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'): target.cancel_palkia_arts()
+                            if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'):
+                                target.cancel_mewtwo_arts()
+                            elif target.current_state in ['hooh_channeling', 'panic_run'] and hasattr(target, 'cancel_hooh_arts'):
+                                target.cancel_hooh_arts()
+                            elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'):
+                                target.cancel_lugia_arts()
+                            elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'):
+                                target.cancel_kyogre_arts()
+                            elif target.current_state == 'groudon_channeling' and hasattr(target, 'cancel_groudon_arts'):
+                                target.cancel_groudon_arts()
+                            elif target.current_state == 'rayquaza_channeling' and hasattr(target, 'cancel_rayquaza_arts'):
+                                target.cancel_rayquaza_arts()
+                            elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'):
+                                target.cancel_dialga_arts()
+                            elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'):
+                                target.cancel_palkia_arts()
 
                             # 7. Final Visual Reset and Assignment
                             target.canvas.itemconfig(target.canvas_image_id, state='normal')
@@ -2706,7 +2745,7 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                         
                         self.show_fairy_sparkles_vfx()
                         
-                        # El hada da un pequeño salto de felicidad al detener la pelea
+                        # The fairy does a small happy jump upon stopping the fight
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
                         self.v_y_velocity = 3.0 if getattr(self, 'gravity_inverted', False) else -3.0
@@ -2763,7 +2802,8 @@ class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, Solgale
                                 hit_target.cancel_mewtwo_arts()
                             elif getattr(hit_target, 'current_state', '') in ['hooh_channeling', 'panic_run']:
                                 hit_target.cancel_hooh_arts()
-                            elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']: hit_target.cancel_lugia_arts()
+                            elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']:
+                                hit_target.cancel_lugia_arts()
                                 
                             hit_target.current_state = 'bubbled'
                             hit_target.bubble_max_time = random.randint(130, 200) 

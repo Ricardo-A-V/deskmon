@@ -67,7 +67,6 @@ class FloodOverlay:
     def _apply_click_through(self):
         if HAS_WIN32 and self.active:
             try:
-                # Get the real "Parent ID" of the OS window, not the internal Tkinter container
                 hwnd = win32gui.GetParent(self.window.winfo_id())
                 if not hwnd:
                     hwnd = int(self.window.wm_frame())

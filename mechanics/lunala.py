@@ -11,7 +11,7 @@ class LunalaMechanics:
         for attr in ['lunala_phase', 'lunala_timer', 'lunala_hit_targets', 'l_particles', 'lunala_beam_step', 'lunala_exploded', 'lunala_energy_lines']:
             if hasattr(self, attr): delattr(self, attr)
 
-        # FIX VISUAL: Explicitly delete the charging spiral particles from the Tkinter Canvas
+        # VISUAL FIX: Explicitly delete the charging spiral particles from the Tkinter Canvas
         self.canvas.delete("vfx_l_charge")
 
         self.canvas.itemconfig(self.canvas_image_id, state='normal')
@@ -21,7 +21,7 @@ class LunalaMechanics:
             self.v_x_velocity = 0.0
             self.v_y_velocity = 0.0
             
-            # FIX LÓGICO: Smooth transition to hover height. Binds the current Y coordinate 
+            # LOGICAL FIX: Smooth transition to hover height. Binds the current Y coordinate 
             # to the floor_y anchor, forcing the 'ascending' FSM to interpolate the flight path.
             if getattr(self, 'is_flying', False):
                 self.floor_y = self.y
@@ -64,7 +64,7 @@ class LunalaMechanics:
             if self.lunala_timer <= 0:
                 self.lunala_phase = 2
                 self.lunala_beam_step = 0
-                # FIX LÓGICO: Duración total del rayo reducida exactamente a la mitad (20 ticks en lugar de 40)
+                # LOGICAL FIX: Total beam duration halved exactly (20 ticks instead of 40)
                 self.lunala_timer = 10 
                 
                 self.beam_target_x = random.randint(self.v_x, self.v_x + self.v_width)
@@ -79,7 +79,7 @@ class LunalaMechanics:
             
             self.lunala_apply_beam_hitbox()
             
-            # FIX CINÉTICO: El rayo detona en el paso 4 en lugar del 8 (llega al suelo el doble de rápido)
+            # KINETIC FIX: The beam detonates at step 4 instead of 8 (reaches the ground twice as fast)
             if self.lunala_beam_step == 4 and not getattr(self, 'lunala_exploded', False):
                 self.lunala_explode()
                 self.lunala_exploded = True
@@ -155,15 +155,15 @@ class LunalaMechanics:
         self.lunala_canvas.delete("vfx_l_beam")
         self.lunala_win.lift()
         
-        # FIX GEOMÉTRICO: Eliminado el cálculo de offset de Yveltal. 
-        # El rayo nace estrictamente desde el núcleo de Lunala (Centro del Canvas).
+        # GEOMETRIC FIX: Removed Yveltal offset calculation.
+        # The beam strictly originates from Lunala's core (Canvas center).
         start_x = (self.x + self.size_w / 2) - self.v_x
         start_y = (self.y + self.size_h / 2) - self.v_y
         
         end_x = self.beam_target_x - self.v_x
         end_y = self.beam_target_y - self.v_y
         
-        # PROGRESO ACELERADO: Divisor ajustado a 4.0 para duplicar la velocidad de proyección
+        # ACCELERATED PROGRESS: Divisor set to 4.0 to double the projection speed
         progress = min(1.0, getattr(self, 'lunala_beam_step', 0) / 4.0)
         
         current_x = start_x + (end_x - start_x) * progress
@@ -208,14 +208,14 @@ class LunalaMechanics:
     def lunala_apply_beam_hitbox(self):
         if not getattr(self, 'get_all_pets', None): return
         
-        # FIX GEOMÉTRICO (Hitbox): Adaptado al nuevo origen central de Lunala
+        # GEOMETRIC FIX (Hitbox): Adapted to the new central origin of Lunala
         start_x = self.x + self.size_w / 2
         start_y = self.y + self.size_h / 2
         
         end_x = self.beam_target_x
         end_y = self.beam_target_y
         
-        # PROGRESO ACELERADO: Divisor ajustado a 4.0 en el cálculo físico
+        # ACCELERATED PROGRESS: Divisor adjusted to 4.0 in physics calculation
         progress = min(1.0, getattr(self, 'lunala_beam_step', 0) / 4.0)
         current_end_x = start_x + (end_x - start_x) * progress
         current_end_y = start_y + (end_y - start_y) * progress
@@ -244,7 +244,7 @@ class LunalaMechanics:
                     self.apply_lunala_knockback(target)
 
     def lunala_explode(self):
-        # FIX DE IMPACTO: Radio reducido un 15% (de 1000 a 850) para ser sutilmente más pequeño
+        # IMPACT FIX: Radius reduced by 15% (from 1000 to 850) to be subtly smaller
         impact_radius = 850 
         
         if hasattr(self, 'lunala_canvas'):
@@ -257,7 +257,7 @@ class LunalaMechanics:
                 if not hasattr(self, 'lunala_canvas') or getattr(self, 'current_state', '') != 'lunala_channeling': return
                 try:
                     self.lunala_canvas.delete("vfx_l_exp")
-                    # Expansión ralentizada ligeramente para mantener coherencia visual con el nuevo radio máximo
+                    # Expansion slightly slowed to maintain visual consistency with the new max radius
                     exp_state['radius'] += 135.0
                     exp_state['width'] *= 0.6 
                     

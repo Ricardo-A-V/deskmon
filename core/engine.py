@@ -11,7 +11,6 @@ from entities.pet import DesktopPet
 from entities.interactables import InteractiveBerry, InteractivePokeball
 from ui.menus import StarterSelectionWindow
 
-# --- CENTRAL GAME CONTROLLER ---
 class GameController:
     def __init__(self):
         self.save_mgr = SaveManager()
@@ -43,7 +42,6 @@ class GameController:
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False) 
         
-        # --- WINDOW DRAG LOGIC ---
         self._drag_data = {"x": 0, "y": 0}
         def drag_start(event):
             self._drag_data["x"] = event.x
@@ -72,7 +70,6 @@ class GameController:
         content_frame = tk.Frame(self.root, bg=bg_main)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Search bar
         search_row = tk.Frame(content_frame, bg=bg_main)
         search_row.pack(fill=tk.X, padx=10, pady=(8, 0))
         
@@ -138,7 +135,6 @@ class GameController:
         btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
         btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
-        # --- DISCORD RPC INJECTION ---
         self.discord_rpc = DiscordRPC("1517136709039685685") 
         self.discord_rpc.update_loop(self.root)
 
@@ -299,11 +295,11 @@ class GameController:
                 self.fly_row.pack_forget()
 
             # --- LOGIC INJECTION: EXCLUSIVE ALTER BUTTON ---
-            nombre_normalizado = pet["species"].lower().replace("_", "").replace("-", "")
+            normalized_name = pet["species"].lower().replace("_", "").replace("-", "")
             
-            # FIX: Se añade zacian1 a la matriz para que el botón de eliminar espada se renderice
-            # FIX: Ampliada la matriz de comprobación para soportar al Escudo Coronado
-            if nombre_normalizado in ["giratina1", "zacian1", "zamazenta1"]:
+            # FIX: Add zacian1 to the matrix so the remove sword button renders
+            # FIX: Expanded check matrix to support Crowned Shield
+            if normalized_name in ["giratina1", "zacian1", "zamazenta1"]:
                 self.btn_alter = tk.Button(
                     self.fly_wrapper, 
                     text="Alter Form", 
@@ -321,11 +317,9 @@ class GameController:
             self.fly_row.pack_forget()
 
     def trigger_alter_form(self, pet_id):
-        # 1. Search in live memory
         active_pet = next((p for p in self.active_instances if p.pet_data["id"] == pet_id), None)
         
         if active_pet:
-            # 2. Execute physical transformation
             active_pet.manual_alter_form()
             
             # 3. CRITICAL: Save structural change to disk
@@ -334,10 +328,9 @@ class GameController:
             # 4. Refresh UI to prevent dropdown crashes
             self.update_pc_ui()
             
-            # 5. Automatically select new name in PC
-            nuevo_nombre = f"{active_pet.pet_data['species'].capitalize()}"
+            new_name = f"{active_pet.pet_data['species'].capitalize()}"
             for idx, val in enumerate(self.combo['values']):
-                if val.lower().startswith(nuevo_nombre.lower()):
+                if val.lower().startswith(new_name.lower()):
                     self.combo.current(idx)
                     self.on_combo_select()
                     break
@@ -361,7 +354,7 @@ class GameController:
                 if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False):
                     p["everstone"] = new_state
                     
-            # FIX LÓGICO: Sustituido load_save() (que borraba los datos en RAM) por save_data()
+            # LOGICAL FIX: Replaced load_save() (which deleted RAM data) with save_data()
             self.save_mgr.save_data()
             
             if not new_state:
@@ -389,7 +382,6 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
-        # This function now only builds the master list (unfiltered)
         if not self.save_mgr.data["inventory"]:
             self.full_display_list = ["(Empty)"]
         else:
@@ -413,7 +405,6 @@ class GameController:
                         display_list.append(p_str)
                 self.full_display_list = display_list
                 
-        # Calls the filter to apply the search (or show all if blank)
         self.filter_pc_list()
 
     def filter_pc_list(self, *args):
@@ -426,7 +417,6 @@ class GameController:
         if not search_query:
             filtered = self.full_display_list
         else:
-            # Filters ignoring case and accents
             filtered = [item for item in self.full_display_list if search_query in item.lower()]
             
         if not filtered:
@@ -531,9 +521,9 @@ class GameController:
     def wild_spawner_loop(self):
         if self.save_mgr.data.get("settings", {}).get("allow_wild", True):
             if len(self.wild_instances) < 4:
-                probabilidad_spawn = random.randint(1, 100)
+                spawn_probability = random.randint(1, 100)
                 
-                if probabilidad_spawn <= 20:
+                if spawn_probability <= 20:
                     if self.spawn_pool_species:
                         target = random.choices(
                             population=self.spawn_pool_species, 
@@ -610,14 +600,11 @@ class GameController:
 
     def on_pet_evolve(self, pet_instance, new_species, is_mid_evo=False, evo_channel=None):
         if getattr(pet_instance, 'is_egg', False):
-            # 1. Remove egg status and secure data in Inventory (PC)
             pet_instance.pet_data["is_egg"] = False
             self.save_mgr.save_data()
             
-            # 2. Count patrolling Pokémon (excluding the egg that just hatched)
             active_count = len([p for p in self.active_instances if not getattr(p, 'is_egg', False) and p != pet_instance])
             
-            # 3. Extract coordinates and destroy egg instance
             target_coords = (pet_instance.x, pet_instance.y)
             if pet_instance in self.active_instances:
                 self.active_instances.remove(pet_instance)
@@ -625,7 +612,6 @@ class GameController:
                 self.sync_save_state()
             pet_instance.window.destroy()
 
-            # 4. Spawn decision based on field limit (6)
             if active_count >= 6:
                 # OVERFLOW (Walk right and store):
                 # Passing is_overflow=True will force FSM to walk and leave.
@@ -639,7 +625,6 @@ class GameController:
             self.update_pc_ui()
             return
 
-        # === LOGIC FOR NORMAL POKÉMON EVOLUTIONS (NON-EGGS) ===
         pet_instance.pet_data["species"] = new_species
         pet_instance.pet_data["last_evolution_level"] = pet_instance.pet_data["level"]
         self.save_mgr.save_data()

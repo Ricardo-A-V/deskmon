@@ -72,7 +72,7 @@ class YveltalMechanics:
         elif self.yveltal_phase == 2:
             self.yveltal_timer -= 1
             if self.yveltal_timer <= 0:
-                # FIX LÓGICO: Eliminada la sobrescritura a 'idle' para evitar el teletransporte masivo
+                # LOGICAL FIX: Removed overwrite to 'idle' to prevent massive teleportation
                 self.cancel_yveltal_arts()
                 self.yveltal_cooldown = 72000 
 
@@ -282,7 +282,6 @@ class YveltalMechanics:
         if self.yveltal_petrified_timer <= 0:
             self.canvas.delete("vfx_y_stone")
             
-            # PURGA TOTAL DE ESTADOS VISUALES ANÓMALOS
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             if hasattr(self, 'dark_mode'): self.dark_mode = False 

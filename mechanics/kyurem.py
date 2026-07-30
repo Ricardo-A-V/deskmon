@@ -58,7 +58,7 @@ class KyuremMechanics:
 
     def spawn_kyurem_global_vfx(self):
         self.kyurem_win = tk.Toplevel(self.window.master)
-        self.kyurem_win.title("VFX_Kyurem_Ignore") # FIX TÉCNICO: Evitar colisión física
+        self.kyurem_win.title("VFX_Kyurem_Ignore") # TECHNICAL FIX: Prevent physical collision
         self.kyurem_win.overrideredirect(True)
         self.kyurem_win.attributes('-topmost', True)
         
@@ -67,7 +67,7 @@ class KyuremMechanics:
         try: self.kyurem_win.wm_attributes('-transparentcolor', TRANS_COLOR)
         except: pass
 
-        # OPTIMIZACIÓN: Reducción del tamaño de la ventana al nuevo radio (400px * 2)
+        # OPTIMIZATION: Window size reduction to new radius (400px * 2)
         self.kyurem_win_size = 800
         cx = int(self.x + self.size_w/2 - self.kyurem_win_size/2)
         cy = int(self.y + self.size_h/2 - self.kyurem_win_size/2)
@@ -89,7 +89,7 @@ class KyuremMechanics:
             for _ in range(2): 
                 base_angle = 0 if direction == 1 else math.pi
                 
-                # FIX: Dispersión visual ampliada a 0.8 radianes (~45 grados) para coincidir con la nueva hitbox
+                # FIX: Visual spread expanded to 0.8 radians (~45 degrees) to match the new hitbox
                 angle = random.uniform(base_angle - 0.8, base_angle + 0.8)
                 speed = random.uniform(15.0, 35.0) 
                 
@@ -120,7 +120,7 @@ class KyuremMechanics:
         if not getattr(self, 'get_all_pets', None): return
         
         for target in self.get_all_pets():
-            # FIX ESTRUCTURAL: Ignorar siempre a los huevos
+            # STRUCTURAL FIX: Always ignore eggs
             if target != self and target.current_state != 'exiting' and getattr(target, 'kyurem_frozen_timer', 0) <= 0 and not getattr(target, 'is_egg', False):
                 
                 my_cx = self.x + self.size_w / 2
@@ -177,37 +177,35 @@ class KyuremMechanics:
         target.current_state = 'kyurem_frozen'
         target.kyurem_frozen_timer = 300 
         
-        # FIX: Eliminamos la aniquilación de velocidad. 
-        # Si iban corriendo al ser impactados, conservarán su inercia y resbalarán.
+        # FIX: Remove speed annihilation.
+        # If they were running when hit, they will keep their inertia and slide.
         if not hasattr(target, 'v_x_velocity'): target.v_x_velocity = 0.0
         if not hasattr(target, 'v_y_velocity'): target.v_y_velocity = 0.0
 
         target.kyurem_frozen_cube_loop()
 
     def _fsm_kyurem_frozen(self):
-        # 1. FÍSICA HORIZONTAL (Hielo resbaladizo)
-        # Factor de fricción muy bajo (0.98) comparado con el estándar de Tkinter
+        # Very low friction factor (0.98) compared to the Tkinter standard
         self.v_x_velocity *= 0.98 
         self.x += self.v_x_velocity
 
-        # Límites del monitor para evitar que se resbalen fuera de la pantalla
+        # Monitor boundaries to prevent them from sliding off the screen
         if getattr(self, 'can_screen_wrap', False):
             if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
             elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
         else:
             if self.x <= self.v_x:
                 self.x = self.v_x
-                self.v_x_velocity *= -0.7 # Rebote contra el borde izquierdo
+                self.v_x_velocity *= -0.7 # Bounce against left edge
             elif self.x >= (self.v_x + self.v_width) - self.size_w:
                 self.x = (self.v_x + self.v_width) - self.size_w
-                self.v_x_velocity *= -0.7 # Rebote contra el borde derecho
+                self.v_x_velocity *= -0.7 # Bounce against right edge
 
-        # 2. FÍSICA VERTICAL (Gravedad)
         gravity = 4.0 if getattr(self, 'heavy_fall', False) else 1.5
         self.v_y_velocity += gravity
         next_y = self.y + self.v_y_velocity
         
-        # Tolerancia dinámica para no atravesar ventanas cayendo a alta velocidad
+        # Dynamic tolerance to avoid passing through windows when falling at high speed
         fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
         current_env, _ = self.get_window_environment()
         
@@ -215,43 +213,36 @@ class KyuremMechanics:
         target_hwnd = current_env['hwnd'] if highest_surface == current_env['y'] else None
         target_rect = current_env['rect'] if highest_surface == current_env['y'] else None
         
-        # 3. MOTOR DE COLISIÓN AABB 2D (Cubos entre sí)
         if getattr(self, 'get_all_pets', None):
             for other in self.get_all_pets():
                 if other != self and other.current_state == 'kyurem_frozen':
                     
-                    # Verificación rápida de Hitbox masivo
                     if abs(self.x - other.x) < self.size_w * 0.95 and abs(self.y - other.y) < self.size_h * 1.5:
                         
                         other_roof_y = other.y - self.size_h
                         
-                        # A. Colisión Vertical (Apilamiento Perfecto)
                         if self.y <= other_roof_y + 15 and next_y >= other_roof_y:
                             if other_roof_y < highest_surface:
                                 highest_surface = other_roof_y
                                 target_hwnd = getattr(other, 'anchored_hwnd', None)
                                 target_rect = getattr(other, 'anchored_rect', None)
                                 
-                        # B. Colisión Lateral (Choque Transversal y Transferencia de Momento)
                         elif abs(next_y - other.y) < self.size_h * 0.8:
-                            # Choca por la izquierda del otro bloque
                             if self.x < other.x and self.v_x_velocity > 0:
                                 self.x = other.x - self.size_w * 0.95
-                                other.v_x_velocity += self.v_x_velocity * 0.7 # Transfiere el 70% de su energía
-                                self.v_x_velocity *= -0.3 # Rebota levemente
-                            # Choca por la derecha del otro bloque
+                                other.v_x_velocity += self.v_x_velocity * 0.7 
+                                self.v_x_velocity *= -0.3 # Bounces slightly
                             elif self.x > other.x and self.v_x_velocity < 0:
                                 self.x = other.x + self.size_w * 0.95
                                 other.v_x_velocity += self.v_x_velocity * 0.7
                                 self.v_x_velocity *= -0.3
 
-        # 4. RESOLUCIÓN DE SUELO Y ANCLAJE
         if next_y >= highest_surface:
             self.y = highest_surface
             self.floor_y = highest_surface
             self.v_y_velocity = 0.0
             
-            # FIX: Anclar lógicamente el bloque a la ventana detectada
+            # FIX: Logically anchor block to the detected window
             if target_hwnd:
                 self.anchored_hwnd = target_hwnd
                 self.anchored_rect = target_rect
@@ -262,8 +253,8 @@ class KyuremMechanics:
             
         self.update_position()
         
-        # FIX: Hilo acelerado a 20ms en lugar de 50ms para que el deslizamiento
-        # y las colisiones AABB se procesen de forma fluida y sin empotramientos.
+        # FIX: Thread accelerated to 20ms instead of 50ms so the slide
+        # and AABB collisions are processed smoothly without getting stuck.
         self.schedule_loop(20, self.physics_loop)
 
     def kyurem_frozen_cube_loop(self):

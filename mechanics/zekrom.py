@@ -41,7 +41,7 @@ class ZekromMechanics:
 
         elif self.zekrom_phase == 1:
             self.zekrom_timer -= 1
-            # FIX: Incremento reducido de 0.2 a 0.05 para una flotación mucho más lenta y pesada
+            # FIX: Increment reduced from 0.2 to 0.05 for a much slower and heavier float
             self.fly_amplitude = getattr(self, 'fly_amplitude', 0) + 0.05 
             self.y = target_y + math.sin(self.fly_amplitude) * 10
             
@@ -109,7 +109,7 @@ class ZekromMechanics:
         cx = self.size_w / 2
         cy = self.size_h / 2
         
-        # Aumentamos el margen de seguridad a 5 píxeles para que la expansión exterior no choque con los bordes de la ventana
+        # Increased safety margin to 5 pixels so outer expansion doesn't hit window edges
         max_r = (min(self.size_w, self.size_h) / 2) - 5 
         base_radius_mult = getattr(self, 'zekrom_vfx_radius', 1.0)
         
@@ -118,11 +118,9 @@ class ZekromMechanics:
         if r1_base > 5:
             self.zekrom_pulse = getattr(self, 'zekrom_pulse', 0) + 0.15
             
-            # Pulso exterior leve (3% de variación)
             outer_pulse_mod = math.sin(self.zekrom_pulse) * 0.05
             r1 = max_r * (base_radius_mult + outer_pulse_mod)
             
-            # Pulso interior inestable y notorio (10% de variación)
             inner_pulse_mod = math.sin(self.zekrom_pulse) * 0.05
             r2 = r1 * (0.85 + inner_pulse_mod)
             r3 = r1 * (0.60 + inner_pulse_mod)
@@ -170,7 +168,7 @@ class ZekromMechanics:
 
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
-                # FIX ESTRUCTURAL: Ignorar siempre a los huevos
+                # STRUCTURAL FIX: Always ignore eggs
                 if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
                     if dist <= impact_radius:
@@ -283,7 +281,7 @@ class ZekromMechanics:
             else:
                 self.current_state = 'idle'
                 
-        # FIX LÓGICO: Forzar la ejecución del bucle independientemente del estado para no matar el FSM
+        # LOGICAL FIX: Force loop execution regardless of state to avoid killing the FSM
         self.schedule_loop(50, self.physics_loop)
 
     def zekrom_para_vfx_loop(self):

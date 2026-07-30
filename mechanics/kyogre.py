@@ -21,7 +21,6 @@ class KyogreMechanics:
             length = random.randint(10, 20)
             color = random.choice(["#3498DB", "#5DADE2", "#85C1E9"]) 
             
-            # Aesthetic diagonal of strong storm
             pid = self.canvas.create_line(x, y, x - length, y + length*2, fill=color, width=2, tags="vfx_rain")
             particles.append({'id': pid, 'vx': -6.0, 'vy': 12.0, 'life': 8})
             

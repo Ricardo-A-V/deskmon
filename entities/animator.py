@@ -4,7 +4,6 @@ import sys
 import random
 from PIL import Image, ImageOps, ImageTk, ImageEnhance
 
-# --- ANIMATION ENGINE ---
 class DesktopPetAnimator:
     def __init__(self, canvas_widget, config_img, size_idle, size_walk, pet_dir):
         self.canvas = canvas_widget
@@ -105,19 +104,16 @@ class DesktopPetAnimator:
         if rotation_angle != 0:
             processed_image = processed_image.rotate(rotation_angle, expand=False, resample=Image.NEAREST)
 
-        # 1. Pipeline de Escalado (Crecimiento)
         if scale_mod != 1.0:
             w, h = processed_image.size
             processed_image = processed_image.resize((int(w * scale_mod), int(h * scale_mod)), Image.Resampling.NEAREST)
 
-        # 2. Pipeline de Brillo (Luminosidad Fotónica)
         if bright_mod != 1.0:
             alpha = processed_image.getchannel('A') 
             enhancer = ImageEnhance.Brightness(processed_image.convert('RGB'))
             processed_image = enhancer.enhance(bright_mod).convert('RGBA')
             processed_image.putalpha(alpha) 
 
-        # 3. Pipeline de Oscurecimiento (Absorción de Luz)
         actual_darkness = max(darkness_mod, 0.85 if is_darkened else 0.0)
         if actual_darkness > 0.0:
             black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))

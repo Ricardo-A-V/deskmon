@@ -4,7 +4,6 @@ import tkinter as tk
 
 class ReshiramMechanics:
     def cancel_reshiram_arts(self):
-        # Destruir proyectil externo si existe
         if hasattr(self, 'res_win') and self.res_win and self.res_win.winfo_exists():
             self.res_win.destroy()
             self.res_win = None
@@ -26,9 +25,9 @@ class ReshiramMechanics:
             self.res_pulse = 0.0
             self.res_vfx_radius = 0.0
             
-            # 1. Spawn de la ventana independiente para el proyectil esférico
+            # 1. Spawn independent window for the spherical projectile
             self.res_win = tk.Toplevel(self.window.master)
-            self.res_win.title("VFX_Reshiram_Ignore") # FIX TÉCNICO: Evitar colisión física
+            self.res_win.title("VFX_Reshiram_Ignore") # TECHNICAL FIX: Prevent physical collision
             self.res_win.overrideredirect(True)
             self.res_win.attributes('-topmost', True)
             TRANS_COLOR = '#010101'
@@ -40,7 +39,6 @@ class ReshiramMechanics:
             self.res_canvas = tk.Canvas(self.res_win, width=self.res_size, height=self.res_size, bg=TRANS_COLOR, highlightthickness=0)
             self.res_canvas.pack()
             
-            # Coordenadas iniciales: Centro de Reshiram
             self.res_x = self.x + self.size_w / 2 - self.res_size / 2
             self.res_y = self.y + self.size_h / 2 - self.res_size / 2
             self.res_win.geometry(f"{self.res_size}x{self.res_size}+{int(self.res_x)}+{int(self.res_y)}")
@@ -48,7 +46,7 @@ class ReshiramMechanics:
             self.res_particles = []
             self.reshiram_sphere_loop()
             
-        # 2. Reshiram se queda inmóvil recargando
+        # 2. Reshiram stays still reloading
         self.v_x_velocity = 0.0
         self.v_y_velocity = 0.0
         if not getattr(self, 'is_flying', False):
@@ -58,7 +56,6 @@ class ReshiramMechanics:
                 self.y += 4.0
                 if self.y > physical_floor: self.y = physical_floor
         
-        # 3. Línea Temporal del Proyectil (Esfera)
         target_y = self.v_y + (self.v_height * 0.25) - self.res_size / 2
 
         if self.res_phase == 0:
@@ -124,7 +121,6 @@ class ReshiramMechanics:
                 for attr in ['res_phase', 'res_timer', 'res_vx', 'res_vy', 'res_pulse']:
                     if hasattr(self, attr): delattr(self, attr)
 
-        # Mover la sub-ventana si existe
         if hasattr(self, 'res_win') and self.res_win and self.res_win.winfo_exists():
             self.res_win.geometry(f"+{int(self.res_x)}+{int(self.res_y)}")
 
@@ -154,12 +150,11 @@ class ReshiramMechanics:
             r2 = r1 * (0.85 + inner_pulse_mod)
             r3 = r1 * (0.60 + inner_pulse_mod)
             
-            # Anillos de fuego solar
             self.res_canvas.create_oval(cx-r1, cy-r1, cx+r1, cy+r1, fill="#C0392B", outline="#C0392B", tags="vfx_res")
             self.res_canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, fill="#E67E22", outline="#E67E22", tags="vfx_res")
             self.res_canvas.create_oval(cx-r3, cy-r3, cx+r3, cy+r3, fill="#F1C40F", outline="#F1C40F", tags="vfx_res")
             
-            # FIX LÓGICO: Emisión de partículas radiales en 360 grados
+            # LOGICAL FIX: 360 degree radial particle emission
             for _ in range(4):
                 angle = random.uniform(0, 2 * math.pi)
                 dist = random.uniform(0, r1)
@@ -169,7 +164,6 @@ class ReshiramMechanics:
                 
                 speed = random.uniform(2.0, 7.0)
                 
-                # Cálculo balístico direccional puro
                 vx = math.cos(angle) * speed
                 vy = math.sin(angle) * speed
                 
@@ -197,7 +191,7 @@ class ReshiramMechanics:
 
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
-                # FIX ESTRUCTURAL: Ignorar siempre a los huevos
+                # STRUCTURAL FIX: Always ignore eggs
                 if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.res_target_x - target.x)**2 + (self.res_target_y - target.y)**2)
                     if dist <= impact_radius:
@@ -205,7 +199,7 @@ class ReshiramMechanics:
 
     def trigger_reshiram_shockwave(self, max_radius):
         wave_win = tk.Toplevel(self.window.master)
-        wave_win.title("VFX_ResWave_Ignore") # FIX TÉCNICO: Evitar colisión física
+        wave_win.title("VFX_ResWave_Ignore") # TECHNICAL FIX: Prevent physical collision
         wave_win.overrideredirect(True)
         wave_win.attributes('-topmost', True)
         
@@ -238,7 +232,7 @@ class ReshiramMechanics:
             cx = win_size / 2
             cy = win_size / 2
             
-            # Múltiples anillos de fuego para la onda expansiva
+            # Multiple fire rings for the shockwave
             w_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#C0392B", width=int(state['alpha_width']), tags="wave")
             w_canvas.create_oval(cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#E67E22", width=int(state['alpha_width']*0.8), tags="wave")
             
@@ -282,7 +276,7 @@ class ReshiramMechanics:
         except: pass
 
         target.current_state = 'reshiram_burn'
-        target.reshiram_burn_timer = 166 # 5 segundos a 30ms el tick
+        target.reshiram_burn_timer = 166 # 5 seconds at 30ms per tick
         target.is_facing_right = random.choice([True, False])
 
     def _fsm_reshiram_burn(self):
@@ -348,7 +342,7 @@ class ReshiramMechanics:
             self.fly_amplitude += 0.3
             self.y = self.floor_y + math.sin(self.fly_amplitude) * 10
             
-        # Reutiliza el VFX de fuego de Ho-Oh heredado para la víctima
+        # Reuse inherited Ho-Oh fire VFX for the victim
         if self.reshiram_burn_timer % 3 == 0 and hasattr(self, 'show_fire_vfx'):
             self.show_fire_vfx(is_master=False)
 

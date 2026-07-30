@@ -31,7 +31,6 @@ class PalkiaMechanics:
             fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
             floor = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else getattr(self, 'default_floor_y', self.y)
 
-            # Seismic impact
             if self.y >= floor and self.v_y_velocity > 0:
                 self.y = floor
                 self.v_y_velocity = 0.0
@@ -39,7 +38,6 @@ class PalkiaMechanics:
                 self.palkia_timer = 0
                 self.trigger_landing_shake()
                 
-                # SHOCKWAVE: GRAVITY INVERSION
                 if getattr(self, 'get_all_pets', None):
                     for target in self.get_all_pets():
                         is_climber = getattr(target, 'is_climbing', False) or target.config.get("physics", {}).get("is_climbing", False)
@@ -47,7 +45,6 @@ class PalkiaMechanics:
                         if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg'] and not is_climber:
                             target.apply_gravity_inversion(60) # 60 seconds
                             
-                # VFX ACTIVATION FOR MASTER (Palkia)
                 self.palkia_aura_end = time.time() + 60
                 self.palkia_vfx_loop()
                 
@@ -63,11 +60,9 @@ class PalkiaMechanics:
         self.schedule_loop(30, self.physics_loop)
         
     def palkia_vfx_loop(self):
-        # Asynchronous loop to emit space particles
         if getattr(self, 'current_state', 'exiting') == 'exiting': return
         if time.time() > getattr(self, 'palkia_aura_end', 0): return
         
-        # Emits short bursts constantly
         if random.randint(1, 4) <= 2:
             self.show_spatial_rend_vfx()
             
@@ -80,7 +75,6 @@ class PalkiaMechanics:
         cx = self.size_w // 2
         cy = self.size_h // 2
         
-        # Generate 3-5 particles per burst
         for _ in range(random.randint(3, 5)):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(1.5, 4.0)
@@ -88,7 +82,6 @@ class PalkiaMechanics:
             vy = math.sin(angle) * speed
             
             size = random.choice([2, 3])
-            # Spatial distortion palette: Bright pinks and whites
             color = random.choice(["#FFB6C1", "#FF69B4", "#FFFFFF", "#F8BBD0", "#F48FB1"])
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_palkia")
@@ -117,7 +110,6 @@ class PalkiaMechanics:
         animate_palkia_aura()
 
     def apply_gravity_inversion(self, duration_secs):
-        # 1. Generic state cleanup
         if self.current_state in ['digging_in', 'digging', 'digging_out']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
@@ -150,7 +142,6 @@ class PalkiaMechanics:
             try: self.window.attributes('-alpha', 1.0)
             except: pass
 
-        # 2. Legendary mechanics cleanup
         if self.current_state.startswith('dark_'): self.cancel_dark_arts()
         elif self.current_state.startswith('mewtwo_'): self.cancel_mewtwo_arts()
         elif self.current_state in ['hooh_channeling', 'panic_run']: self.cancel_hooh_arts()

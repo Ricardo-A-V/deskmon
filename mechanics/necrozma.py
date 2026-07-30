@@ -31,7 +31,7 @@ class NecrozmaMechanics:
             self.v_x_velocity = 0.0
             self.v_y_velocity = 0.0
             
-            # CONFIGURACIÓN: Modifica este valor para cambiar la cantidad total de proyectiles disparados
+            # CONFIG: Modify this value to change the total amount of projectiles fired
             self.necrozma_total_shots = 20
             
             if not getattr(self, 'is_flying', False):
@@ -47,7 +47,7 @@ class NecrozmaMechanics:
             self.spawn_necrozma_charge_vfx()
             
             if self.necrozma_timer <= 0:
-                # FIX: Borrado estricto e inmediato de las partículas de carga justo antes de empezar a disparar
+                # FIX: Strict and immediate deletion of charge particles just before starting to shoot
                 self.canvas.delete("vfx_n_charge")
                 
                 self.necrozma_phase = 1
@@ -61,7 +61,7 @@ class NecrozmaMechanics:
             oy = random.choice([-4, 0, 4])
             self.canvas.coords(self.canvas_image_id, (self.size_w//2) + ox, (self.size_h//2) + oy)
             
-            # Utiliza la variable dinámica en lugar de un número fijo
+            # Use dynamic variable instead of fixed number
             total_shots = getattr(self, 'necrozma_total_shots', 10)
             if self.necrozma_timer % 1 == 0 and getattr(self, 'necrozma_shots_fired', 0) < total_shots:
                 self.fire_necrozma_projectile()
@@ -153,7 +153,7 @@ class NecrozmaMechanics:
         vx = math.cos(angle) * speed
         vy = math.sin(angle) * speed
         
-        # FIX VISUAL: Dibujado como segmento lineal con reborde simulado (dos líneas superpuestas)
+        # VISUAL FIX: Drawn as a linear segment with simulated outline (two overlapping lines)
         tracer_length = 2.0 
         tail_x = start_x - vx * tracer_length
         tail_y = start_y - vy * tracer_length
@@ -239,7 +239,7 @@ class NecrozmaMechanics:
             self.apply_necrozma_growth_buff()
             
         if getattr(self, 'current_state', '') == 'necrozma_channeling' or getattr(self, 'n_projectiles', []):
-            # FIX LÓGICO: Solo intenta reordenar las capas (Z-Order) si hay proyectiles vivos en este fotograma
+            # LOGICAL FIX: Only attempts to reorder layers (Z-Order) if there are live projectiles in this frame
             if getattr(self, 'n_projectiles', []):
                 try:
                     self.necrozma_canvas.tag_raise("vfx_n_proj", "vfx_n_proj_bg")

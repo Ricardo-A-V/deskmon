@@ -37,19 +37,16 @@ class DiscordRPC:
         if self.connected and self.target_pet and self.target_pet.window.winfo_exists():
             pet = self.target_pet
             
-            # 1. Parse Name and Level
             name = pet.pet_data['species'].capitalize()
             if getattr(pet, 'is_shiny', False):
                 name += " ★"
             level = pet.pet_data['level']
 
-            # 2. Parse Activity and Environment (OS Awareness)
             window_title = ""
             if getattr(pet, 'anchored_hwnd', None):
                 try:
                     raw_title = win32gui.GetWindowText(pet.anchored_hwnd)
                     if raw_title:
-                        # Extract main program name
                         parts = raw_title.split('-')
                         window_title = parts[-1].strip()
                         if len(window_title) > 20:
@@ -77,7 +74,6 @@ class DiscordRPC:
                 elif pet.current_state == 'eating': activity = "Eating a berry"
                 else: activity = "Strolling the desktop"
 
-            # 3. Asynchronous Payload Sending
             def send_payload():
                 try:
                     self.RPC.update(

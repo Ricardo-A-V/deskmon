@@ -35,14 +35,12 @@ class GiratinaMechanics:
                     target.canvas.itemconfig(target.canvas_image_id, state='normal')
 
     def _fsm_giratina_channeling(self):
-        # 1. PREPARATION (Zero trace of vortex here)
         if not hasattr(self, 'giratina_phase'):
             self.giratina_phase = 0
             self.giratina_timer = 0
             self.giratina_center_x = self.x + self.size_w / 2
             self.giratina_center_y = self.y + self.size_h / 2
 
-        # 2. PHASE 0: Giratina fade
         if self.giratina_phase == 0:
             current_alpha = self.window.attributes('-alpha')
             if current_alpha > 0.0:
@@ -61,7 +59,6 @@ class GiratinaMechanics:
                 self.giratina_phase = 1
                 self.giratina_timer = 200 
 
-        # 3. PHASE 1: Absorption of Victims (Max 10s)
         elif self.giratina_phase == 1:
             self.giratina_timer -= 1 
             all_absorbed = True
@@ -84,14 +81,12 @@ class GiratinaMechanics:
                 self.giratina_phase = 2
                 self.giratina_timer = 80 # Exactly 4 seconds of stable vortex 
 
-        # 4. PHASE 2: Stable Vortex
         elif self.giratina_phase == 2:
             self.giratina_timer -= 1
             if self.giratina_timer <= 0:
                 self.giratina_phase = 3
                 self.giratina_timer = 100 # 5 Seconds of progressive shrinking
 
-        # 5. PHASE 3: Vortex Dissipation
         elif self.giratina_phase == 3:
             self.giratina_timer -= 1
             self.giratina_vortex_radius = max(0.0, self.giratina_timer / 100.0)
@@ -103,7 +98,6 @@ class GiratinaMechanics:
                 self.giratina_phase = 4
                 self.giratina_timer = 200 # 10 Seconds of absolute vacuum before dash
 
-        # 6. PHASE 4: Silence and Flight Start
         elif self.giratina_phase == 4:
             self.giratina_timer -= 1
             if self.giratina_timer <= 0:

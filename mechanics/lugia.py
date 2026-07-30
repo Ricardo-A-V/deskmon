@@ -18,10 +18,9 @@ class LugiaMechanics:
     def _fsm_lugia_channeling(self):
         # FIX: Calculate target only once and save it in static memory
         if not hasattr(self, 'lugia_target_x'):
-            # Save real direction of future attack
             self.lugia_dash_direction = self.is_facing_right 
             
-            # Calculate retreat point (Reverse of attack)
+            
             if self.lugia_dash_direction:
                 self.lugia_target_x = self.v_x - 300
             else:
@@ -38,13 +37,11 @@ class LugiaMechanics:
         if dist > fly_speed:
             self.x += (dx/dist) * fly_speed
             self.y += (dy/dist) * fly_speed
-            # Sprite faces direction of its current flight (Front)
             self.is_facing_right = (dx > 0)
         else:
             self.x = self.lugia_target_x
             self.y = self.lugia_target_y
             self.current_state = 'lugia_dash'
-            # Turns around to face screen using saved direction
             self.is_facing_right = self.lugia_dash_direction
             self.lugia_pushed = False
             
@@ -52,7 +49,6 @@ class LugiaMechanics:
         self.schedule_loop(30, self.physics_loop)
 
     def _fsm_lugia_dash(self):
-        # 2. Cross screen at extreme speed (Wind Tunnel)
         dash_speed = 100.0 
         
         self.x += dash_speed if self.is_facing_right else -dash_speed
@@ -61,12 +57,10 @@ class LugiaMechanics:
         # FIX: 45-degree forward rotation (Aerodynamic dive)
         self.surface_angle = -30 if self.is_facing_right else 30
         
-        # 3. Wind Wave Trigger (Just upon entering visible zone)
         if not getattr(self, 'lugia_pushed', False):
             if (self.is_facing_right and self.x > self.v_x) or (not self.is_facing_right and self.x < self.v_x + self.v_width - self.size_w):
                 self.lugia_pushed = True
                 
-                # HORIZONTAL SHAKE (Sonic wave simile)
                 if self.game_controller and hasattr(self.game_controller, 'root'):
                     pc = self.game_controller.root
                     try:
@@ -83,12 +77,10 @@ class LugiaMechanics:
                             self.schedule_loop(80, restore_pc)
                     except: pass
                 
-                # PROPEL ALL VICTIMS
                 if getattr(self, 'get_all_pets', None):
                     for target in self.get_all_pets():
                         if target != self and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
                             
-                            # STRICT EVENT CLEANUP
                             if target.current_state.startswith('dark_'): target.cancel_dark_arts()
                             elif target.current_state.startswith('mewtwo_'): target.cancel_mewtwo_arts()
                             elif target.current_state in ['hooh_channeling', 'panic_run']: target.cancel_hooh_arts()
@@ -126,7 +118,6 @@ class LugiaMechanics:
                             try: target.window.attributes('-alpha', 1.0)
                             except: pass
                             
-                            # EXTREME HORIZONTAL INERTIA
                             target.current_state = 'thrown'
                             force_x = random.uniform(55.0, 95.0) 
                             target.v_x_velocity = force_x if self.is_facing_right else -force_x
@@ -136,7 +127,6 @@ class LugiaMechanics:
                             target.wind_tunnel_timer = 50
                             target.show_wind_tunnel_vfx(self.is_facing_right)
 
-        # 4. Finish attack upon exiting screen on other side
         if (self.is_facing_right and self.x > self.v_x + self.v_width + 100) or (not self.is_facing_right and self.x < self.v_x - self.size_w - 100):
             self.surface_angle = 0 
             if hasattr(self, 'lugia_target_x'): delattr(self, 'lugia_target_x')
@@ -160,12 +150,10 @@ class LugiaMechanics:
         self.wind_tunnel_timer -= 1
         self.canvas.delete("vfx_wind")
         
-        # Draws 2 to 4 dynamic wind trails
         for _ in range(random.randint(2, 4)):
             y = random.randint(10, self.size_h - 10)
             length = random.randint(20, 50)
             
-            # Lines "pierce" Pokemon's box at wind speed
             x = random.randint(0, self.size_w // 2) if wind_to_right else random.randint(self.size_w // 2, self.size_w)
             end_x = x + length if wind_to_right else x - length
             

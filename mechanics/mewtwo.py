@@ -130,7 +130,6 @@ class MewtwoMechanics:
         cx = self.size_w // 2
         cy = self.size_h // 2
         
-        # Generate 30 high-speed particles of psychic energy
         for _ in range(30):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(10.0, 25.0)

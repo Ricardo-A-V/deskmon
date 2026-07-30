@@ -10,7 +10,6 @@ class GroudonMechanics:
 
     def _fsm_groudon_channeling(self):
         if self.groudon_phase == 'jumping':
-            # PHYSICS: Supermassive gravity
             gravity = 4.0
             self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + gravity
             self.y += self.v_y_velocity
@@ -24,7 +23,6 @@ class GroudonMechanics:
             fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
             self.floor_y = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.default_floor_y
 
-            # SEISMIC IMPACT (Landing and Propagation)
             if self.y >= self.floor_y and self.v_y_velocity > 0:
                 self.y = self.floor_y
                 self.v_y_velocity = 0.0
@@ -83,7 +81,6 @@ class GroudonMechanics:
                                 try: target.window.attributes('-alpha', 1.0)
                                 except: pass
                                 
-                                # Apply bounce physics to victim
                                 target.current_state = 'jumping_arc'
                                 target.jump_target_y = physical_floor
                                 target.v_y_velocity = random.uniform(-10.0, -16.0) 
@@ -94,7 +91,6 @@ class GroudonMechanics:
                                 # Aerodynamic disturbance for flyers (does not cancel states, just pushes them)
                                 target.y += random.uniform(8.0, 20.0)
 
-                # MASTER WINDOW SHAKE
                 if self.game_controller and hasattr(self.game_controller, 'root'):
                     pc = self.game_controller.root
                     try:
@@ -117,7 +113,6 @@ class GroudonMechanics:
         elif self.groudon_phase == 'shaking':
             self.groudon_shake_timer -= 1
             
-            # Chaotic displacement of Groudon while shaking the earth
             offset_x = random.choice([-8, 0, 8])
             self.canvas.coords(self.canvas_image_id, (self.size_w//2) + offset_x, self.size_h//2)
             

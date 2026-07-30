@@ -14,7 +14,6 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-# --- INTERACTIVE POKEBALL ---
 class InteractivePokeball:
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
         self.window = tk.Toplevel(parent_root)
@@ -412,7 +411,6 @@ class InteractivePokeball:
         self.window.after(30, self.physics_loop)
 
 
-# --- INJECTION: CONSUMABLE BERRY ---
 class InteractiveBerry(InteractivePokeball):
     def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
         self.window = tk.Toplevel(parent_root)
@@ -427,8 +425,8 @@ class InteractiveBerry(InteractivePokeball):
         self.on_destroy = on_destroy_callback
         self.base_dir = base_dir
         
-        self.size_baya = 40 
-        self.size = self.size_baya
+        self.berry_size = 40 
+        self.size = self.berry_size
         self.offset_y = -6
         user32 = ctypes.windll.user32
         self.v_x = user32.GetSystemMetrics(76) 
@@ -544,7 +542,6 @@ class InteractiveBerry(InteractivePokeball):
         self.update_position()
         self.window.after(30, self.physics_loop)
 
-# --- WATER BUBBLE PROJECTILE ---
 class BubbleProjectile:
     def __init__(self, parent_root, base_dir, start_x, start_y, target, on_hit_callback):
         self.window = tk.Toplevel(parent_root)

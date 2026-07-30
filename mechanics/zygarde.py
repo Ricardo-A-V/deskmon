@@ -8,7 +8,6 @@ class ZygardeMechanics:
             self.zygarde_win.destroy()
             self.zygarde_win = None
 
-        # INYECCIÓN: Limpieza de la matriz de partículas del aura del 50%
         for attr in ['zygarde_phase', 'zygarde_timer', 'zygarde_hit_targets', 'zygarde_projectiles', 'zygarde50_phase', 'zygarde50_timer', 'zygarde50_attack_cd', 'zygarde50_shake', 'z50_particles']:
             if hasattr(self, attr): delattr(self, attr)
 
@@ -22,7 +21,7 @@ class ZygardeMechanics:
             self.v_y_velocity = 0.0
 
     # ==========================================
-    # FASE 10% (PERRO) - INTERCEPTOR HORIZONTAL
+    # 10% PHASE (DOG) - HORIZONTAL INTERCEPTOR
     # ==========================================
     def _fsm_zygarde_channeling(self):
         if not hasattr(self, 'zygarde_phase'):
@@ -113,7 +112,7 @@ class ZygardeMechanics:
 
 
     # ==========================================
-    # FASE 50% (SERPIENTE) - ARTILLERÍA GLOBAL
+    # 50% PHASE (SNAKE) - GLOBAL ARTILLERY
     # ==========================================
     def _fsm_zygarde50_channeling(self):
         if not hasattr(self, 'zygarde50_phase'):
@@ -159,13 +158,13 @@ class ZygardeMechanics:
                 self.zygarde50_attack_cd = random.randint(10, 30) 
                 
                 self.create_zygarde_global_canvas()
-                self.zygarde50_aura_loop() # Invocamos el aura en lugar de la cuadrícula
+                self.zygarde50_aura_loop()
 
         elif self.zygarde50_phase == 2:
             self.zygarde50_timer -= 1
             self.zygarde50_attack_cd -= 1
             
-            # CONTROL DE VIBRACIÓN (Kinetic Feedback)
+            # VIBRATION CONTROL (Kinetic Feedback)
             if getattr(self, 'zygarde50_shake', 0) > 0:
                 self.zygarde50_shake -= 1
                 ox = random.choice([-4, 0, 4])
@@ -174,7 +173,7 @@ class ZygardeMechanics:
             else:
                 self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
 
-            # Instanciación continua del aura celular
+            # Continuous instantiation of the cellular aura
             if self.zygarde50_timer % 3 == 0:
                 self.spawn_zygarde50_aura_particles()
 
@@ -191,19 +190,18 @@ class ZygardeMechanics:
         self.schedule_loop(50, self.physics_loop)
 
     def spawn_zygarde50_aura_particles(self):
-        # Protege contra fugas de memoria si el estado colapsa
+        # Protects against memory leaks if the state collapses
         if getattr(self, 'current_state', '') != 'zygarde50_channeling': return
         
         cx = self.size_w / 2
         cy = self.size_h / 2
         
-        # Genera de 1 a 2 células (hexágonos) por tick
         for _ in range(random.randint(1, 2)):
             r = random.uniform(2.0, 4.5)
             px = cx + random.uniform(-self.size_w * 0.35, self.size_w * 0.35)
             py = cy + random.uniform(-self.size_h * 0.3, self.size_h * 0.4)
             
-            # Construcción trigonométrica estricta de un hexágono
+            # Strict trigonometric construction of a hexagon
             pts = [
                 px, py-r, px+r*0.86, py-r*0.5, px+r*0.86, py+r*0.5,
                 px, py+r, px-r*0.86, py+r*0.5, px-r*0.86, py-r*0.5
@@ -214,7 +212,7 @@ class ZygardeMechanics:
             
             if not hasattr(self, 'z50_particles'): self.z50_particles = []
             
-            # Las células ascienden como si fueran energía gravitacional
+            # Cells ascend as if they were gravitational energy
             self.z50_particles.append({
                 'id': pid, 
                 'vx': random.uniform(-0.8, 0.8), 
@@ -223,7 +221,7 @@ class ZygardeMechanics:
             })
 
     def zygarde50_aura_loop(self):
-        # Bucle aislado para manejar las físicas del aura
+        # Isolated loop to handle aura physics
         if getattr(self, 'current_state', '') != 'zygarde50_channeling':
             self.canvas.delete("vfx_z50_aura")
             return
@@ -235,7 +233,7 @@ class ZygardeMechanics:
             if p['life'] > 0:
                 self.canvas.move(p['id'], p['vx'], p['vy'])
                 
-                # Inyección de deriva estocástica (movimiento serpenteante ligero)
+                # Stochastic drift injection (light snaking movement)
                 p['vx'] += random.uniform(-0.3, 0.3)
                 p['life'] -= 1
                 alive.append(p)
@@ -253,7 +251,7 @@ class ZygardeMechanics:
         
         target = random.choice(valid_targets)
         
-        # Voltea a Zygarde para que mire hacia su víctima
+        # Flips Zygarde to face its victim
         self.is_facing_right = target.x > self.x
         
         is_climber = getattr(target, 'climbing_surface', 'floor') != 'floor'
@@ -264,7 +262,7 @@ class ZygardeMechanics:
         elif target.current_state in ['falling', 'thrown', 'jumping_arc', 'legendary_bounce', 'falling_legendary', 'falling_pokeball'] and target.y < getattr(target, 'floor_y', target.default_floor_y) - 5:
             is_airborne = True
             
-        # Ejecuta Mil Flechas si vuela libremente, de lo contrario Fuerza Telúrica
+        # Executes Thousand Arrows if flying freely, otherwise Land's Wrath
         if is_airborne and not is_climber:
             self.execute_thousand_arrows(target, burst_mode=True)
         else:
@@ -272,7 +270,7 @@ class ZygardeMechanics:
 
 
     # ==========================================
-    # MOTOR DE ARMAMENTO Y VFX
+    # WEAPONRY AND VFX ENGINE
     # ==========================================
     def execute_thousand_arrows(self, target, burst_mode=False):
         if not hasattr(self, 'zygarde_win') or not self.zygarde_win:
@@ -280,7 +278,7 @@ class ZygardeMechanics:
             
         start_x = self.x + self.size_w/2 - self.v_x
         
-        # En modo normal, nacen de los pies. En modo ráfaga (50%), nacen de su centro geométrico.
+        # In normal mode, they spawn from the feet. In burst mode (50%), they spawn from its geometric center.
         start_y = (self.y + self.size_h/2 - self.v_y) if burst_mode else (self.y + self.size_h - self.v_y)
         
         for _ in range(6):
@@ -458,7 +456,6 @@ class ZygardeMechanics:
                 if p['life'] <= 0:
                     self.zygarde_force_launch(p['target'], p['vx'], p['vy'])
                     
-                    # INYECCIÓN: Dispara el temblor de la fase 50% al completar el pilar
                     self.zygarde50_shake = 10 
                     
                     for _ in range(15):
@@ -491,7 +488,7 @@ class ZygardeMechanics:
             self.window.after(30, self.zygarde_vfx_engine)
 
     # ==========================================
-    # RESOLUCIÓN FÍSICA
+    # PHYSICAL RESOLUTION
     # ==========================================
     def apply_zygarde_grounded(self, target):
         if target.current_state.startswith('dark_'): target.cancel_dark_arts()
@@ -609,7 +606,7 @@ class ZygardeMechanics:
         target.v_x_velocity = vx
         target.v_y_velocity = vy
         
-        # FIX DE RECUPERACIÓN DE VUELO
+        # FLIGHT RECOVERY FIX
         was_flyer = getattr(target, 'is_flying', False)
         is_currently_grounded = (target.current_state == 'zygarde_grounded')
         
@@ -668,7 +665,7 @@ class ZygardeMechanics:
                 self.x = (self.v_x + self.v_width) - self.size_w
                 self.v_x_velocity *= -0.8
 
-        # FIX: En lugar de estrellarse, cuando la inercia vertical pase a ser de caída, retoma el vuelo suavemente.
+        # FIX: Instead of crashing, when vertical inertia becomes falling, gently resume flight.
         if self.v_y_velocity > 0:
             self.v_y_velocity = 0.0
             self.v_x_velocity = 0.0

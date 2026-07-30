@@ -18,7 +18,6 @@ class StarterSelectionWindow:
         
         tk.Label(self.window, text="Prepare for your new adventure.\nSelect your starting pokémon:", font=("Segoe UI", 12, "bold")).pack(pady=(15, 10))
         
-        # Create scrollable container
         container = tk.Frame(self.window)
         container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
@@ -42,7 +41,6 @@ class StarterSelectionWindow:
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         self.window.bind("<Destroy>", lambda e: canvas.unbind_all("<MouseWheel>"))
 
-        # Canonical Grid (9 Generations + Pikachu/Eevee)
         starter_grid = [
             ["pikachu", "eevee"],
             ["bulbasaur", "charmander", "squirtle"],
@@ -79,7 +77,6 @@ class StarterSelectionWindow:
             config_path = os.path.join(pet_path, "config.json")
             idle_file = "idle_0.png"
             
-            # Dynamically find the idle sprite name from the JSON
             if os.path.exists(config_path):
                 with open(config_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
