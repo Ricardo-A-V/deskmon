@@ -301,8 +301,9 @@ class GameController:
             # --- LOGIC INJECTION: EXCLUSIVE ALTER BUTTON ---
             nombre_normalizado = pet["species"].lower().replace("_", "").replace("-", "")
             
-            # Only enabled if it is the Origin Form
-            if nombre_normalizado == "giratina1":
+            # FIX: Se añade zacian1 a la matriz para que el botón de eliminar espada se renderice
+            # FIX: Ampliada la matriz de comprobación para soportar al Escudo Coronado
+            if nombre_normalizado in ["giratina1", "zacian1", "zamazenta1"]:
                 self.btn_alter = tk.Button(
                     self.fly_wrapper, 
                     text="Alter Form", 
@@ -359,7 +360,9 @@ class GameController:
             for p in self.save_mgr.data["inventory"]:
                 if p["species"] == target_species and p["level"] == target_level and p.get("is_shiny", False) == is_shiny_spawn and not p.get("is_egg", False):
                     p["everstone"] = new_state
-            self.save_mgr.data = self.save_mgr.load_save()
+                    
+            # FIX LÓGICO: Sustituido load_save() (que borraba los datos en RAM) por save_data()
+            self.save_mgr.save_data()
             
             if not new_state:
                 for active_pet in self.active_instances:

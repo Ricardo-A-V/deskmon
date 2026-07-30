@@ -39,8 +39,16 @@ from mechanics.giratina import GiratinaMechanics
 from mechanics.zekrom import ZekromMechanics
 from mechanics.reshiram import ReshiramMechanics
 from mechanics.kyurem import KyuremMechanics
+from mechanics.xerneas import XerneasMechanics
+from mechanics.yveltal import YveltalMechanics
+from mechanics.zygarde import ZygardeMechanics
+from mechanics.lunala import LunalaMechanics
+from mechanics.solgaleo import SolgaleoMechanics
+from mechanics.necrozma import NecrozmaMechanics
+from mechanics.zacian import ZacianMechanics
+from mechanics.zamazenta import ZamazentaMechanics
 
-class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(ZamazentaMechanics, ZacianMechanics, NecrozmaMechanics, SolgaleoMechanics, LunalaMechanics, ZygardeMechanics, YveltalMechanics, XerneasMechanics, KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMechanics, DialgaMechanics, PalkiaMechanics, RayquazaMechanics, LugiaMechanics, MewtwoMechanics, HoOhMechanics, KyogreMechanics, GroudonMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -78,10 +86,10 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             "articuno", "zapdos", "moltres", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
-            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "keldeo", "meloetta", "genesect",
+            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
-            "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
-            "zacian", "zamazenta", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus",
+            "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
+            "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus",
             "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt"
         }
         
@@ -220,7 +228,13 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
         if spawn_coords:
             self.x = spawn_coords[0]
             self.y = spawn_coords[1]
-            self.floor_y = spawn_coords[1] # CRITICAL FIX: Synchronize local floor with spawn height
+            
+            # Prevents spawned eggs from inheriting the sky altitude (target_floor_y) of a flying parent.
+            if self.is_egg:
+                self.floor_y = self.default_floor_y
+            else:
+                self.floor_y = spawn_coords[1] 
+
             if is_mid_evo:
                 self.evo_channel = evo_channel
                 self.current_state = 'evolving_finish'
@@ -335,8 +349,21 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             'reshiram_burn': self._fsm_reshiram_burn,
             'reshiram_burn': self._fsm_reshiram_burn,
             'kyurem_channeling': self._fsm_kyurem_channeling,
-            'kyurem_frozen': self._fsm_kyurem_frozen
-        }            
+            'kyurem_frozen': self._fsm_kyurem_frozen,
+            'xerneas_channeling': self._fsm_xerneas_channeling,
+            'xerneas_pacified': self._fsm_xerneas_pacified,
+            'yveltal_channeling': self._fsm_yveltal_channeling,
+            'yveltal_petrified': self._fsm_yveltal_petrified,
+            'zygarde_channeling': self._fsm_zygarde_channeling,
+            'zygarde_grounded': self._fsm_zygarde_grounded,
+            'zygarde_launched': self._fsm_zygarde_launched,
+            'zygarde50_channeling': self._fsm_zygarde50_channeling,     
+            'zygarde_launched_flyer': self._fsm_zygarde_launched_flyer,
+            'lunala_channeling': self._fsm_lunala_channeling,  
+            'solgaleo_channeling': self._fsm_solgaleo_channeling,
+            'zacian_channeling': self._fsm_zacian_channeling,
+            'zamazenta_channeling': self._fsm_zamazenta_channeling,
+        }
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
@@ -350,7 +377,11 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
     def on_drag_start(self, event):
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
         
-        # FIX: Total destruction of the telekinetic link if the Master is clicked
+        # Restores the alpha channel explicitly if the user interrupts a phase-shift sequence via mouse interaction.
+        if self.current_state in ['teleporting_out', 'teleporting_in']:
+            try: self.window.attributes('-alpha', 1.0)
+            except: pass
+
         if self.current_state == 'tk_channeling':
             self.current_state = 'idle'
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
@@ -422,11 +453,35 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
 
+        elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'): 
+            self.cancel_xerneas_arts()
+
+        elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'):
+            self.cancel_yveltal_arts()
+
+        elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
+            self.cancel_zygarde_arts()
+
+        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+            self.cancel_lunala_arts()
+
+        elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
+            self.cancel_solgaleo_arts()
+
+        elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
+            self.cancel_necrozma_arts()
+
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
         elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
 
         elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+
+        elif self.current_state == 'zacian_channeling' and hasattr(self, 'cancel_zacian_arts'): 
+            self.cancel_zacian_arts()
+
+        elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
+            self.cancel_zamazenta_arts()
 
         self.drag_offset_x = event.x
         self.drag_offset_y = event.y
@@ -518,11 +573,35 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
 
+        elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'): 
+            self.cancel_xerneas_arts()
+
+        elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'):
+            self.cancel_yveltal_arts()
+
+        elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
+            self.cancel_zygarde_arts()
+
+        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+            self.cancel_lunala_arts()
+
+        elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
+            self.cancel_solgaleo_arts()
+
+        elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
+            self.cancel_necrozma_arts()
+
         elif self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
 
         elif self.current_state in ['lugia_channeling', 'lugia_dash']: self.cancel_lugia_arts()
 
         elif self.current_state == 'rayquaza_channeling': self.cancel_rayquaza_arts()
+
+        elif self.current_state == 'zacian_channeling' and hasattr(self, 'cancel_zacian_arts'): 
+            self.cancel_zacian_arts()
+
+        elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'): 
+            self.cancel_zamazenta_arts()
         
         # VARIABLE UPDATE FOR PHYSICS (Without altering mouse offset)
         self.last_mouse_x = pointer_x
@@ -823,6 +902,7 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
                     s.play()
             except: pass
             self.play_shiny_sound()
+            
         if step <= 40: self.evo_blend = 1.0
         elif step <= 100: self.evo_blend = 1.0 - ((step - 40) / 60.0)
         else:
@@ -830,8 +910,11 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             if getattr(self, 'is_overflow', False):
                 self.current_state = 'walking_away'
                 self.is_facing_right = True
-            else: self.current_state = 'idle'
+            else: 
+                # Forces a physical drop to recalculate the bounding box collision against the real floor.
+                self.current_state = 'falling'
             return
+            
         self.schedule_loop(50, lambda: self.finish_evolution_vfx(step+1))
 
     def hatch_egg(self):
@@ -921,62 +1004,35 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
                 self.canvas.delete("vfx_heart")
         float_up(0)
 
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-        
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
     def trigger_landing_shake(self):
         self.current_state = 'landing_shake'
         self.shake_timer = 25
         
         # SEISMIC SHOCKWAVE
         if getattr(self, 'get_all_pets', None):
+            my_cx = self.x + self.size_w / 2
+            my_cy = self.y + self.size_h / 2
+            
             for other in self.get_all_pets():
                 if other != self and other.current_state in ['idle', 'walking', 'socializing', 'attacking'] and not getattr(other, 'is_flying', False) and not getattr(other, 'is_egg', False):
-                    # FIX: Calculate the actual physical floor (soles of the feet), not the upper anchor
-                    my_floor = self.floor_y + self.size_h + getattr(self, 'offset_y', 0)
-                    other_floor = other.floor_y + other.size_h + getattr(other, 'offset_y', 0)
                     
-                    # Impact range increased to 400px to emphasize the mass effect
-                    if abs(my_floor - other_floor) < 25 and abs(other.x - self.x) < 400:
+                    other_cx = other.x + other.size_w / 2
+                    other_cy = other.y + other.size_h / 2
+                    
+                    # STRUCTURAL FIX: Trigonometric Euclidean distance to create a true circular blast radius.
+                    dist = math.hypot(my_cx - other_cx, my_cy - other_cy)
+                    
+                    if dist <= 400:
+                        # KINETIC RESET: Forcibly detach climbers and reset their rotation matrix before launching them.
+                        other.climbing_surface = 'floor'
+                        other.surface_angle = 180 if getattr(other, 'gravity_inverted', False) else 0
+                        other.anchored_hwnd = None
+                        
                         other.current_state = 'jumping_arc'
-                        other.jump_target_y = other.floor_y
+                        # Send them to the absolute physical floor, not the surface they were climbing
+                        other.jump_target_y = other.default_floor_y
                         other.v_y_velocity = -5.0 
                         other.v_x_velocity = 0.0
-                        other.anchored_hwnd = None
-
 
 
     def check_evolution(self):
@@ -1190,6 +1246,13 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'): self.cancel_zekrom_arts()
             elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'): self.cancel_reshiram_arts()
             elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'): self.cancel_kyurem_arts()
+            elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'): self.cancel_xerneas_arts()
+            elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'): self.cancel_yveltal_arts()
+            elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'): self.cancel_zygarde_arts()
+            elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'): self.cancel_lunala_arts()
+            elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):self.cancel_solgaleo_arts()
+            elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'): self.cancel_necrozma_arts()
+            elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'): self.cancel_zamazenta_arts()
 
             if self.is_wild:
                 self.on_catch(self)
@@ -1262,16 +1325,18 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
 
         blend = getattr(self, 'evo_blend', 0.0)
         
-        # VISUAL INVERSION
+        # --- FIX GEOMÉTRICO: INVERSIÓN VISUAL PARA BORDES OPUESTOS ---
         render_facing_right = self.is_facing_right
-        if getattr(self, 'is_climbing', False):
-            surface = getattr(self, 'climbing_surface', 'floor')
-            if surface in ['screen_l', 'screen_r']:
-                render_facing_right = not self.is_facing_right
-                
-        # --- FIX: NULLIFY MOONWALK IN INVERTED GRAVITY ---
-        if getattr(self, 'gravity_inverted', False):
-            render_facing_right = not render_facing_right
+        surface = getattr(self, 'climbing_surface', 'floor')
+        
+        # Los bordes del monitor (screen_r: 90°, screen_l: 270°) son inversos a los bordes 
+        # de las ventanas (wall_r: 270°, wall_l: 90°). Requieren inversión espejo previa.
+        if surface in ['screen_l', 'screen_r']:
+            render_facing_right = not self.is_facing_right
+            
+        # La gravedad invertida de Palkia sobre un suelo estándar también requiere inversión
+        if getattr(self, 'gravity_inverted', False) and surface == 'floor':
+            render_facing_right = not self.is_facing_right
 
         if getattr(self, 'is_egg', False):
             if blend > 0.0 and getattr(self, 'egg_base_img', None):
@@ -1292,14 +1357,13 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             anim_state = self.current_state
             freeze_animation = False
             
-            # 1. Prioridad Absoluta: Congelación y Parálisis
-            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'kyurem_frozen']:
+            # 1. Absolute Priority: Freezing, Paralysis, and Petrification
+            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'kyurem_frozen', 'yveltal_petrified']:
                 anim_state = 'idle'
                 freeze_animation = True
-                # FIX: Anclar matemáticamente el índice al fotograma cero
                 if hasattr(self, 'animator'):
-                    self.animator.current_frame = 0 
-                target_ms = 999999 
+                    self.animator.current_frame = getattr(self.animator, 'current_frame', 0) 
+                target_ms = 999999
                 
             # 2. Reajustes de Canalización
             elif anim_state in ['hooh_channeling'] and getattr(self, 'hooh_phase', 0) == 1:
@@ -1310,13 +1374,88 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
                 anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
             elif anim_state in ['giratina_dash_prep', 'giratina_dash']:
                 anim_state = 'walking'
-            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling']:
+            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling']:
                 anim_state = 'idle'
-            elif anim_state == 'reshiram_burn':
+            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling']:
+                anim_state = 'walking' 
+            elif anim_state in ['zygarde_grounded']:
+                anim_state = 'idle'
+            elif anim_state == 'zygarde_channeling':
+                if getattr(self, 'zygarde_phase', 0) in [0, 4]:
+                    anim_state = 'idle' 
+                else:
+                    anim_state = 'walking'
+
+            # AÑADE ESTO PARA EL 50%
+            elif anim_state == 'zygarde50_channeling':
+                if getattr(self, 'zygarde50_phase', 0) in [0, 1]:
+                    anim_state = 'idle' # O 'digging' si tienes la animación
+                else:
+                    anim_state = 'idle' # Se queda en idle disparando mientras mira al objetivo
+
+            # --- AÑADE ESTO PARA EL LANZAMIENTO TELÚRICO ---
+            elif anim_state == 'zygarde_launched':
+                anim_state = 'falling'
+
+            elif anim_state == 'lunala_channeling':
+                anim_state = 'idle' if getattr(self, 'lunala_phase', 0) > 0 else 'walking'
+
+            elif anim_state == 'solgaleo_channeling':
                 anim_state = 'walking'
 
-            self.animator.update_animation(anim_state, render_facing_right, self.canvas_image_id, not freeze_animation, target_ms, blend_factor=blend, rotation_angle=self.surface_angle, is_glitching=getattr(self, 'is_glitching', False), is_darkened=getattr(self, 'dark_mode', False))
-                        
+            elif anim_state == 'zacian_channeling':
+                anim_state = 'walking'
+
+            elif anim_state == 'zamazenta_channeling':
+                anim_state = 'walking'
+
+            # --- MOTOR DE EXPANSIÓN FÍSICA Y GEOMÉTRICA ---
+            if not hasattr(self, 'base_size_w'):
+                self.base_size_w = self.size_w
+                self.base_size_h = self.size_h
+                
+            scale_mod = getattr(self, 'necrozma_scale_mod', 1.0)
+            target_w = max(1, int(self.base_size_w * scale_mod))
+            target_h = max(1, int(self.base_size_h * scale_mod))
+            
+            if self.size_w != target_w or self.size_h != target_h:
+                delta_w = target_w - self.size_w
+                delta_h = target_h - self.size_h
+                
+                # 1. Actualiza la hitbox absoluta para el escáner del motor de colisiones
+                self.size_w = target_w
+                self.size_h = target_h
+                
+                # 2. Desplaza las coordenadas para que crezca desde el centro hacia los lados y de abajo hacia arriba
+                self.x -= delta_w / 2
+                self.y -= delta_h
+                
+                # 3. Recalcula la gravedad para no perforar el suelo físico de Windows
+                self.default_floor_y = (self.v_y + self.v_height) - self.size_h - getattr(self, 'offset_y', 0)
+                
+                # 4. Expande la ventana y el Canvas nativo de Tkinter en tiempo real
+                self.window.geometry(f"{self.size_w}x{self.size_h}+{int(self.x)}+{int(self.y)}")
+                self.canvas.config(width=self.size_w, height=self.size_h)
+                
+                # 5. Resitúa el ancla visual del sprite en el nuevo centro calculado
+                if anim_state not in ['landing_shake', 'digging_in', 'digging_out']:
+                    self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+                    
+            # FIX: Passing the dynamically calculated render_facing_right instead of the raw physical direction
+            self.animator.update_animation(
+                anim_state, 
+                render_facing_right, 
+                self.canvas_image_id, 
+                True, 
+                target_ms, 
+                blend, 
+                getattr(self, 'surface_angle', 0), 
+                getattr(self, 'is_glitching', False),
+                getattr(self, 'dark_mode', False),
+                scale_mod=getattr(self, 'necrozma_scale_mod', 1.0),
+                bright_mod=getattr(self, 'necrozma_bright_mod', 1.0),
+                darkness_mod=getattr(self, 'darkness_mod', 0.0)
+            )
         self.schedule_loop(16, self.animate_loop)
 
     def physics_loop(self):
@@ -2187,27 +2326,113 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
         self.zekrom_cooldown = max(0, getattr(self, 'zekrom_cooldown', 0) - 1)
         self.reshiram_cooldown = max(0, getattr(self, 'reshiram_cooldown', 0) - 1)
         self.kyurem_cooldown = max(0, getattr(self, 'kyurem_cooldown', 0) - 1)
+        self.xerneas_cooldown = max(0, getattr(self, 'xerneas_cooldown', 0) - 1)
+        self.yveltal_cooldown = max(0, getattr(self, 'yveltal_cooldown', 0) - 1)
+        self.zygarde_cooldown = max(0, getattr(self, 'zygarde_cooldown', 0) - 1)
+        self.lunala_cooldown = max(0, getattr(self, 'lunala_cooldown', 0) - 1)
+        self.solgaleo_cooldown = max(0, getattr(self, 'solgaleo_cooldown', 0) - 1)
+        self.necrozma_cooldown = max(0, getattr(self, 'necrozma_cooldown', 0) - 1)
+        self.zacian_cooldown = max(0, getattr(self, 'zacian_cooldown', 0) - 1)
+        self.zamazenta_cooldown = max(0, getattr(self, 'zamazenta_cooldown', 0) - 1)
 
-        # --- MECÁNICA EXCLUSIVA: GLACIATE DE KYUREM ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyurem" and getattr(self, 'kyurem_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+        # --- EXCLUSIVE MECHANIC: DAUNTLESS SHIELD (ZAMAZENTA) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zamazenta", "zamazenta1"] and getattr(self, 'zamazenta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.kyurem_cooldown = 108000 # 1.5 Horas
+                self.zamazenta_cooldown = 72000 
+                self.current_state = 'zamazenta_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: BEHEMOTH BLADE (ZACIAN) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zacian", "zacian1"] and getattr(self, 'zacian_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.zacian_cooldown = 72000 
+                self.current_state = 'zacian_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: PRISMATIC LASER (NECROZMA) ---
+        # Base Necrozma, Dusk Mane (necrozma1) and Dawn Wings (necrozma2) share this core ability
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["necrozma", "necrozma1", "necrozma2"] and getattr(self, 'necrozma_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.necrozma_cooldown = 72000 
+                self.current_state = 'necrozma_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: SUNSTEEL STRIKE (SOLGALEO) ---
+        # Shared with Dusk Mane Necrozma (necrozma1) due to assimilation
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["solgaleo", "necrozma1"] and getattr(self, 'solgaleo_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.solgaleo_cooldown = 72000 
+                self.current_state = 'solgaleo_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: MOONGEIST BEAM (LUNALA) ---
+        # Shared with Dawn Wings Necrozma (necrozma2) due to assimilation
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["lunala", "necrozma2"] and getattr(self, 'lunala_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.lunala_cooldown = 72000 
+                self.current_state = 'lunala_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+                
+        # --- EXCLUSIVE MECHANIC: LAND'S WRATH / THOUSAND ARROWS (ZYGARDE 50%) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.zygarde_cooldown = 72000 # 1 hora
+                self.current_state = 'zygarde50_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: THOUSAND ARROWS (ZYGARDE 10%) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde1" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.zygarde_cooldown = 72000 # 1 hora
+                self.current_state = 'zygarde_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: OBLIVION WING (YVELTAL) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "yveltal" and getattr(self, 'yveltal_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.yveltal_cooldown = 72000 # 1 hour
+                self.current_state = 'yveltal_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- MECÁNICA EXCLUSIVA: GEOMANCY DE XERNEAS ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "xerneas" and getattr(self, 'xerneas_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.xerneas_cooldown = 72000 # 1 Hora
+                self.current_state = 'xerneas_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: GLACIATE (KYUREM) ---
+        # Base Kyurem, White Kyurem (kyurem1) and Black Kyurem (kyurem2) share this core ability
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["kyurem", "kyurem1", "kyurem2"] and getattr(self, 'kyurem_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.kyurem_cooldown = 108000 
                 self.current_state = 'kyurem_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: BLUE FLARE DE RESHIRAM ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "reshiram" and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+        # --- EXCLUSIVE MECHANIC: BLUE FLARE (RESHIRAM) ---
+        # Shared with White Kyurem (kyurem1) due to assimilation
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["reshiram", "kyurem1"] and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.reshiram_cooldown = 72000 # 1 Hora
+                self.reshiram_cooldown = 72000 
                 self.current_state = 'reshiram_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
 
-        # --- MECÁNICA EXCLUSIVA: BOLT STRIKE DE ZEKROM ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "zekrom" and getattr(self, 'zekrom_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+        # --- EXCLUSIVE MECHANIC: BOLT STRIKE (ZEKROM) ---
+        # Shared with Black Kyurem (kyurem2) due to assimilation
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zekrom", "kyurem2"] and getattr(self, 'zekrom_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
-                self.zekrom_cooldown = 72000 # 1 Hora
+                self.zekrom_cooldown = 72000 
                 self.current_state = 'zekrom_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
@@ -3010,12 +3235,52 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             self.swap_giratina_form("giratina")
             self.current_state = 'falling'
             self.play_shiny_sound() 
-            self.show_alter_form_vfx() # FIX: Injection of visual explosion
+            self.show_alter_form_vfx() 
         elif name == "giratina":
             self.swap_giratina_form("giratina_1")
             self.current_state = 'ascending'
             self.play_shiny_sound()
-            self.show_alter_form_vfx() # FIX: Injection of visual explosion
+            self.show_alter_form_vfx() 
+        # Add Zacian Crowned Sword reversion logic
+        elif name == "zacian1":
+            self.pet_name = "zacian"
+            self.pet_data["species"] = "zacian"
+            
+            from entities.animator import DesktopPetAnimator
+            
+            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "zacian")
+            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+                anim_dir = os.path.join(anim_dir, "shiny")
+            
+            # Hot-reload the animator with the base form assets
+            self.animator = DesktopPetAnimator(
+                self.canvas, self.config.get("images", {}), 
+                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
+            )
+            
+            # Drop the entity to recalculate physical collision bounds with the new sprite
+            self.current_state = 'falling'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx()
+
+        elif name == "zamazenta1":
+            self.pet_name = "zamazenta"
+            self.pet_data["species"] = "zamazenta"
+            
+            from entities.animator import DesktopPetAnimator
+            
+            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "zamazenta")
+            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+                anim_dir = os.path.join(anim_dir, "shiny")
+            
+            self.animator = DesktopPetAnimator(
+                self.canvas, self.config.get("images", {}), 
+                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
+            )
+            
+            self.current_state = 'falling'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx()
 
     def show_alter_form_vfx(self):
         if getattr(self, 'current_state', 'exiting') == 'exiting': return
@@ -3075,7 +3340,17 @@ class DesktopPet(KyuremMechanics, ReshiramMechanics, ZekromMechanics, GiratinaMe
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',
             'zekrom_channeling',
             'reshiram_channeling',
-            'kyurem_channeling'
+            'kyurem_channeling',
+            'xerneas_channeling',
+            'yveltal_channeling',
+            'yveltal_channeling',
+            'zygarde_channeling',
+            'zygarde50_channeling',
+            'lunala_channeling',
+            'solgaleo_channeling',
+            'necrozma_channeling',
+            'zacian_channeling',
+            'zamazenta_channeling'
         ]
         
         # 3. Structural scan

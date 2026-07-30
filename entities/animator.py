@@ -2,7 +2,7 @@ import time
 import os
 import sys
 import random
-from PIL import Image, ImageOps, ImageTk
+from PIL import Image, ImageOps, ImageTk, ImageEnhance
 
 # --- ANIMATION ENGINE ---
 class DesktopPetAnimator:
@@ -54,8 +54,7 @@ class DesktopPetAnimator:
             print(f"Error loading assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False):
-        # FIX: Freeze the visual engine during static events
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False, scale_mod=1.0, bright_mod=1.0, darkness_mod=0.0):
         if state in ['exiting', 'landing_shake', 'dark_victim_frozen', 'dark_victim_hidden']: return
         
         current_time = time.time()
@@ -74,9 +73,7 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        # FIX: deluge_float moved here to force fall/float animation
-        # FIX VISUAL: groudon_channeling moved to 'idle' to force frontal sprite
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling']:
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling', 'necrozma_channeling']:
             render_state = 'idle'
             
         elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim']:
@@ -87,14 +84,12 @@ class DesktopPetAnimator:
                 disable_mirror = True
                 active_matrix = self.frames_walk_right if facing_right else self.frames_walk_left
                 if self.current_frame_index >= len(active_matrix): self.current_frame_index = 0
-                
                 raw_image = active_matrix[self.current_frame_index]
                 self.current_frame_index = (self.current_frame_index + 1) % len(active_matrix)
             
         elif render_state == 'idle':
             if self.idle_is_animated:
                 if self.current_frame_index >= len(self.frames_idle): self.current_frame_index = 0
-                
                 raw_image = self.frames_idle[self.current_frame_index]
                 self.current_frame_index = (self.current_frame_index + 1) % len(self.frames_idle)
 
@@ -110,32 +105,40 @@ class DesktopPetAnimator:
         if rotation_angle != 0:
             processed_image = processed_image.rotate(rotation_angle, expand=False, resample=Image.NEAREST)
 
+        # 1. Pipeline de Escalado (Crecimiento)
+        if scale_mod != 1.0:
+            w, h = processed_image.size
+            processed_image = processed_image.resize((int(w * scale_mod), int(h * scale_mod)), Image.Resampling.NEAREST)
+
+        # 2. Pipeline de Brillo (Luminosidad Fotónica)
+        if bright_mod != 1.0:
+            alpha = processed_image.getchannel('A') 
+            enhancer = ImageEnhance.Brightness(processed_image.convert('RGB'))
+            processed_image = enhancer.enhance(bright_mod).convert('RGBA')
+            processed_image.putalpha(alpha) 
+
+        # 3. Pipeline de Oscurecimiento (Absorción de Luz)
+        actual_darkness = max(darkness_mod, 0.85 if is_darkened else 0.0)
+        if actual_darkness > 0.0:
+            black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))
+            black_layer.putalpha(processed_image.split()[3])
+            processed_image = Image.blend(processed_image, black_layer, actual_darkness)
+
         if blend_factor > 0.0:
             white_layer = Image.new("RGBA", processed_image.size, (255, 255, 255, 255))
             white_layer.putalpha(processed_image.split()[3]) 
             processed_image = Image.blend(processed_image, white_layer, blend_factor)
 
-        # --- NEW: INTERFERENCE EFFECT (VECTOR GLITCH) ---
-        # Alternates between normal and broken sprite based on clock milliseconds
         if is_glitching and int(time.time() * 15) % 2 == 0:
             w, h = processed_image.size
             glitched = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            strip_h = max(1, h // 5) # Cut the sprite into 5 horizontal strips
-            
+            strip_h = max(1, h // 5)
             for i in range(5):
                 box = (0, i * strip_h, w, min(h, (i + 1) * strip_h))
                 strip = processed_image.crop(box)
-                offset_x = random.choice([-12, -6, 6, 12]) # Shift them randomly
+                offset_x = random.choice([-12, -6, 6, 12]) 
                 glitched.paste(strip, (offset_x, i * strip_h))
-                
             processed_image = glitched
-
-        # --- NEW: DARK MODE (Silhouette) ---
-        if is_darkened:
-            black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))
-            black_layer.putalpha(processed_image.split()[3])
-            # Mixed at 85% to maintain slight body nuances
-            processed_image = Image.blend(processed_image, black_layer, 0.85)
 
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
