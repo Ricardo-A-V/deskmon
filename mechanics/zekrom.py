@@ -11,6 +11,10 @@ class ZekromMechanics:
         self.canvas.itemconfig(self.canvas_image_id, state='normal')
 
         if self.current_state not in ['dragged', 'exiting']:
+            # Flushes spatial anchor variables before assigning ballistic states to prevent the engine from pulling the entity back to a window edge
+            self.climbing_surface = 'floor'
+            self.anchored_hwnd = None
+            
             if getattr(self, 'is_flying', False):
                 self.floor_y = getattr(self, 'target_floor_y', self.y)
                 self.current_state = 'ascending'
@@ -41,7 +45,6 @@ class ZekromMechanics:
 
         elif self.zekrom_phase == 1:
             self.zekrom_timer -= 1
-            # FIX: Increment reduced from 0.2 to 0.05 for a much slower and heavier float
             self.fly_amplitude = getattr(self, 'fly_amplitude', 0) + 0.05 
             self.y = target_y + math.sin(self.fly_amplitude) * 10
             
@@ -109,7 +112,6 @@ class ZekromMechanics:
         cx = self.size_w / 2
         cy = self.size_h / 2
         
-        # Increased safety margin to 5 pixels so outer expansion doesn't hit window edges
         max_r = (min(self.size_w, self.size_h) / 2) - 5 
         base_radius_mult = getattr(self, 'zekrom_vfx_radius', 1.0)
         
@@ -168,7 +170,6 @@ class ZekromMechanics:
 
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
-                # STRUCTURAL FIX: Always ignore eggs
                 if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
                     if dist <= impact_radius:
@@ -250,6 +251,10 @@ class ZekromMechanics:
         try: target.window.attributes('-alpha', 1.0)
         except: pass
 
+        # Eradicates spatial orientation memory to guarantee a clean ballistic state update
+        target.climbing_surface = 'floor'
+        target.anchored_hwnd = None
+        
         target.current_state = 'zekrom_paralyzed'
         target.zekrom_para_timer = 300 
         target.v_x_velocity = 0.0
@@ -260,32 +265,48 @@ class ZekromMechanics:
     def _fsm_zekrom_paralyzed(self):
         self.zekrom_para_timer -= 1
         
+        self.v_x_velocity *= 0.95 
+        self.x += self.v_x_velocity
+        
+        if getattr(self, 'can_screen_wrap', False):
+            if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
+            elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
+        else:
+            if self.x <= self.v_x:
+                self.x = self.v_x
+                self.v_x_velocity *= -0.7 
+            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                self.x = (self.v_x + self.v_width) - self.size_w
+                self.v_x_velocity *= -0.7
+
         gravity = 4.0 if getattr(self, 'heavy_fall', False) else 1.5
         self.v_y_velocity += gravity
         self.y += self.v_y_velocity
         
         current_env, _ = self.get_window_environment()
-        physical_floor = current_env['y'] if self.y <= current_env['y'] + 15 else self.default_floor_y
+        
+        fall_tolerance = max(15, int(self.v_y_velocity) + 15) if self.v_y_velocity > 0 else 15
+        physical_floor = current_env['y'] if self.y <= current_env['y'] + fall_tolerance else self.default_floor_y
         
         if self.y >= physical_floor:
             self.y = physical_floor
             self.v_y_velocity = 0.0
+            self.v_x_velocity = 0.0 
             
         self.update_position()
         
         if self.zekrom_para_timer <= 0:
             self.canvas.delete("vfx_para")
             if getattr(self, 'is_flying', False):
-                self.floor_y = self.y
+                self.floor_y = getattr(self, 'target_floor_y', self.y)
                 self.current_state = 'ascending'
             else:
                 self.current_state = 'idle'
                 
-        # LOGICAL FIX: Force loop execution regardless of state to avoid killing the FSM
-        self.schedule_loop(50, self.physics_loop)
+        self.schedule_loop(20, self.physics_loop)
 
     def zekrom_para_vfx_loop(self):
-        if getattr(self, 'current_state', '') != 'zekrom_paralyzed': 
+        if getattr(self, 'current_state', '') not in ['zekrom_paralyzed', 'dragged']: 
             self.canvas.delete("vfx_para")
             return
             

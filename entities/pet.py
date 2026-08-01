@@ -47,8 +47,15 @@ from mechanics.solgaleo import SolgaleoMechanics
 from mechanics.necrozma import NecrozmaMechanics
 from mechanics.zacian import ZacianMechanics
 from mechanics.zamazenta import ZamazentaMechanics
+from mechanics.eternatus import EternatusMechanics
+from mechanics.koraidon import KoraidonMechanics
+from mechanics.miraidon import MiraidonMechanics
+from mechanics.legendary_birds import LegendaryBirdsMechanics
+from mechanics.mew import MewMechanics
+from mechanics.legendary_beasts import LegendaryBeastsMechanics
+from mechanics.celebi import CelebiMechanics
 
-class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -83,7 +90,7 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "").replace(" ", "")
         
         LEGENDARY_MATRIX = {
-            "articuno", "zapdos", "moltres", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
+            "articuno", "articuni1", "zapdos", "zapdos1", "moltres", "moltres1", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "genesect",
@@ -363,6 +370,7 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
             'solgaleo_channeling': self._fsm_solgaleo_channeling,
             'zacian_channeling': self._fsm_zacian_channeling,
             'zamazenta_channeling': self._fsm_zamazenta_channeling,
+            'eternatus_channeling': self._fsm_eternatus_channeling,
         }
         self.keep_on_top()
         self.animate_loop()
@@ -375,7 +383,7 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
             self.schedule_loop(2000, self.keep_on_top)
 
     def on_drag_start(self, event):
-        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen']: return
         
         # Restores the alpha channel explicitly if the user interrupts a phase-shift sequence via mouse interaction.
         if self.current_state in ['teleporting_out', 'teleporting_in']:
@@ -481,6 +489,40 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
         elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
             self.cancel_zamazenta_arts()
 
+        elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
+            self.cancel_eternatus_arts()
+
+        elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
+            self.cancel_koraidon_arts()
+
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+            self.cancel_miraidon_arts()
+            
+        elif self.current_state == 'miraidon_paralyzed':
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            self.current_state = 'falling'
+
+        elif self.current_state == 'bird_channeling' and hasattr(self, 'cancel_bird_arts'):
+            self.cancel_bird_arts()
+
+        elif self.current_state in ['mew_channeling', 'mew_bounce'] and hasattr(self, 'cancel_mew_arts'):
+            self.cancel_mew_arts()
+
+        elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
+            self.cancel_beast_arts()
+
+        elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
+            self.cancel_celebi_arts()
+
+        # Inyección Víctima (El Pokémon anclado)
+        elif self.current_state == 'mew_tethered':
+            self.current_state = 'falling'
+            self.canvas.delete("vfx_mew_bubble")
+            master = getattr(self, 'mew_master', None)
+            if master and hasattr(master, 'mew_victims') and self in master.mew_victims:
+                master.mew_victims.remove(self)
+            self.mew_master = None
+
         if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             try: self.window.attributes('-alpha', 1.0)
@@ -494,7 +536,7 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
         self.is_dragging = False
 
     def on_drag_motion(self, event):
-        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild']: return
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen']: return
         pointer_x = self.window.winfo_pointerx()
         pointer_y = self.window.winfo_pointery()
 
@@ -609,6 +651,40 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
         elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'): 
             self.cancel_zamazenta_arts()
 
+        elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
+            self.cancel_eternatus_arts()
+
+        elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
+            self.cancel_koraidon_arts()
+
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+            self.cancel_miraidon_arts()
+            
+        elif self.current_state == 'miraidon_paralyzed':
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            self.current_state = 'falling'
+
+        elif self.current_state == 'bird_channeling' and hasattr(self, 'cancel_bird_arts'):
+                    self.cancel_bird_arts()
+
+        elif self.current_state in ['mew_channeling', 'mew_bounce'] and hasattr(self, 'cancel_mew_arts'):
+            self.cancel_mew_arts()
+
+        elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
+            self.cancel_beast_arts()
+
+        elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
+            self.cancel_celebi_arts()
+
+        # Inyección Víctima (El Pokémon anclado)
+        elif self.current_state == 'mew_tethered':
+            self.current_state = 'falling'
+            self.canvas.delete("vfx_mew_bubble")
+            master = getattr(self, 'mew_master', None)
+            if master and hasattr(master, 'mew_victims') and self in master.mew_victims:
+                master.mew_victims.remove(self)
+            self.mew_master = None
+
         if self.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
             try: self.window.attributes('-alpha', 1.0)
@@ -632,19 +708,18 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
             self.v_y_velocity = max(-40.0, min(40.0, v_y))
             
             # --- STRUCTURAL FIX: STATE ROUTING WITH ABSOLUTE PRIORITY ---
-            # 1. Ice nullifies all physical behavior
+            # Evaluates persisting debuffs to prevent clearing them when the user drops the entity
+            if self.current_state in ['celebi_frozen']: return
             if getattr(self, 'kyurem_frozen_timer', 0) > 0:
                 self.current_state = 'kyurem_frozen'
-                
-            # 2. Paralysis acts just like ice
             elif getattr(self, 'zekrom_para_timer', 0) > 0:
                 self.current_state = 'zekrom_paralyzed'
-                
-            # 3. Buoyancy forced by Kyogre's flood
+            elif getattr(self, 'mrd_para_timer', 0) > 0:
+                self.current_state = 'miraidon_paralyzed'
+            elif getattr(self, 'reshiram_burn_timer', 0) > 0:
+                self.current_state = 'reshiram_burn'
             elif getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
                 self.current_state = 'deluge_float'
-                
-            # 4. Comportamiento balístico estándar
             else:
                 self.current_state = 'thrown'
 
@@ -1284,7 +1359,35 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
                 self.cancel_necrozma_arts()
             elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
                 self.cancel_zamazenta_arts()
+            elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
+                self.cancel_eternatus_arts()
+            elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
+                self.cancel_koraidon_arts()
+            elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
+                self.cancel_koraidon_arts()
+            elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+                self.cancel_miraidon_arts()            
+            elif self.current_state == 'miraidon_paralyzed':
+                self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+                self.current_state = 'falling'
+            elif self.current_state == 'bird_channeling' and hasattr(self, 'cancel_bird_arts'):
+                self.cancel_bird_arts()
+            elif self.current_state in ['mew_channeling', 'mew_bounce'] and hasattr(self, 'cancel_mew_arts'):
+                self.cancel_mew_arts()
+            elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
+                self.cancel_beast_arts()
+            elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
+                self.cancel_celebi_arts()
 
+            # Inyección Víctima (El Pokémon anclado)
+            elif self.current_state == 'mew_tethered':
+                self.current_state = 'falling'
+                self.canvas.delete("vfx_mew_bubble")
+                master = getattr(self, 'mew_master', None)
+                if master and hasattr(master, 'mew_victims') and self in master.mew_victims:
+                    master.mew_victims.remove(self)
+                self.mew_master = None
+                
             if self.is_wild:
                 self.on_catch(self)
                 self.animate_vfx("catch")
@@ -1389,12 +1492,25 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
             freeze_animation = False
             
             # 1. Absolute Priority: Freezing, Paralysis, and Petrification
-            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'kyurem_frozen', 'yveltal_petrified']:
+            # Enforces sprite freezing across all paralysis types, overriding native FSM requests
+            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or getattr(self, 'mrd_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'miraidon_paralyzed', 'kyurem_frozen', 'yveltal_petrified']:
                 anim_state = 'idle'
                 freeze_animation = True
                 if hasattr(self, 'animator'):
                     self.animator.current_frame = getattr(self.animator, 'current_frame', 0) 
                 target_ms = 999999
+                
+            elif anim_state == 'dragged':
+                # Overrides the dragged sprite if the entity is currently burning or frozen
+                if getattr(self, 'reshiram_burn_timer', 0) > 0:
+                    anim_state = 'walking' 
+                    target_ms = max(10, self.frame_rate_active // 2)
+                elif getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or getattr(self, 'mrd_para_timer', 0) > 0:
+                    anim_state = 'idle'
+                    freeze_animation = True
+                    target_ms = 999999
+                    if hasattr(self, 'animator'):
+                        self.animator.current_frame = getattr(self.animator, 'current_frame', 0)
                 
             # 2. Channeling Readjustments
             elif anim_state in ['hooh_channeling'] and getattr(self, 'hooh_phase', 0) == 1:
@@ -1439,6 +1555,53 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
 
             elif anim_state == 'zamazenta_channeling':
                 anim_state = 'walking'
+
+            elif anim_state == 'eternatus_channeling':
+                anim_state = 'idle'
+
+            elif anim_state in ['koraidon_sprint', 'koraidon_climb', 'koraidon_dive', 'koraidon_dismount']:
+                anim_state = 'walking' 
+                # Bypasses the idle evaluation and forces exactly 2x active walking speed
+                target_ms = max(10, self.frame_rate_active // 2)
+            elif anim_state in ['koraidon_leap']:
+                anim_state = 'falling'
+            elif anim_state in ['koraidon_apex', 'koraidon_impact']:
+                anim_state = 'idle'
+
+            elif anim_state in ['miraidon_absorb', 'miraidon_impact']:
+                anim_state = 'idle'
+            elif anim_state in ['miraidon_descent', 'miraidon_dash']:
+                anim_state = 'walking' 
+                target_ms = max(10, self.frame_rate_active // 2)
+            elif anim_state == 'miraidon_paralyzed':
+                anim_state = 'idle'
+                freeze_animation = True
+                target_ms = 999999
+                if hasattr(self, 'animator'):
+                    self.animator.current_frame = getattr(self.animator, 'current_frame', 0)
+
+            elif anim_state == 'bird_channeling':
+                anim_state = 'idle'
+                
+            elif anim_state in ['mew_channeling', 'mew_bounce', 'mew_tethered']:
+                anim_state = 'idle'
+
+            elif anim_state in ['beast_channeling', 'beast_roar', 'beast_wait_clear']:
+                anim_state = 'idle'
+            elif anim_state == 'beast_dash':
+                anim_state = 'walking'
+                target_ms = max(10, self.frame_rate_active // 2)
+            elif anim_state == 'beast_dismount':
+                anim_state = 'falling'
+
+            elif anim_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_frozen']:
+                anim_state = 'idle'
+                if anim_state == 'celebi_frozen':
+                    freeze_animation = True
+                    target_ms = 999999
+            elif anim_state == 'celebi_revert_flight':
+                anim_state = 'walking'
+                target_ms = max(10, self.frame_rate_active // 2)
 
             # --- PHYSICAL AND GEOMETRIC EXPANSION ENGINE ---
             if not hasattr(self, 'base_size_w'):
@@ -2118,6 +2281,10 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
                 
                 mult = 1 if not is_inv else -1
                 
+                # Retrieve dynamic force multipliers injected by Eternatus' Dynamax FSM
+                my_force = getattr(self, 'push_force_mult', 1.0)
+                target_force = getattr(target, 'push_force_mult', 1.0)
+                
                 if getattr(self, 'heavy_fall', False) and target_is_soft:
                     self.current_state = 'landing_shake'
                     self.shake_timer = 25 
@@ -2125,8 +2292,9 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
                     self.v_y_velocity = 0.0
                 else:
                     self.current_state = 'thrown' 
-                    self.v_x_velocity = -(25.0 * my_knockback_ratio) * push_dir 
-                    self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio)) * mult            
+                    # Apply target's force multiplier to self knockback
+                    self.v_x_velocity = -(25.0 * my_knockback_ratio * target_force) * push_dir 
+                    self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio) * target_force) * mult            
                 
                 if target and getattr(target, 'current_state', '') == 'attacking':
                     if getattr(target, 'heavy_fall', False) and self_is_soft:
@@ -2136,8 +2304,9 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
                         target.v_y_velocity = 0.0
                     else:
                         target.current_state = 'thrown'
-                        target.v_x_velocity = (25.0 * target_knockback_ratio) * push_dir 
-                        target.v_y_velocity = -(15.0 * min(1.5, target_knockback_ratio)) * mult
+                        # Apply self force multiplier to target knockback
+                        target.v_x_velocity = (25.0 * target_knockback_ratio * my_force) * push_dir 
+                        target.v_y_velocity = -(15.0 * min(1.5, target_knockback_ratio) * my_force) * mult
                         
                     target.attack_target = None
                     target.attack_phase = 0
@@ -2365,6 +2534,63 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
         self.necrozma_cooldown = max(0, getattr(self, 'necrozma_cooldown', 0) - 1)
         self.zacian_cooldown = max(0, getattr(self, 'zacian_cooldown', 0) - 1)
         self.zamazenta_cooldown = max(0, getattr(self, 'zamazenta_cooldown', 0) - 1)
+        self.eternatus_cooldown = max(0, getattr(self, 'eternatus_cooldown', 0) - 1)
+        self.koraidon_cooldown = max(0, getattr(self, 'koraidon_cooldown', 0) - 1)
+        self.miraidon_cooldown = max(0, getattr(self, 'miraidon_cooldown', 0) - 1)
+        self.bird_cooldown = max(0, getattr(self, 'bird_cooldown', 0) - 1)
+        self.mew_cooldown = max(0, getattr(self, 'mew_cooldown', 0) - 1)
+        self.beast_cooldown = max(0, getattr(self, 'beast_cooldown', 0) - 1)
+        self.celebi_cooldown = max(0, getattr(self, 'celebi_cooldown', 0) - 1) # AÑADIR
+
+        # --- EXCLUSIVE MECHANIC: TEMPORAL CHECKPOINT (CELEBI) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "celebi" and getattr(self, 'celebi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.celebi_cooldown = 72000 
+                self.trigger_celebi_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: LEGENDARY BEASTS (RAIKOU, ENTEI, SUICUNE) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["raikou", "entei", "suicune"] and getattr(self, 'beast_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.beast_cooldown = 72000 
+                self.trigger_beast_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: GENESIS BUBBLE (MEW) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "mew" and getattr(self, 'mew_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.mew_cooldown = 72000 
+                self.trigger_mew_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: LEGENDARY BIRDS ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["articuno", "articuno1", "zapdos", "zapdos1", "moltres", "moltres1"] and getattr(self, 'bird_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.bird_cooldown = 72000 
+                self.trigger_bird_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: ELECTRO DRIFT (MIRAIDON) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "miraidon" and getattr(self, 'miraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.miraidon_cooldown = 72000 
+                self.trigger_electro_drift()
+                return
+
+        # --- EXCLUSIVE MECHANIC: APEX CRASH (KORAIDON) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "koraidon" and getattr(self, 'koraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.koraidon_cooldown = 72000 
+                self.trigger_apex_crash()
+                return
+
+        # --- EXCLUSIVE MECHANIC: ETERNABEAM (ETERNATUS) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["eternatus", "eternatus1"] and getattr(self, 'eternatus_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.eternatus_cooldown = 72000 
+                self.current_state = 'eternatus_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
 
         # --- EXCLUSIVE MECHANIC: DAUNTLESS SHIELD (ZAMAZENTA) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") in ["zamazenta", "zamazenta1"] and getattr(self, 'zamazenta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
@@ -3390,8 +3616,34 @@ class DesktopPet(MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics
             'solgaleo_channeling',
             'necrozma_channeling',
             'zacian_channeling',
-            'zamazenta_channeling'
+            'zamazenta_channeling',
+            'eternatus_channeling',
+            'koraidon_sprint',
+            'koraidon_climb',
+            'koraidon_leap',
+            'koraidon_apex',
+            'koraidon_dive',
+            'koraidon_impact',
+            'miraidon_absorb',
+            'miraidon_descent',
+            'miraidon_dash',
+            'miraidon_impact',
+            'bird_channeling',
+            'mew_channeling',
+            'mew_bounce',
+            'beast_dismount',
+            'beast_channeling',
+            'beast_roar',
+            'beast_dash',
+            'beast_wait_clear',
+            'celebi_channeling',
+            'celebi_wait',
+            'celebi_freeze',
+            'celebi_revert_flight'
         ]
+
+        if hasattr(self, 'krd_phase'):
+            return True
         
         # 3. Structural scan
         for p in self.get_all_pets():
