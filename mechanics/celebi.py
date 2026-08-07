@@ -352,12 +352,21 @@ class CelebiMechanics:
                 self.celebi_vfx_canvas.delete(target_dict['id'])
         
         if getattr(target, 'current_state', '') == 'celebi_frozen':
-            # Forces the target's absolute floor reset to prevent surface memory glitches
             target.x = target_dict['x']
             target.y = target_dict['y']
             target.floor_y = getattr(target, 'default_floor_y', target.y)
+            
+            # --- PURGA FÍSICA Y VISUAL ABSOLUTA ---
             target.climbing_surface = 'floor'
+            target.surface_angle = 180 if getattr(target, 'gravity_inverted', False) else 0
             target.anchored_hwnd = None
+            target.anchored_rect = None
+            target.canvas.itemconfig(target.canvas_image_id, state='normal')
+            target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+            
+            target.v_x_velocity = 0.0
+            target.v_y_velocity = 0.0
+            # --------------------------------------
             
             target.update_position()
             target.current_state = 'falling'

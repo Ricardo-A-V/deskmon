@@ -54,8 +54,12 @@ from mechanics.legendary_birds import LegendaryBirdsMechanics
 from mechanics.mew import MewMechanics
 from mechanics.legendary_beasts import LegendaryBeastsMechanics
 from mechanics.celebi import CelebiMechanics
+from mechanics.legendary_regis import LegendaryRegisMechanics
+from mechanics.jirachi import JirachiMechanics
+from mechanics.darkrai import DarkraiMechanics
+from mechanics.cresselia import CresseliaMechanics
 
-class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -119,6 +123,10 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
         size_multiplier = 1.55
         if self.is_legendary:
             size_multiplier *= 1.2 
+            
+        # Forces a strictly larger AABB for physical collision detection
+        if normalized_name == "regigigas":
+            size_multiplier *= 1.5
 
         speed_multiplier = 2
         physics = self.config.get("physics", {})
@@ -128,6 +136,11 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
         
         base_speed = physics.get("movement_speed", 2)
         self.speed = max(1, int(base_speed * speed_multiplier))
+        
+        # Enforces the Slow Start biological trait physically
+        if normalized_name == "regigigas":
+            self.speed = max(1, self.speed // 2)
+
         self.is_flying = physics.get("is_flying", False)
         self.is_climbing = physics.get("is_climbing", False) and not self.is_flying 
         
@@ -297,81 +310,23 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
             despawn_time = random.randint(120000, 300000) 
             self.despawn_timer = self.schedule_loop(despawn_time, self.start_wild_despawn)
             
-        # FSM DICTIONARY (Finite State Machine)
-        self.fsm = {
-            'exiting': self._fsm_exiting,
-            'egg_idle': self._fsm_wait,
-            'egg_wiggle': self._fsm_wait,
-            'dragged': self._fsm_wait,
-            'evolving_start': self._fsm_wait,
-            'evolving_finish': self._fsm_wait,
-            'despawning_wild': self._fsm_wait,
-            'spawning_wild': self._fsm_wait,
-            'thrown': self._fsm_thrown,
-            'legendary_bounce': self._fsm_legendary_bounce,
-            'jumping_arc': self._fsm_jumping_arc,
-            'ascending': self._fsm_ascending,
-            'walking_away': self._fsm_walking_away,
-            'falling': self._fsm_falling,
-            'falling_pokeball': self._fsm_falling,
-            'falling_legendary': self._fsm_falling,
-            'socializing': self._fsm_socializing,
-            'attacking': self._fsm_attacking,
-            'eating': self._fsm_eating,
-            'idle': self._fsm_active,
-            'walking': self._fsm_active,
-            'climbing': self._fsm_active,
-            'teleporting_out': self._fsm_teleporting_out,
-            'teleporting_in': self._fsm_teleporting_in,
-            'bubbled': self._fsm_bubbled,
-            'digging_in': self._fsm_digging_in,
-            'digging': self._fsm_digging,
-            'digging_out': self._fsm_digging_out,
-            'mewtwo_channeling': self._fsm_mewtwo_channeling, 
-            'mewtwo_victim': self._fsm_mewtwo_victim,
-            'hooh_channeling': self._fsm_hooh_channeling, 
-            'panic_run': self._fsm_panic_run,
-            'kyogre_channeling': self._fsm_kyogre_channeling,
-            'deluge_float': self._fsm_deluge_float,
-            'groudon_channeling': self._fsm_groudon_channeling,
-            'lugia_channeling': self._fsm_lugia_channeling,
-            'lugia_dash': self._fsm_lugia_dash,
-            'rayquaza_channeling': self._fsm_rayquaza_channeling,
-            'rayquaza_cyclone_victim': self._fsm_rayquaza_cyclone_victim,
-            'palkia_channeling': self._fsm_palkia_channeling,
-            'palkia_invert_transition': self._fsm_palkia_invert_transition,
-            'palkia_revert_transition': self._fsm_palkia_revert_transition,
-            'giratina_channeling': self._fsm_giratina_channeling,
-            'giratina_dash_prep': self._fsm_giratina_dash_prep,
-            'giratina_dash': self._fsm_giratina_dash,
-            'giratina_wait_reappear': self._fsm_giratina_wait_reappear,
-            'giratina_reappear': self._fsm_giratina_reappear,
-            'giratina_victim_pulled': self._fsm_giratina_victim_pulled,
-            'giratina_victim_fade': self._fsm_giratina_victim_fade,
-            'giratina_victim_absorbed': self._fsm_giratina_victim_absorbed,
-            'zekrom_channeling': self._fsm_zekrom_channeling,
-            'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
-            'zekrom_paralyzed': self._fsm_zekrom_paralyzed,
-            'reshiram_channeling': self._fsm_reshiram_channeling,
-            'reshiram_burn': self._fsm_reshiram_burn,
-            'reshiram_burn': self._fsm_reshiram_burn,
-            'kyurem_channeling': self._fsm_kyurem_channeling,
-            'kyurem_frozen': self._fsm_kyurem_frozen,
-            'xerneas_channeling': self._fsm_xerneas_channeling,
-            'xerneas_pacified': self._fsm_xerneas_pacified,
-            'yveltal_channeling': self._fsm_yveltal_channeling,
-            'yveltal_petrified': self._fsm_yveltal_petrified,
-            'zygarde_channeling': self._fsm_zygarde_channeling,
-            'zygarde_grounded': self._fsm_zygarde_grounded,
-            'zygarde_launched': self._fsm_zygarde_launched,
-            'zygarde50_channeling': self._fsm_zygarde50_channeling,     
-            'zygarde_launched_flyer': self._fsm_zygarde_launched_flyer,
-            'lunala_channeling': self._fsm_lunala_channeling,  
-            'solgaleo_channeling': self._fsm_solgaleo_channeling,
-            'zacian_channeling': self._fsm_zacian_channeling,
-            'zamazenta_channeling': self._fsm_zamazenta_channeling,
-            'eternatus_channeling': self._fsm_eternatus_channeling,
+        # Maps multi-purpose or alias states to their shared mathematical physics handler.
+        # Bypasses the 'else' fallback overhead for core loops like 'idle'.
+        self.state_aliases = {
+            'egg_idle': 'wait',
+            'egg_wiggle': 'wait',
+            'dragged': 'wait',
+            'evolving_start': 'wait',
+            'evolving_finish': 'wait',
+            'despawning_wild': 'wait',
+            'spawning_wild': 'wait',
+            'falling_pokeball': 'falling',
+            'falling_legendary': 'falling',
+            'idle': 'active', 
+            'walking': 'active',
+            'climbing': 'active',
         }
+        
         self.keep_on_top()
         self.animate_loop()
         self.physics_loop()
@@ -383,8 +338,13 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
             self.schedule_loop(2000, self.keep_on_top)
 
     def on_drag_start(self, event):
-        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen']: return
-        
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing']: return
+
+        if self.current_state == 'regirock_embedded':
+            self.current_state = 'dragged'
+            self.surface_angle = 0
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+
         # Restores the alpha channel explicitly if the user interrupts a phase-shift sequence via mouse interaction.
         if self.current_state in ['teleporting_out', 'teleporting_in']:
             try: self.window.attributes('-alpha', 1.0)
@@ -513,6 +473,18 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
 
         elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
             self.cancel_celebi_arts()
+
+        elif self.current_state in ['regi_approach', 'regi_strike'] and hasattr(self, 'cancel_regi_arts'):
+            self.cancel_regi_arts()
+
+        elif self.current_state in ['jirachi_channeling', 'jirachi_vanished', 'jirachi_flyby'] and hasattr(self, 'cancel_jirachi_arts'):
+            self.cancel_jirachi_arts()
+
+        elif self.current_state.startswith('darkrai_') and hasattr(self, 'cancel_darkrai_arts'):
+            self.cancel_darkrai_arts()
+
+        elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
+            self.cancel_cresselia_arts()
 
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
@@ -675,6 +647,18 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
 
         elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
             self.cancel_celebi_arts()
+
+        elif self.current_state in ['regi_approach', 'regi_strike'] and hasattr(self, 'cancel_regi_arts'):
+            self.cancel_regi_arts()
+
+        elif self.current_state in ['jirachi_channeling', 'jirachi_vanished', 'jirachi_flyby'] and hasattr(self, 'cancel_jirachi_arts'):
+            self.cancel_jirachi_arts()
+
+        elif self.current_state.startswith('darkrai_') and hasattr(self, 'cancel_darkrai_arts'):
+            self.cancel_darkrai_arts()
+
+        elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
+            self.cancel_cresselia_arts()
 
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
@@ -1378,6 +1362,14 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
                 self.cancel_beast_arts()
             elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
                 self.cancel_celebi_arts()
+            elif self.current_state in ['regi_approach', 'regi_strike'] and hasattr(self, 'cancel_regi_arts'):
+                self.cancel_regi_arts()
+            elif self.current_state in ['jirachi_channeling', 'jirachi_vanished', 'jirachi_flyby'] and hasattr(self, 'cancel_jirachi_arts'):
+                self.cancel_jirachi_arts()
+            elif self.current_state.startswith('darkrai_') and hasattr(self, 'cancel_darkrai_arts'):
+                self.cancel_darkrai_arts()
+            elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
+                self.cancel_cresselia_arts()
 
             # Inyección Víctima (El Pokémon anclado)
             elif self.current_state == 'mew_tethered':
@@ -1603,6 +1595,64 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
                 anim_state = 'walking'
                 target_ms = max(10, self.frame_rate_active // 2)
 
+            elif anim_state in ['regi_approach', 'regi_channeling', 'regigigas_approach', 'regigigas_grab']:
+                regi_id = self.pet_name.lower().replace("_", "").replace("-", "")
+                
+                if anim_state == 'regi_channeling' and regi_id == "regigigas":
+                    # Forces the forward-facing sprite while accumulating kinetic energy
+                    anim_state = 'idle'
+                elif regi_id == "regice" and anim_state == 'regi_approach':
+                    anim_state = 'walking' 
+                    freeze_animation = True
+                    target_ms = 999999
+                elif regi_id == "regieleki":
+                    anim_state = 'walking' 
+                    target_ms = max(10, self.frame_rate_active // 3) 
+                elif regi_id == "regigigas":
+                    anim_state = 'walking'
+                    # Delays the visual refresh cycle to sync with the lethargic movement
+                    target_ms = int(self.frame_rate_active * 2.0) 
+                else:
+                    anim_state = 'walking'
+            elif anim_state == 'regi_strike':
+                anim_state = 'idle'
+            elif anim_state == 'regidrago_slowed':
+                anim_state = 'walking'
+                target_ms = int(self.frame_rate_active * 2.5) 
+            elif anim_state == 'regirock_embedded':
+                anim_state = 'idle'
+                freeze_animation = True
+                # Eliminado target_ms = 999999 para evitar la muerte del hilo visual
+
+            # JIRACHI FSM RENDER
+            elif anim_state == 'jirachi_channeling':
+                anim_state = 'idle'
+            elif anim_state == 'jirachi_flyby':
+                anim_state = 'walking' 
+                freeze_animation = True
+
+            # JIRACHI BUFF TIMEOUT EVALUATION
+            if getattr(self, 'jirachi_buff_timer', 0) > 0:
+                self.jirachi_buff_timer -= 1
+                if self.jirachi_buff_timer <= 0:
+                    # Restores absolute original speed to prevent permanent acceleration logic
+                    self.speed = getattr(self, 'base_buffered_speed', self.speed)
+
+            # DARKRAI FSM RENDER
+            elif anim_state in ['darkrai_channeling', 'darkrai_aoe']:
+                anim_state = 'idle'
+            elif anim_state == 'darkrai_shadow_walk':
+                anim_state = 'walking' 
+            elif anim_state == 'darkrai_nightmare':
+                anim_state = 'idle'
+                freeze_animation = True
+
+            # CRESSELIA FSM RENDER
+            elif anim_state in ['cresselia_channeling', 'cresselia_aurora']:
+                anim_state = 'idle'
+            elif anim_state in ['cresselia_ascension', 'cresselia_blessing']:
+                anim_state = 'walking'
+
             # --- PHYSICAL AND GEOMETRIC EXPANSION ENGINE ---
             if not hasattr(self, 'base_size_w'):
                 self.base_size_w = self.size_w
@@ -1648,7 +1698,8 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
                 getattr(self, 'dark_mode', False),
                 scale_mod=getattr(self, 'necrozma_scale_mod', 1.0),
                 bright_mod=getattr(self, 'necrozma_bright_mod', 1.0),
-                darkness_mod=getattr(self, 'darkness_mod', 0.0)
+                darkness_mod=getattr(self, 'darkness_mod', 0.0),
+                nightmare_filter=getattr(self, 'nightmare_filter', False)
             )
         self.schedule_loop(16, self.animate_loop)
 
@@ -1657,12 +1708,15 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
             self.check_time_distortion()
         if hasattr(self, 'check_gravity_inversion'):
             self.check_gravity_inversion()
-        # Dynamic engine: If the state is not in the dictionary, it looks for it by name
-        handler = self.fsm.get(self.current_state)
-        if handler:
-            handler()
-        elif hasattr(self, f"_fsm_{self.current_state}"):
-            getattr(self, f"_fsm_{self.current_state}")()
+            
+        # Resolves shared physics handlers by checking the alias map first. 
+        # Falls back to the raw state name for dedicated 1:1 FSM handlers.
+        target_fsm_name = self.state_aliases.get(self.current_state, self.current_state)
+        handler_name = f"_fsm_{target_fsm_name}"
+        
+        # Executes the resolved function dynamically, avoiding bloated hardcoded dictionaries.
+        if hasattr(self, handler_name):
+            getattr(self, handler_name)()
         else:
             self._fsm_active()
 
@@ -2540,7 +2594,44 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
         self.bird_cooldown = max(0, getattr(self, 'bird_cooldown', 0) - 1)
         self.mew_cooldown = max(0, getattr(self, 'mew_cooldown', 0) - 1)
         self.beast_cooldown = max(0, getattr(self, 'beast_cooldown', 0) - 1)
-        self.celebi_cooldown = max(0, getattr(self, 'celebi_cooldown', 0) - 1) # AÑADIR
+        self.celebi_cooldown = max(0, getattr(self, 'celebi_cooldown', 0) - 1) 
+        self.regi_cooldown = max(0, getattr(self, 'regi_cooldown', 0) - 1)
+        self.jirachi_cooldown = max(0, getattr(self, 'jirachi_cooldown', 0) - 1)
+        self.darkrai_cooldown = max(0, getattr(self, 'darkrai_cooldown', 0) - 1)
+        self.cresselia_cooldown = max(0, getattr(self, 'cresselia_cooldown', 0) - 1)
+
+        # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
+        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+
+        # --- EXCLUSIVE MECHANIC: CRESSELIA ---
+        if normalized_name == "cresselia" and getattr(self, 'cresselia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.cresselia_cooldown = 72000 
+                self.trigger_cresselia_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: DARKRAI ---
+        if normalized_name == "darkrai" and getattr(self, 'darkrai_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.darkrai_cooldown = 72000 
+                self.trigger_darkrai_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: JIRACHI ---
+        if normalized_name == "jirachi" and getattr(self, 'jirachi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.jirachi_cooldown = 72000 
+                self.trigger_jirachi_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: LEGENDARY REGIS ---
+        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+        # The string "regigigas" must be explicitly present to grant FSM entry
+        if normalized_name in ["regirock", "regice", "registeel", "regieleki", "regidrago", "regigigas"] and getattr(self, 'regi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.regi_cooldown = 72000 
+                self.trigger_regi_arts()
+                return
 
         # --- EXCLUSIVE MECHANIC: TEMPORAL CHECKPOINT (CELEBI) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") == "celebi" and getattr(self, 'celebi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
@@ -3639,7 +3730,20 @@ class DesktopPet(CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, Legend
             'celebi_channeling',
             'celebi_wait',
             'celebi_freeze',
-            'celebi_revert_flight'
+            'celebi_revert_flight',
+            'regi_approach',
+            'regi_strike',
+            'regigigas_approach',
+            'regigigas_grab',
+            'jirachi_channeling',
+            'jirachi_vanished',
+            'jirachi_flyby',
+            'darkrai_shadow_walk',
+            'darkrai_channeling',
+            'darkrai_aoe',
+            'cresselia_channeling',
+            'cresselia_ascension',
+            'cresselia_aurora',
         ]
 
         if hasattr(self, 'krd_phase'):

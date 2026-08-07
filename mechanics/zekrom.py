@@ -251,9 +251,13 @@ class ZekromMechanics:
         try: target.window.attributes('-alpha', 1.0)
         except: pass
 
-        # Eradicates spatial orientation memory to guarantee a clean ballistic state update
+        # --- PURGA FÍSICA Y VISUAL ABSOLUTA ---
         target.climbing_surface = 'floor'
+        target.surface_angle = 180 if getattr(target, 'gravity_inverted', False) else 0
         target.anchored_hwnd = None
+        target.anchored_rect = None
+        target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+        # --------------------------------------
         
         target.current_state = 'zekrom_paralyzed'
         target.zekrom_para_timer = 300 

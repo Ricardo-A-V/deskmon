@@ -53,7 +53,7 @@ class DesktopPetAnimator:
             print(f"Error loading assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False, scale_mod=1.0, bright_mod=1.0, darkness_mod=0.0):
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False, scale_mod=1.0, bright_mod=1.0, darkness_mod=0.0, nightmare_filter=False):
         if state in ['exiting', 'landing_shake', 'dark_victim_frozen', 'dark_victim_hidden']: return
         
         current_time = time.time()
@@ -135,6 +135,14 @@ class DesktopPetAnimator:
                 offset_x = random.choice([-12, -6, 6, 12]) 
                 glitched.paste(strip, (offset_x, i * strip_h))
             processed_image = glitched
+
+        if nightmare_filter:
+            # Isolates RGB to prevent ImageOps.invert from destroying the Alpha mask
+            r, g, b, a = processed_image.split()
+            rgb_image = Image.merge('RGB', (r, g, b))
+            inverted_rgb = ImageOps.invert(rgb_image)
+            r2, g2, b2 = inverted_rgb.split()
+            processed_image = Image.merge('RGBA', (r2, g2, b2, a))
 
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)
