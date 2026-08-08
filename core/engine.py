@@ -299,7 +299,7 @@ class GameController:
             
             # FIX: Add zacian1 to the matrix so the remove sword button renders
             # FIX: Expanded check matrix to support Crowned Shield
-            if normalized_name in ["giratina1", "zacian1", "zamazenta1"]:
+            if normalized_name in ["giratina1", "zacian1", "zamazenta1", "shaymin1"]:
                 self.btn_alter = tk.Button(
                     self.fly_wrapper, 
                     text="Alter Form", 

@@ -38,6 +38,7 @@ from mechanics.palkia import PalkiaMechanics
 from mechanics.giratina import GiratinaMechanics
 from mechanics.zekrom import ZekromMechanics
 from mechanics.reshiram import ReshiramMechanics
+from mechanics.heatran import HeatranMechanics
 from mechanics.kyurem import KyuremMechanics
 from mechanics.xerneas import XerneasMechanics
 from mechanics.yveltal import YveltalMechanics
@@ -58,8 +59,13 @@ from mechanics.legendary_regis import LegendaryRegisMechanics
 from mechanics.jirachi import JirachiMechanics
 from mechanics.darkrai import DarkraiMechanics
 from mechanics.cresselia import CresseliaMechanics
+from mechanics.lati_twins import LatiTwinsMechanics
+from mechanics.deoxys import DeoxysMechanics
+from mechanics.lake_trio import LakeTrioMechanics
+from mechanics.shaymin import ShayminMechanics
+from mechanics.tapus import TapusMechanics
 
-class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -96,7 +102,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
         LEGENDARY_MATRIX = {
             "articuno", "articuni1", "zapdos", "zapdos1", "moltres", "moltres1", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
-            "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "arceus",
+            "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "shaymin1", "arceus",
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
@@ -338,7 +344,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             self.schedule_loop(2000, self.keep_on_top)
 
     def on_drag_start(self, event):
-        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing']: return
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating']: return
 
         if self.current_state == 'regirock_embedded':
             self.current_state = 'dragged'
@@ -418,6 +424,8 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
 
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
+        elif self.current_state.startswith('heatran_') and hasattr(self, 'cancel_heatran_arts'):
+            self.cancel_heatran_arts()
 
         elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
             self.cancel_zekrom_arts()
@@ -485,6 +493,21 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
 
         elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
             self.cancel_cresselia_arts()
+            
+        elif self.current_state.startswith('lati_') and hasattr(self, 'cancel_lati_arts'):
+            self.cancel_lati_arts()
+            
+        elif self.current_state.startswith('deoxys_') and hasattr(self, 'cancel_deoxys_arts'):
+            self.cancel_deoxys_arts()
+            
+        elif self.current_state.startswith('lake_') and hasattr(self, 'cancel_lake_arts'):
+            self.cancel_lake_arts()
+            
+        elif self.current_state.startswith('shaymin_') and hasattr(self, 'cancel_shaymin_arts'):
+            self.cancel_shaymin_arts()
+
+        elif self.current_state.startswith('tapu_') and hasattr(self, 'cancel_tapu_mechanic'):
+            self.cancel_tapu_mechanic()
 
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
@@ -592,6 +615,8 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
 
         elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
             self.cancel_reshiram_arts()
+        elif self.current_state.startswith('heatran_') and hasattr(self, 'cancel_heatran_arts'):
+            self.cancel_heatran_arts()
 
         elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
             self.cancel_zekrom_arts()
@@ -659,6 +684,21 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
 
         elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
             self.cancel_cresselia_arts()
+            
+        elif self.current_state.startswith('lati_') and hasattr(self, 'cancel_lati_arts'):
+            self.cancel_lati_arts()
+            
+        elif self.current_state.startswith('deoxys_') and hasattr(self, 'cancel_deoxys_arts'):
+            self.cancel_deoxys_arts()
+
+        elif self.current_state.startswith('lake_') and hasattr(self, 'cancel_lake_arts'):
+                    self.cancel_lake_arts()
+                    
+        elif self.current_state.startswith('shaymin_') and hasattr(self, 'cancel_shaymin_arts'):
+            self.cancel_shaymin_arts()
+
+        elif self.current_state.startswith('tapu_') and hasattr(self, 'cancel_tapu_mechanic'):
+            self.cancel_tapu_mechanic()
 
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
@@ -1325,6 +1365,8 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 self.cancel_giratina_arts()
             elif self.current_state.startswith('reshiram_') and hasattr(self, 'cancel_reshiram_arts'):
                 self.cancel_reshiram_arts()
+            elif self.current_state.startswith('heatran_') and hasattr(self, 'cancel_heatran_arts'):
+                self.cancel_heatran_arts()
             elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
                 self.cancel_zekrom_arts()
             elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
@@ -1339,8 +1381,6 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 self.cancel_solgaleo_arts()
             elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
                 self.cancel_lunala_arts()
-            elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
-                self.cancel_necrozma_arts()
             elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
                 self.cancel_zamazenta_arts()
             elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
@@ -1370,6 +1410,17 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 self.cancel_darkrai_arts()
             elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing' and hasattr(self, 'cancel_cresselia_arts'):
                 self.cancel_cresselia_arts()
+            elif self.current_state.startswith('lati_') and hasattr(self, 'cancel_lati_arts'):
+                self.cancel_lati_arts()
+            elif self.current_state.startswith('deoxys_') and hasattr(self, 'cancel_deoxys_arts'):
+                self.cancel_deoxys_arts()
+            elif self.current_state.startswith('lake_') and hasattr(self, 'cancel_lake_arts'):
+                self.cancel_lake_arts()        
+            elif self.current_state.startswith('shaymin_') and hasattr(self, 'cancel_shaymin_arts'):
+                self.cancel_shaymin_arts()
+
+            elif self.current_state.startswith('tapu_') and hasattr(self, 'cancel_tapu_mechanic'):
+                self.cancel_tapu_mechanic()
 
             # Inyección Víctima (El Pokémon anclado)
             elif self.current_state == 'mew_tethered':
@@ -1475,7 +1526,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
             # --- FRAME RATE EVALUATION ---
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling'] else self.frame_rate_idle
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling', 'lati_channeling', 'deoxys_channeling', 'lake_rotating', 'shaymin_sky_jump', 'joy_jump'] else self.frame_rate_idle
             if getattr(self, 'time_distorted', False):
                 target_ms = int(target_ms * 4.0)
             
@@ -1513,9 +1564,9 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
             elif anim_state in ['giratina_dash_prep', 'giratina_dash']:
                 anim_state = 'walking'
-            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling']:
+            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling', 'heatran_channeling', 'heatran_jump_down', 'heatran_storm', 'heatran_falling', 'lati_channeling']:
                 anim_state = 'idle'
-            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling']:
+            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling', 'heatran_positioning', 'lati_spiral', 'lati_dash', 'lati_return']:
                 anim_state = 'walking' 
             elif anim_state in ['zygarde_grounded']:
                 anim_state = 'idle'
@@ -1652,13 +1703,39 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 anim_state = 'idle'
             elif anim_state in ['cresselia_ascension', 'cresselia_blessing']:
                 anim_state = 'walking'
+                
+            # LATI TWINS FSM RENDER
+            elif anim_state in ['lati_channeling', 'lati_spiral', 'lati_dash', 'lati_return']:
+                anim_state = 'walking' if anim_state != 'lati_channeling' else 'idle'
+
+            # DEOXYS FSM RENDER
+            elif anim_state in ['deoxys_channeling', 'deoxys_ascend', 'deoxys_wait', 'deoxys_meteor', 'deoxys_emerge']:
+                anim_state = 'idle'
+                
+            # LAKE TRIO FSM RENDER
+            elif anim_state in ['lake_channeling', 'lake_rotating']:
+                anim_state = 'walking' if anim_state == 'lake_rotating' else 'idle'
+                
+            # SHAYMIN FSM RENDER
+            elif anim_state in ['shaymin_summon', 'shaymin_channeling']:
+                anim_state = 'idle'
+            elif anim_state in ['shaymin_sky_jump']:
+                anim_state = 'walking'
+            elif anim_state in ['joy_jump']:
+                anim_state = 'falling'
+                
+            # TAPU FSM RENDER
+            elif anim_state in ['tapu_channeling', 'tapu_active']:
+                anim_state = 'idle'
+            elif anim_state == 'tapu_positioning':
+                anim_state = 'walking'
 
             # --- PHYSICAL AND GEOMETRIC EXPANSION ENGINE ---
             if not hasattr(self, 'base_size_w'):
                 self.base_size_w = self.size_w
                 self.base_size_h = self.size_h
                 
-            scale_mod = getattr(self, 'necrozma_scale_mod', 1.0)
+            scale_mod = getattr(self, 'scale_mod', getattr(self, 'necrozma_scale_mod', 1.0))
             target_w = max(1, int(self.base_size_w * scale_mod))
             target_h = max(1, int(self.base_size_h * scale_mod))
             
@@ -1696,7 +1773,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 getattr(self, 'surface_angle', 0), 
                 getattr(self, 'is_glitching', False),
                 getattr(self, 'dark_mode', False),
-                scale_mod=getattr(self, 'necrozma_scale_mod', 1.0),
+                scale_mod=scale_mod,
                 bright_mod=getattr(self, 'necrozma_bright_mod', 1.0),
                 darkness_mod=getattr(self, 'darkness_mod', 0.0),
                 nightmare_filter=getattr(self, 'nightmare_filter', False)
@@ -1708,6 +1785,20 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             self.check_time_distortion()
         if hasattr(self, 'check_gravity_inversion'):
             self.check_gravity_inversion()
+            
+        if hasattr(self, 'tapu_field_timeout'):
+            self.tapu_field_timeout -= 1
+            if self.tapu_field_timeout <= 0:
+                delattr(self, 'tapu_field_timeout')
+                try: delattr(self, 'tapu_field_effect')
+                except: pass
+                if hasattr(self, 'original_speed'):
+                    self.speed = self.original_speed
+                if getattr(self, 'scale_mod', 1.0) != 1.0:
+                    self.scale_mod = max(1.0, getattr(self, 'scale_mod', 1.0) - 0.05)
+                    if self.scale_mod > 1.0:
+                        self.tapu_field_timeout = 1
+
             
         # Resolves shared physics handlers by checking the alias map first. 
         # Falls back to the raw state name for dedicated 1:1 FSM handlers.
@@ -2579,6 +2670,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
         self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
         self.zekrom_cooldown = max(0, getattr(self, 'zekrom_cooldown', 0) - 1)
         self.reshiram_cooldown = max(0, getattr(self, 'reshiram_cooldown', 0) - 1)
+        self.heatran_cooldown = max(0, getattr(self, 'heatran_cooldown', 0) - 1)
         self.kyurem_cooldown = max(0, getattr(self, 'kyurem_cooldown', 0) - 1)
         self.xerneas_cooldown = max(0, getattr(self, 'xerneas_cooldown', 0) - 1)
         self.yveltal_cooldown = max(0, getattr(self, 'yveltal_cooldown', 0) - 1)
@@ -2599,6 +2691,10 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
         self.jirachi_cooldown = max(0, getattr(self, 'jirachi_cooldown', 0) - 1)
         self.darkrai_cooldown = max(0, getattr(self, 'darkrai_cooldown', 0) - 1)
         self.cresselia_cooldown = max(0, getattr(self, 'cresselia_cooldown', 0) - 1)
+        self.lati_cooldown = max(0, getattr(self, 'lati_cooldown', 0) - 1)
+        self.deoxys_cooldown = max(0, getattr(self, 'deoxys_cooldown', 0) - 1)
+        self.lake_cooldown = max(0, getattr(self, 'lake_cooldown', 0) - 1)
+        self.shaymin_cooldown = max(0, getattr(self, 'shaymin_cooldown', 0) - 1)
 
         # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
@@ -2691,12 +2787,61 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 self.schedule_loop(50, self.physics_loop)
                 return
 
+        # --- EXCLUSIVE MECHANIC: CROSS SCREEN DASH (LATIOS/LATIAS) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["latios", "latias"] and getattr(self, 'lati_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lati=True):
+            if random.randint(1, 1000) <= 8:
+                self.lati_cooldown = 72000 
+                self.current_state = 'lati_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: METEOR STRIKE (DEOXYS) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["deoxys", "deoxysnormal", "deoxysattack", "deoxysdefense", "deoxysspeed"] and getattr(self, 'deoxys_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.deoxys_cooldown = 72000
+                self.current_state = 'deoxys_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: LAKE TRIO ROTATION (AZELF, MESPRIT, UXIE) ---
+        if self.pet_name.lower().replace("_", "") in ["azelf", "mesprit", "uxie"] and getattr(self, 'lake_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lake=True):
+            if random.randint(1, 1000) <= 8:
+                self.lake_cooldown = 72000
+                self.current_state = 'lake_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+                
+        # --- EXCLUSIVE MECHANIC: SHAYMIN (LAND / SKY) ---
+        if self.pet_name.lower().replace("_", "") == "shaymin" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.shaymin_cooldown = 108000
+                self.current_state = 'shaymin_summon'
+                self.schedule_loop(50, self.physics_loop)
+                return
+                
+        if self.pet_name.lower().replace("_", "") == "shaymin1" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.shaymin_cooldown = 108000
+                if hasattr(self, 'start_shaymin_sky_jump'):
+                    self.start_shaymin_sky_jump()
+                self.schedule_loop(50, self.physics_loop)
+                return
+
         # --- EXCLUSIVE MECHANIC: BEHEMOTH BLADE (ZACIAN) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") in ["zacian", "zacian1"] and getattr(self, 'zacian_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.zacian_cooldown = 72000 
                 self.current_state = 'zacian_channeling'
                 self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: TAPUS (KOKO, LELE, BULU, FINI) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["tapukoko", "tapukoko1", "tapulele", "tapulele1", "tapubulu", "tapubulu1", "tapufini", "tapufini1"] and getattr(self, 'tapu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.tapu_cooldown = 108000
+                if hasattr(self, 'start_tapu_mechanic'):
+                    self.start_tapu_mechanic()
+                self.schedule_loop(33, self.physics_loop)
                 return
 
         # --- EXCLUSIVE MECHANIC: PRISMATIC LASER (NECROZMA) ---
@@ -2764,6 +2909,18 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             if random.randint(1, 1000) <= 8:
                 self.kyurem_cooldown = 108000 
                 self.current_state = 'kyurem_channeling'
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: MAGMA STORM (HEATRAN) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "heatran" and getattr(self, 'heatran_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.heatran_cooldown = 72000 
+                if self.y < self.default_floor_y - 15:
+                    self.current_state = 'heatran_jump_down'
+                    self.v_y_velocity = -10.0
+                else:
+                    self.current_state = 'heatran_channeling'
                 self.schedule_loop(50, self.physics_loop)
                 return
 
@@ -3598,6 +3755,24 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             self.current_state = 'ascending'
             self.play_shiny_sound()
             self.show_alter_form_vfx() 
+            
+        elif name == "shaymin1":
+            self.pet_name = "shaymin"
+            self.pet_data["species"] = "shaymin"
+            if hasattr(self, 'cancel_shaymin_arts'):
+                self.cancel_shaymin_arts()
+            from entities.animator import DesktopPetAnimator
+            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "shaymin")
+            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+                anim_dir = os.path.join(anim_dir, "shiny")
+            self.animator = DesktopPetAnimator(
+                self.canvas, self.config.get("images", {}), 
+                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
+            )
+            self.current_state = 'falling'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx(["#FFFFFF", "#00FF00", "#AAFF00"])
+            
         # Add Zacian Crowned Sword reversion logic
         elif name == "zacian1":
             self.pet_name = "zacian"
@@ -3639,7 +3814,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             self.play_shiny_sound()
             self.show_alter_form_vfx()
 
-    def show_alter_form_vfx(self):
+    def show_alter_form_vfx(self, colors=None):
         if getattr(self, 'current_state', 'exiting') == 'exiting': return
         
         particles = []
@@ -3654,7 +3829,9 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             vy = math.sin(angle) * speed
             
             size = random.choice([3, 4, 5])
-            color = random.choice(["#000000", "#1A1A1A", "#4B0082", "#2C003E", "#8A2BE2"])
+            if not colors:
+                colors = ["#000000", "#1A1A1A", "#4B0082", "#2C003E", "#8A2BE2"]
+            color = random.choice(colors)
             
             pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline=color, tags="vfx_alter")
             particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': random.randint(15, 25)})
@@ -3679,7 +3856,7 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
                 
         animate_explosion()
 
-    def is_global_mechanic_active(self):
+    def is_global_mechanic_active(self, ignore_lati=False, ignore_lake=False):
         # 1. If there is no pet system linked, there is no blocking
         if not getattr(self, 'get_all_pets', None):
             return False
@@ -3697,6 +3874,11 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',
             'zekrom_channeling',
             'reshiram_channeling',
+            'heatran_jump_down',
+            'heatran_channeling',
+            'heatran_positioning',
+            'heatran_storm',
+            'heatran_falling',
             'kyurem_channeling',
             'xerneas_channeling',
             'yveltal_channeling',
@@ -3727,6 +3909,9 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             'beast_roar',
             'beast_dash',
             'beast_wait_clear',
+            'tapu_channeling',
+            'tapu_positioning',
+            'tapu_active',
             'celebi_channeling',
             'celebi_wait',
             'celebi_freeze',
@@ -3744,14 +3929,34 @@ class DesktopPet(CresseliaMechanics, DarkraiMechanics, JirachiMechanics, Legenda
             'cresselia_channeling',
             'cresselia_ascension',
             'cresselia_aurora',
+            'lati_channeling',
+            'lati_spiral',
+            'lati_dash_wait',
+            'lati_dash',
+            'lati_return',
+            'deoxys_channeling',
+            'deoxys_ascend',
+            'deoxys_wait',
+            'deoxys_meteor',
+            'deoxys_emerge',
+            'lake_channeling',
+            'lake_rotating',
+            'shaymin_summon',
+            'shaymin_sky_jump'
         ]
-
+        
+        if ignore_lati:
+            blocking_states = [s for s in blocking_states if not s.startswith('lati_')]
+            
+        if ignore_lake:
+            blocking_states = [s for s in blocking_states if not s.startswith('lake_')]
+            
         if hasattr(self, 'krd_phase'):
             return True
         
         # 3. Structural scan
         for p in self.get_all_pets():
-            if p.current_state in blocking_states:
+            if p != self and p.current_state in blocking_states:
                 return True
                 
         return False
