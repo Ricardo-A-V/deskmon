@@ -354,7 +354,8 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
     def on_drag_start(self, event):
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating']: return
 
-        if self.pet_name.startswith("meloetta"):
+        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+        if normalized_name in ["meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1"]:
             self.meloetta_angle_sum = 0
             self.last_meloetta_angle = None
         if self.current_state == 'regirock_embedded':
@@ -594,7 +595,8 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
             self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
 
-        if self.pet_name.startswith("meloetta"):
+        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+        if normalized_name in ["meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1"]:
             dx = pointer_x - getattr(self, 'last_mouse_x', pointer_x)
             dy = pointer_y - getattr(self, 'last_mouse_y', pointer_y)
             if math.hypot(dx, dy) > 2:
@@ -610,10 +612,7 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
                     
                     if abs(self.meloetta_angle_sum) >= 8 * math.pi:
                         self.meloetta_angle_sum = 0
-                        if self.pet_name == "meloetta":
-                            self.manual_alter_form()
-                        elif self.pet_name == "meloetta_1":
-                            self.manual_alter_form()
+                        self.manual_alter_form()
 
         # FIX: Destruction of the link if the telekinesis victim is clicked
         if self.current_state == 'tk_lifted':
@@ -3877,14 +3876,16 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
         name = self.pet_name.lower().replace("_", "").replace("-", "")
         if name == "giratina1":
             self.swap_giratina_form("giratina")
-            self.current_state = 'falling'
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
             self.play_shiny_sound() 
-            self.show_alter_form_vfx() 
+            self.show_alter_form_vfx(["#FF0000", "#FFD700", "#555555"]) 
         elif name == "giratina":
             self.swap_giratina_form("giratina_1")
-            self.current_state = 'ascending'
+            if self.current_state != 'dragged':
+                self.current_state = 'ascending'
             self.play_shiny_sound()
-            self.show_alter_form_vfx() 
+            self.show_alter_form_vfx(["#FF0000", "#FFD700", "#555555"]) 
             
         elif name == "shaymin1":
             self.pet_name = "shaymin"
@@ -3899,7 +3900,8 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
                 self.canvas, self.config.get("images", {}), 
                 (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
             )
-            self.current_state = 'falling'
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
             self.play_shiny_sound()
             self.show_alter_form_vfx(["#FFFFFF", "#00FF00", "#AAFF00"])
             
@@ -3921,9 +3923,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             )
             
             # Drop the entity to recalculate physical collision bounds with the new sprite
-            self.current_state = 'falling'
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
             self.play_shiny_sound()
-            self.show_alter_form_vfx()
+            self.show_alter_form_vfx(["#00FFFF", "#FF00FF", "#FFD700"])
 
         elif name == "meloetta":
             self.pet_name = "meloetta_1"
@@ -3978,9 +3981,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
                 (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
             )
             
-            self.current_state = 'falling'
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
             self.play_shiny_sound()
-            self.show_alter_form_vfx()
+            self.show_alter_form_vfx(["#FF00FF", "#00FFFF", "#FFD700"])
 
     def show_alter_form_vfx(self, colors=None):
         if getattr(self, 'current_state', 'exiting') == 'exiting': return

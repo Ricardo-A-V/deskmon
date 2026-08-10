@@ -294,24 +294,6 @@ class GameController:
             else:
                 self.fly_row.pack_forget()
 
-            # --- LOGIC INJECTION: EXCLUSIVE ALTER BUTTON ---
-            normalized_name = pet["species"].lower().replace("_", "").replace("-", "")
-            
-            # FIX: Add zacian1 to the matrix so the remove sword button renders
-            # FIX: Expanded check matrix to support Crowned Shield
-            if normalized_name in ["giratina1", "zacian1", "zamazenta1", "shaymin1"]:
-                self.btn_alter = tk.Button(
-                    self.fly_wrapper, 
-                    text="Alter Form", 
-                    font=("Segoe UI", 8, "bold"), 
-                    bg="#8E44AD", 
-                    fg="white", 
-                    bd=0, 
-                    pady=2,
-                    command=lambda pid=pet["id"]: self.trigger_alter_form(pid)
-                )
-                self.btn_alter.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=(4, 0))
-                
         else:
             self.everstone_var.set(False)
             self.fly_row.pack_forget()
