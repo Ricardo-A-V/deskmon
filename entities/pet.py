@@ -64,8 +64,12 @@ from mechanics.deoxys import DeoxysMechanics
 from mechanics.lake_trio import LakeTrioMechanics
 from mechanics.shaymin import ShayminMechanics
 from mechanics.tapus import TapusMechanics
+from mechanics.sea_guardians import SeaGuardiansMechanics
+from mechanics.victini import VictiniMechanics
+from mechanics.genesect import GenesectMechanics
+from mechanics.meloetta import MeloettaMechanics
 
-class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -103,7 +107,7 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             "articuno", "articuni1", "zapdos", "zapdos1", "moltres", "moltres1", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "shaymin1", "arceus",
-            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "genesect",
+            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
             "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus",
@@ -161,6 +165,10 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         self.dark_arts = physics.get("dark_arts", False)
         self.aggressive = physics.get("aggressive", False)
         self.teleport_cooldown = 0
+        self.sg_cooldown = 0
+        self.victini_cooldown = 0
+        self.genesect_cooldown = 0
+        self.meloetta_cooldown = 0
 
         self.climbing_surface = 'floor' 
         self.surface_angle = 0
@@ -346,6 +354,9 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
     def on_drag_start(self, event):
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating']: return
 
+        if self.pet_name.startswith("meloetta"):
+            self.meloetta_angle_sum = 0
+            self.last_meloetta_angle = None
         if self.current_state == 'regirock_embedded':
             self.current_state = 'dragged'
             self.surface_angle = 0
@@ -399,6 +410,10 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         # Interrupt Mewtwo's Psychic Vortex
         if self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
+            
+        elif self.current_state.startswith('meloetta_'):
+            if hasattr(self, 'cancel_meloetta_arts'):
+                self.cancel_meloetta_arts()
 
         # Interrupt Ho-Oh's Sacred Fire
         elif self.current_state in ['hooh_channeling', 'panic_run']:
@@ -429,6 +444,15 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
 
         elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
             self.cancel_zekrom_arts()
+
+        elif self.current_state.startswith('sea_guardian_') and hasattr(self, 'cancel_sea_guardian_arts'):
+            self.cancel_sea_guardian_arts()
+            
+        elif self.current_state.startswith('victini_') and hasattr(self, 'cancel_victini_arts'):
+            self.cancel_victini_arts()
+
+        elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
+            self.cancel_genesect_arts()
 
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
@@ -509,6 +533,15 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         elif self.current_state.startswith('tapu_') and hasattr(self, 'cancel_tapu_mechanic'):
             self.cancel_tapu_mechanic()
 
+        elif self.current_state.startswith('sea_guardian_') and hasattr(self, 'cancel_sea_guardian_arts'):
+            self.cancel_sea_guardian_arts()
+            
+        elif self.current_state.startswith('victini_') and hasattr(self, 'cancel_victini_arts'):
+            self.cancel_victini_arts()
+
+        elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
+            self.cancel_genesect_arts()
+
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
             self.current_state = 'falling'
@@ -561,6 +594,27 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             self.v_x_velocity = (pointer_x - self.last_mouse_x) / (dt * 150.0) 
             self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
 
+        if self.pet_name.startswith("meloetta"):
+            dx = pointer_x - getattr(self, 'last_mouse_x', pointer_x)
+            dy = pointer_y - getattr(self, 'last_mouse_y', pointer_y)
+            if math.hypot(dx, dy) > 2:
+                angle = math.atan2(dy, dx)
+                if getattr(self, 'last_meloetta_angle', None) is None:
+                    self.last_meloetta_angle = angle
+                else:
+                    diff = angle - self.last_meloetta_angle
+                    if diff > math.pi: diff -= 2 * math.pi
+                    elif diff < -math.pi: diff += 2 * math.pi
+                    self.meloetta_angle_sum = getattr(self, 'meloetta_angle_sum', 0) + diff
+                    self.last_meloetta_angle = angle
+                    
+                    if abs(self.meloetta_angle_sum) >= 8 * math.pi:
+                        self.meloetta_angle_sum = 0
+                        if self.pet_name == "meloetta":
+                            self.manual_alter_form()
+                        elif self.pet_name == "meloetta_1":
+                            self.manual_alter_form()
+
         # FIX: Destruction of the link if the telekinesis victim is clicked
         if self.current_state == 'tk_lifted':
             self.current_state = 'falling'
@@ -591,6 +645,10 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         if self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
 
+        elif self.current_state.startswith('meloetta_'):
+            if hasattr(self, 'cancel_meloetta_arts'):
+                self.cancel_meloetta_arts()
+
         # Interrupt Ho-Oh's Sacred Fire
         elif self.current_state in ['hooh_channeling', 'panic_run']:
             self.cancel_hooh_arts()
@@ -620,6 +678,12 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
 
         elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
             self.cancel_zekrom_arts()
+            
+        elif self.current_state.startswith('victini_') and hasattr(self, 'cancel_victini_arts'):
+            self.cancel_victini_arts()
+
+        elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
+            self.cancel_genesect_arts()
 
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
@@ -1369,6 +1433,12 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                 self.cancel_heatran_arts()
             elif self.current_state.startswith('zekrom_') and hasattr(self, 'cancel_zekrom_arts'):
                 self.cancel_zekrom_arts()
+            elif self.current_state.startswith('sea_guardian_') and hasattr(self, 'cancel_sea_guardian_arts'):
+                self.cancel_sea_guardian_arts()
+            elif self.current_state.startswith('victini_') and hasattr(self, 'cancel_victini_arts'):
+                self.cancel_victini_arts()
+            elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
+                self.cancel_genesect_arts()
             elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
                 self.cancel_kyurem_arts()
             elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'):
@@ -1681,6 +1751,14 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             elif anim_state == 'jirachi_flyby':
                 anim_state = 'walking' 
                 freeze_animation = True
+                
+            elif anim_state in ['sea_guardian_absorb', 'sea_guardian_wait', 'sea_guardian_braking', 'victini_channeling', 'victini_forming_v']:
+                anim_state = 'idle'
+            elif anim_state in ['sea_guardian_big_jump', 'sea_guardian_jump', 'sea_guardian_last_jump', 'victini_flying', 'victini_dash', 'genesect_walk']:
+                anim_state = 'walking'
+            elif anim_state in ['genesect_channeling', 'genesect_laser']:
+                anim_state = 'walking'
+                freeze_animation = True
 
             # JIRACHI BUFF TIMEOUT EVALUATION
             if getattr(self, 'jirachi_buff_timer', 0) > 0:
@@ -1728,6 +1806,12 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             elif anim_state in ['tapu_channeling', 'tapu_active']:
                 anim_state = 'idle'
             elif anim_state == 'tapu_positioning':
+                anim_state = 'walking'
+
+            # MELOETTA FSM RENDER
+            elif anim_state in ['meloetta_aria_charge', 'meloetta_aria_wait', 'meloetta_aria_fire', 'meloetta_pirouette_fire']:
+                anim_state = 'idle'
+            elif anim_state in ['meloetta_aria_fly_up', 'meloetta_aria_fly_down', 'meloetta_aria_float', 'meloetta_pirouette_walk', 'meloetta_pirouette_jump_off', 'dancing', 'meloetta_pirouette_dance']:
                 anim_state = 'walking'
 
             # --- PHYSICAL AND GEOMETRIC EXPANSION ENGINE ---
@@ -1781,6 +1865,12 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         self.schedule_loop(16, self.animate_loop)
 
     def physics_loop(self):
+        if getattr(self, 'is_glitching', False) and getattr(self, 'has_genesect_glitch', False) and hasattr(self, 'spawn_genesect_particle'):
+            if random.random() < 0.4:
+                cx = self.x - self.v_x + self.size_w/2 + random.uniform(-self.size_w*0.4, self.size_w*0.4)
+                cy = self.y - self.v_y + self.size_h/2 + random.uniform(-self.size_h*0.4, self.size_h*0.4)
+                self.spawn_genesect_particle(cx, cy, random.uniform(-1, 1), random.uniform(-3, -1), random.randint(15, 30), p_type="charge")
+
         if hasattr(self, 'check_time_distortion'):
             self.check_time_distortion()
         if hasattr(self, 'check_gravity_inversion'):
@@ -2287,7 +2377,11 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                             self.current_state = 'walking_away'
                             self.is_facing_right = True
                         else:
-                            self.current_state = 'idle'
+                            if hasattr(self, 'meloetta_resume_state'):
+                                self.current_state = self.meloetta_resume_state
+                                delattr(self, 'meloetta_resume_state')
+                            else:
+                                self.current_state = 'idle'
         self.update_position()
         self.schedule_loop(20, self.physics_loop)
 
@@ -2535,6 +2629,7 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
         else:
             # End of phase
             self.is_glitching = False
+            self.has_genesect_glitch = False
             self.glitch_cooldown = 12000
             try: self.window.attributes('-alpha', 1.0)
             except: pass
@@ -2648,6 +2743,10 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
 
     def _fsm_active(self):
         self.jump_cooldown = max(0, getattr(self, 'jump_cooldown', 0) - 1)
+        self.sg_cooldown = max(0, getattr(self, 'sg_cooldown', 0) - 1)
+        self.victini_cooldown = max(0, getattr(self, 'victini_cooldown', 0) - 1)
+        self.genesect_cooldown = max(0, getattr(self, 'genesect_cooldown', 0) - 1)
+        self.meloetta_cooldown = max(0, getattr(self, 'meloetta_cooldown', 0) - 1)
         self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
         self.attack_cooldown = max(0, getattr(self, 'attack_cooldown', 0) - 1)
 
@@ -2835,6 +2934,35 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                 self.schedule_loop(50, self.physics_loop)
                 return
 
+        # --- EXCLUSIVE MECHANIC: VICTINI ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "victini" and getattr(self, 'victini_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_victini=True):
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_victini_mechanic'):
+                    self.start_victini_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: GENESECT ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "genesect" and getattr(self, 'genesect_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_genesect=True):
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_genesect_mechanic'):
+                    self.start_genesect_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: MELOETTA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["meloetta", "meloetta1"] and getattr(self, 'meloetta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and getattr(self, 'climbing_surface', 'floor') == 'floor' and not self.is_global_mechanic_active(ignore_meloetta=True):
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_meloetta_mechanic'):
+                    self.start_meloetta_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: SEA GUARDIANS (MANAPHY, PHIONE) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["manaphy", "phione"] and getattr(self, 'sg_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_sea_guardians=True):
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_sea_guardian_mechanic'):
+                    self.start_sea_guardian_mechanic()
+                self.schedule_loop(33, self.physics_loop)
+                return
+
         # --- EXCLUSIVE MECHANIC: TAPUS (KOKO, LELE, BULU, FINI) ---
         if self.pet_name.lower().replace("_", "").replace("-", "") in ["tapukoko", "tapukoko1", "tapulele", "tapulele1", "tapubulu", "tapubulu1", "tapufini", "tapufini1"] and getattr(self, 'tapu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
@@ -2992,6 +3120,7 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                             # 5. FIX: Stop Asynchronous Ghost Interference Thread (Glitch)
                             if getattr(target, 'is_glitching', False):
                                 target.is_glitching = False
+                                target.has_genesect_glitch = False
                                 target.glitch_teleports_left = 0
                                 target.glitch_cooldown = 12000
 
@@ -3173,6 +3302,7 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                             # FIX: Cancel Ghosts' Glitch
                             if getattr(target, 'is_glitching', False):
                                 target.is_glitching = False
+                                target.has_genesect_glitch = False
                                 target.glitch_teleports_left = 0
                                 target.glitch_cooldown = 12000
                                 
@@ -3795,6 +3925,44 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             self.play_shiny_sound()
             self.show_alter_form_vfx()
 
+        elif name == "meloetta":
+            self.pet_name = "meloetta_1"
+            self.pet_data["species"] = "meloetta_1"
+            
+            from entities.animator import DesktopPetAnimator
+            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "meloetta_1")
+            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+                anim_dir = os.path.join(anim_dir, "shiny")
+            
+            self.animator = DesktopPetAnimator(
+                self.canvas, self.config.get("images", {}), 
+                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
+            )
+            
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx(["#FF0000", "#FF5555", "#FF8888"])
+
+        elif name == "meloetta1":
+            self.pet_name = "meloetta"
+            self.pet_data["species"] = "meloetta"
+            
+            from entities.animator import DesktopPetAnimator
+            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "meloetta")
+            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+                anim_dir = os.path.join(anim_dir, "shiny")
+            
+            self.animator = DesktopPetAnimator(
+                self.canvas, self.config.get("images", {}), 
+                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
+            )
+            
+            if self.current_state != 'dragged':
+                self.current_state = 'falling'
+            self.play_shiny_sound()
+            self.show_alter_form_vfx(["#00FF00", "#55FF55", "#88FF88"])
+
         elif name == "zamazenta1":
             self.pet_name = "zamazenta"
             self.pet_data["species"] = "zamazenta"
@@ -3856,7 +4024,7 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
                 
         animate_explosion()
 
-    def is_global_mechanic_active(self, ignore_lati=False, ignore_lake=False):
+    def is_global_mechanic_active(self, ignore_lati=False, ignore_lake=False, ignore_sea_guardians=False, ignore_victini=False, ignore_genesect=False, ignore_meloetta=False):
         # 1. If there is no pet system linked, there is no blocking
         if not getattr(self, 'get_all_pets', None):
             return False
@@ -3942,9 +4110,41 @@ class DesktopPet(TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMech
             'lake_channeling',
             'lake_rotating',
             'shaymin_summon',
-            'shaymin_sky_jump'
+            'shaymin_sky_jump',
+            'sea_guardian_absorb',
+            'sea_guardian_big_jump',
+            'sea_guardian_jump',
+            'sea_guardian_wait',
+            'victini_channeling',
+            'victini_forming_v',
+            'victini_flying',
+            'victini_dash',
+            'victini_impact',
+            'genesect_walk',
+            'genesect_channeling',
+            'genesect_laser',
+            'meloetta_aria_charge',
+            'meloetta_aria_teleport',
+            'meloetta_aria_float',
+            'meloetta_aria_wait',
+            'meloetta_aria_fire',
+            'meloetta_pirouette_walk',
+            'meloetta_pirouette_dance',
+            'meloetta_pirouette_fire'
         ]
         
+        if ignore_meloetta:
+            blocking_states = [s for s in blocking_states if not s.startswith('meloetta_')]
+            
+        if ignore_genesect:
+            blocking_states = [s for s in blocking_states if not s.startswith('genesect_')]
+
+        if ignore_victini:
+            blocking_states = [s for s in blocking_states if not s.startswith('victini_')]
+
+        if ignore_sea_guardians:
+            blocking_states = [s for s in blocking_states if not s.startswith('sea_guardian_')]
+
         if ignore_lati:
             blocking_states = [s for s in blocking_states if not s.startswith('lati_')]
             

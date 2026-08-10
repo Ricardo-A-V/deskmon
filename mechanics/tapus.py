@@ -113,17 +113,19 @@ class TapusMechanics:
             self.schedule_loop(33, self.physics_loop)
             
     def cancel_tapu_mechanic(self):
-        if getattr(self, 'tapu_type', None):
-            for _ in range(20):
-                cx = self.x - self.v_x + self.size_w/2
-                cy = self.y - self.v_y + self.size_h/2
-                angle = random.uniform(0, 2*math.pi)
-                speed = random.uniform(3, 10)
-                vx = math.cos(angle) * speed
-                vy = math.sin(angle) * speed
-                self.spawn_tapu_particle(cx, cy, getattr(self, 'tapu_color', '#FFFFFF'), random.randint(10, 20), vx, vy, p_type="particle")
-                
         if hasattr(self, 'tapu_field_timer'):
+            self.tapu_field_timer = 0
+            
+        # Stop channeling
+        if hasattr(self, 'tapu_channel_timer'):
+            self.tapu_channel_timer = 0
+            
+        # Clean up channeling/ray particles completely and immediately
+        if hasattr(self, 'tapu_particles'):
+            self.tapu_particles = []
+        if hasattr(self, 'tapu_vfx_win_particles') and self.tapu_vfx_win_particles:
+            self.tapu_vfx_win_particles.destroy()
+            self.tapu_vfx_win_particles = None
             self.tapu_field_timer = 0
         self._cleanup_tapu_field()
         if hasattr(self, 'get_all_pets'):
