@@ -68,8 +68,9 @@ from mechanics.sea_guardians import SeaGuardiansMechanics
 from mechanics.victini import VictiniMechanics
 from mechanics.genesect import GenesectMechanics
 from mechanics.meloetta import MeloettaMechanics
+from mechanics.legendary_genies import LegendaryGeniesMechanics
 
-class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -107,10 +108,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             "articuno", "articuni1", "zapdos", "zapdos1", "moltres", "moltres1", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "shaymin1", "arceus",
-            "victini", "cobalion", "terrakion", "virizion", "tornadus", "thundurus", "reshiram", "zekrom", "landorus", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
+            "victini", "cobalion", "terrakion", "virizion", "tornadus", "tornadus1", "thundurus", "thundurus1", "reshiram", "zekrom", "landorus", "landorus1", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
-            "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus",
+            "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus", "enamorus1",
             "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt"
         }
         
@@ -355,7 +356,13 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
         if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating']: return
 
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
-        if normalized_name in ["meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1"]:
+        shakeable_forms = [
+            "meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1",
+            "thundurus", "thundurus1", "tornadus", "tornadus1", "landorus", "landorus1",
+            "enamorus", "enamorus1", "dialga", "dialga1", "palkia", "palkia1",
+            "keldeo1", "hoopa", "hoopa1", "urshifu", "urshifu1", "terapagos1"
+        ]
+        if normalized_name in shakeable_forms:
             self.meloetta_angle_sum = 0
             self.last_meloetta_angle = None
         if self.current_state == 'regirock_embedded':
@@ -504,6 +511,9 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
         elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
             self.cancel_beast_arts()
 
+        elif self.current_state.startswith('genie_') and hasattr(self, 'cancel_genie_arts'):
+            self.cancel_genie_arts()
+
         elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
             self.cancel_celebi_arts()
 
@@ -596,7 +606,13 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             self.v_y_velocity = (pointer_y - self.last_mouse_y) / (dt * 150.0)
 
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
-        if normalized_name in ["meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1"]:
+        shakeable_forms = [
+            "meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1",
+            "thundurus", "thundurus1", "tornadus", "tornadus1", "landorus", "landorus1",
+            "enamorus", "enamorus1", "dialga", "dialga1", "palkia", "palkia1",
+            "keldeo1", "hoopa", "hoopa1", "urshifu", "urshifu1", "terapagos1"
+        ]
+        if normalized_name in shakeable_forms:
             dx = pointer_x - getattr(self, 'last_mouse_x', pointer_x)
             dy = pointer_y - getattr(self, 'last_mouse_y', pointer_y)
             if math.hypot(dx, dy) > 2:
@@ -732,6 +748,9 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
 
         elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
             self.cancel_beast_arts()
+
+        elif self.current_state.startswith('genie_') and hasattr(self, 'cancel_genie_arts'):
+            self.cancel_genie_arts()
 
         elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
             self.cancel_celebi_arts()
@@ -1469,6 +1488,8 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
                 self.cancel_mew_arts()
             elif self.current_state.startswith('beast_') and hasattr(self, 'cancel_beast_arts'):
                 self.cancel_beast_arts()
+            elif self.current_state.startswith('genie_') and hasattr(self, 'cancel_genie_arts'):
+                self.cancel_genie_arts()
             elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight'] and hasattr(self, 'cancel_celebi_arts'):
                 self.cancel_celebi_arts()
             elif self.current_state in ['regi_approach', 'regi_strike'] and hasattr(self, 'cancel_regi_arts'):
@@ -1700,6 +1721,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
 
             elif anim_state in ['beast_channeling', 'beast_roar', 'beast_wait_clear']:
                 anim_state = 'idle'
+            elif anim_state in ['genie_channeling', 'genie_shoot', 'genie_wait_tornado', 'genie_finish']:
+                anim_state = 'idle'
+            elif anim_state in ['tornadus_victim', 'landorus_thrown', 'enamorus_joy']:
+                anim_state = 'falling'
             elif anim_state == 'beast_dash':
                 anim_state = 'walking'
                 target_ms = max(10, self.frame_rate_active // 2)
@@ -1818,7 +1843,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
                 self.base_size_w = self.size_w
                 self.base_size_h = self.size_h
                 
-            scale_mod = getattr(self, 'scale_mod', getattr(self, 'necrozma_scale_mod', 1.0))
+            enamorus_scale = 1.5 if self.pet_name.lower().replace("_", "").replace("-", "") in ["enamorus", "enamorus1"] else 1.0
+            scale_mod = getattr(self, 'scale_mod', getattr(self, 'necrozma_scale_mod', enamorus_scale))
+            if enamorus_scale > 1.0 and scale_mod < enamorus_scale:
+                scale_mod = enamorus_scale
             target_w = max(1, int(self.base_size_w * scale_mod))
             target_h = max(1, int(self.base_size_h * scale_mod))
             
@@ -2793,6 +2821,7 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
         self.deoxys_cooldown = max(0, getattr(self, 'deoxys_cooldown', 0) - 1)
         self.lake_cooldown = max(0, getattr(self, 'lake_cooldown', 0) - 1)
         self.shaymin_cooldown = max(0, getattr(self, 'shaymin_cooldown', 0) - 1)
+        self.genie_cooldown = max(0, getattr(self, 'genie_cooldown', 0) - 1)
 
         # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
@@ -2839,6 +2868,13 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             if random.randint(1, 1000) <= 8:
                 self.beast_cooldown = 72000 
                 self.trigger_beast_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: LEGENDARY GENIES (TORNADUS, THUNDURUS, LANDORUS, ENAMORUS) ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["tornadus", "tornadus1", "thundurus", "thundurus1", "landorus", "landorus1", "enamorus", "enamorus1"] and getattr(self, 'genie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.genie_cooldown = 72000
+                self.trigger_genie_arts()
                 return
 
         # --- EXCLUSIVE MECHANIC: GENESIS BUBBLE (MEW) ---
@@ -3872,119 +3908,79 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             func(*args)
         return self.window.after(int(delay * multiplier), wrapper)
     
+    def swap_form_generic(self, target_species, vfx_colors=None):
+        self.pet_name = target_species
+        self.pet_data["species"] = target_species
+        from entities.animator import DesktopPetAnimator
+        anim_dir = os.path.join(self.base_dir, "game_env", "pets", target_species)
+        if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
+            anim_dir = os.path.join(anim_dir, "shiny")
+        
+        bw = getattr(self, 'base_size_w', self.size_w)
+        bh = getattr(self, 'base_size_h', self.size_h)
+        self.animator = DesktopPetAnimator(
+            self.canvas, self.config.get("images", {}), 
+            (bw, bh), (bw, bh), anim_dir
+        )
+        
+        if self.current_state != 'dragged':
+            self.current_state = 'falling'
+        self.play_shiny_sound()
+        if vfx_colors:
+            self.show_alter_form_vfx(vfx_colors)
+        else:
+            self.show_alter_form_vfx()
+
     def manual_alter_form(self):
         name = self.pet_name.lower().replace("_", "").replace("-", "")
-        if name == "giratina1":
-            self.swap_giratina_form("giratina")
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound() 
-            self.show_alter_form_vfx(["#FF0000", "#FFD700", "#555555"]) 
-        elif name == "giratina":
-            self.swap_giratina_form("giratina_1")
-            if self.current_state != 'dragged':
-                self.current_state = 'ascending'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#FF0000", "#FFD700", "#555555"]) 
+        
+        form_mappings = {
+            "giratina1": ("giratina", ["#FF0000", "#FFD700", "#555555"]),
+            "giratina": ("giratina_1", ["#FF0000", "#FFD700", "#555555"]),
+            "shaymin1": ("shaymin", ["#FFFFFF", "#00FF00", "#AAFF00"]),
+            "zacian1": ("zacian", ["#1E90FF", "#00BFFF", "#FF69B4"]),
+            "zamazenta1": ("zamazenta", ["#DC143C", "#4169E1", "#FFD700"]),
+            "meloetta": ("meloetta_1", ["#FF0000", "#FF5555", "#FF8888"]),
+            "meloetta1": ("meloetta", ["#00FF00", "#55FF55", "#88FF88"]),
+            "thundurus": ("thundurus_1", ["#4169E1", "#800080", "#FFFFFF"]),
+            "thundurus1": ("thundurus", ["#4169E1", "#800080", "#FFFFFF"]),
+            "tornadus": ("tornadus_1", ["#228B22", "#800080", "#FFFFFF"]),
+            "tornadus1": ("tornadus", ["#228B22", "#800080", "#FFFFFF"]),
+            "landorus": ("landorus_1", ["#FF8C00", "#DC143C", "#FFFFFF"]),
+            "landorus1": ("landorus", ["#FF8C00", "#DC143C", "#FFFFFF"]),
+            "enamorus": ("enamorus_1", ["#FF69B4", "#DC143C", "#FFFFFF"]),
+            "enamorus1": ("enamorus", ["#FF69B4", "#DC143C", "#FFFFFF"]),
+            "dialga": ("dialga_1", ["#00008B", "#00BFFF", "#C0C0C0"]),
+            "dialga1": ("dialga", ["#00008B", "#00BFFF", "#C0C0C0"]),
+            "palkia": ("palkia_1", ["#F5F5F5", "#DA70D6", "#8B008B"]),
+            "palkia1": ("palkia", ["#F5F5F5", "#DA70D6", "#8B008B"]),
+            "keldeo1": ("keldeo", ["#FFFDD0", "#FFA500", "#87CEEB"]),
+            "hoopa": ("hoopa_1", ["#800080", "#FFD700", "#FF1493"]),
+            "hoopa1": ("hoopa", ["#800080", "#FFD700", "#FF1493"]),
+            "urshifu": ("urshifu_1", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
+            "urshifu1": ("urshifu", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
+            "terapagos1": ("terapagos", ["#0000FF", "#00FFFF", "#FFFFFF"])
+        }
+        
+        if name in form_mappings:
+            target_form, colors = form_mappings[name]
             
-        elif name == "shaymin1":
-            self.pet_name = "shaymin"
-            self.pet_data["species"] = "shaymin"
-            if hasattr(self, 'cancel_shaymin_arts'):
-                self.cancel_shaymin_arts()
-            from entities.animator import DesktopPetAnimator
-            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "shaymin")
-            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
-                anim_dir = os.path.join(anim_dir, "shiny")
-            self.animator = DesktopPetAnimator(
-                self.canvas, self.config.get("images", {}), 
-                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
-            )
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#FFFFFF", "#00FF00", "#AAFF00"])
+            # Special case for Giratina mechanics
+            if name in ["giratina", "giratina1"]:
+                self.swap_giratina_form(target_form)
+                if self.current_state != 'dragged':
+                    self.current_state = 'ascending' if name == "giratina" else 'falling'
+                self.play_shiny_sound()
+                self.show_alter_form_vfx(colors)
             
-        # Add Zacian Crowned Sword reversion logic
-        elif name == "zacian1":
-            self.pet_name = "zacian"
-            self.pet_data["species"] = "zacian"
-            
-            from entities.animator import DesktopPetAnimator
-            
-            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "zacian")
-            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
-                anim_dir = os.path.join(anim_dir, "shiny")
-            
-            # Hot-reload the animator with the base form assets
-            self.animator = DesktopPetAnimator(
-                self.canvas, self.config.get("images", {}), 
-                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
-            )
-            
-            # Drop the entity to recalculate physical collision bounds with the new sprite
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#00FFFF", "#FF00FF", "#FFD700"])
-
-        elif name == "meloetta":
-            self.pet_name = "meloetta_1"
-            self.pet_data["species"] = "meloetta_1"
-            
-            from entities.animator import DesktopPetAnimator
-            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "meloetta_1")
-            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
-                anim_dir = os.path.join(anim_dir, "shiny")
-            
-            self.animator = DesktopPetAnimator(
-                self.canvas, self.config.get("images", {}), 
-                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
-            )
-            
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#FF0000", "#FF5555", "#FF8888"])
-
-        elif name == "meloetta1":
-            self.pet_name = "meloetta"
-            self.pet_data["species"] = "meloetta"
-            
-            from entities.animator import DesktopPetAnimator
-            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "meloetta")
-            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
-                anim_dir = os.path.join(anim_dir, "shiny")
-            
-            self.animator = DesktopPetAnimator(
-                self.canvas, self.config.get("images", {}), 
-                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
-            )
-            
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#00FF00", "#55FF55", "#88FF88"])
-
-        elif name == "zamazenta1":
-            self.pet_name = "zamazenta"
-            self.pet_data["species"] = "zamazenta"
-            
-            from entities.animator import DesktopPetAnimator
-            
-            anim_dir = os.path.join(self.base_dir, "game_env", "pets", "zamazenta")
-            if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
-                anim_dir = os.path.join(anim_dir, "shiny")
-            
-            self.animator = DesktopPetAnimator(
-                self.canvas, self.config.get("images", {}), 
-                (self.size_w, self.size_h), (self.size_w, self.size_h), anim_dir
-            )
-            
-            if self.current_state != 'dragged':
-                self.current_state = 'falling'
-            self.play_shiny_sound()
-            self.show_alter_form_vfx(["#FF00FF", "#00FFFF", "#FFD700"])
+            # Special case for Shaymin mechanics (needs to cancel arts)
+            elif name == "shaymin1":
+                if hasattr(self, 'cancel_shaymin_arts'):
+                    self.cancel_shaymin_arts()
+                self.swap_form_generic(target_form, colors)
+                
+            else:
+                self.swap_form_generic(target_form, colors)
 
     def show_alter_form_vfx(self, colors=None):
         if getattr(self, 'current_state', 'exiting') == 'exiting': return
@@ -4081,6 +4077,10 @@ class DesktopPet(MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuar
             'beast_roar',
             'beast_dash',
             'beast_wait_clear',
+            'genie_channeling',
+            'genie_shoot',
+            'genie_wait_tornado',
+            'genie_finish',
             'tapu_channeling',
             'tapu_positioning',
             'tapu_active',
