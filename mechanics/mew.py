@@ -100,7 +100,7 @@ class MewMechanics:
             py = abs_cy + math.sin(p['angle']) * current_dist
             
             color = random.choice(["#FF69B4", "#FFB6C1", "#FFFFFF", "#FF1493"])
-            self.mew_vfx_canvas.create_oval(px-p['size'], py-p['size'], px+p['size'], py+p['size'], fill=color, outline="", tags="mew_orbit")
+            self.mew_vfx_canvas.create_rectangle(px-p['size'], py-p['size'], px+p['size'], py+p['size'], fill=color, outline="", tags="mew_orbit")
         
         if self.mew_timer <= 0:
             self.mew_vfx_canvas.delete("mew_orbit")
@@ -154,8 +154,8 @@ class MewMechanics:
             self.mew_vfx_canvas.delete("mew_master_bubble")
             
             # Vectorial Hollow Bubble rendering bypasses PIL Chroma Key Opacity restrictions
-            self.mew_vfx_canvas.create_oval(abs_cx-bubble_radius, abs_cy-bubble_radius, abs_cx+bubble_radius, abs_cy+bubble_radius, outline="#FF69B4", width=4, tags="mew_master_bubble")
-            self.mew_vfx_canvas.create_oval(abs_cx-bubble_radius+4, abs_cy-bubble_radius+4, abs_cx+bubble_radius-4, abs_cy+bubble_radius-4, outline="#FFB6C1", width=1, tags="mew_master_bubble")
+            self._draw_pixel_circle_bbox(self.mew_vfx_canvas, abs_cx-bubble_radius, abs_cy-bubble_radius, abs_cx+bubble_radius, abs_cy+bubble_radius, outline="#FF69B4", width=4, tags="mew_master_bubble")
+            self._draw_pixel_circle_bbox(self.mew_vfx_canvas, abs_cx-bubble_radius+4, abs_cy-bubble_radius+4, abs_cx+bubble_radius-4, abs_cy+bubble_radius-4, outline="#FFB6C1", width=1, tags="mew_master_bubble")
             
             # Simulated gloss reflections
             self.mew_vfx_canvas.create_arc(abs_cx-bubble_radius+10, abs_cy-bubble_radius+10, abs_cx+bubble_radius-10, abs_cy+bubble_radius-10, start=45, extent=45, outline="#FFFFFF", width=3, style=tk.ARC, tags="mew_master_bubble")
@@ -199,7 +199,7 @@ class MewMechanics:
             t['life'] -= 1
             t['size'] *= 0.9 
             if t['life'] > 0:
-                self.mew_vfx_canvas.create_oval(t['x']-t['size'], t['y']-t['size'], t['x']+t['size'], t['y']+t['size'], outline="#FF69B4", width=2, tags="mew_trail")
+                self.mew_vfx_canvas.create_rectangle(t['x']-t['size'], t['y']-t['size'], t['x']+t['size'], t['y']+t['size'], outline="#FF69B4", width=2, tags="mew_trail")
                 alive.append(t)
         self.mew_trail_particles = alive
 
@@ -299,7 +299,7 @@ class MewMechanics:
                 # ------------------------------------
                 
                 vr = max(victim.size_w, victim.size_h) * 0.5
-                self.mew_vfx_canvas.create_oval(vfx_vx-vr, vfx_vy-vr, vfx_vx+vr, vfx_vy+vr, outline="#FF69B4", width=2, tags="mew_victim_bubble")
+                self._draw_pixel_circle_bbox(self.mew_vfx_canvas, vfx_vx-vr, vfx_vy-vr, vfx_vx+vr, vfx_vy+vr, outline="#FF69B4", width=2, tags="mew_victim_bubble")
                 self.mew_vfx_canvas.create_arc(vfx_vx-vr+5, vfx_vy-vr+5, vfx_vx+vr-5, vfx_vy+vr-5, start=45, extent=45, outline="#FFFFFF", width=2, style=tk.ARC, tags="mew_victim_bubble")
 
                 active_victims.append(victim)
@@ -336,7 +336,7 @@ class MewMechanics:
                 p['life'] -= 1
                 if p['life'] > 0:
                     color = random.choice(["#FF69B4", "#FFFFFF", "#FFB6C1"])
-                    self.mew_vfx_canvas.create_oval(p['x']-p['size'], p['y']-p['size'], p['x']+p['size'], p['y']+p['size'], fill=color, outline="", tags="mew_pop")
+                    self.mew_vfx_canvas.create_rectangle(p['x']-p['size'], p['y']-p['size'], p['x']+p['size'], p['y']+p['size'], fill=color, outline="", tags="mew_pop")
                     alive.append(p)
             pop_particles[:] = alive
             if pop_particles:

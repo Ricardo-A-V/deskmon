@@ -583,6 +583,14 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             if abs(pointer_x - getattr(self, 'drag_start_x', pointer_x)) > 5 or \
                abs(pointer_y - getattr(self, 'drag_start_y', pointer_y)) > 5:
                 self.is_dragging = True
+                
+                if hasattr(self, 'cancel_dialga_arts') and self.current_state == 'dialga_channeling': self.cancel_dialga_arts()
+                elif hasattr(self, 'cancel_palkia_arts') and self.current_state == 'palkia_channeling': self.cancel_palkia_arts()
+                elif hasattr(self, 'cancel_groudon_arts') and self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
+                elif hasattr(self, 'cancel_kyogre_arts') and self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
+                elif hasattr(self, 'cancel_lugia_arts') and self.current_state == 'lugia_channeling': self.cancel_lugia_arts()
+                elif hasattr(self, 'cancel_hooh_arts') and self.current_state == 'hooh_channeling': self.cancel_hooh_arts()
+                
                 self.current_state = 'dragged'
                 self.v_x_velocity = 0.0
                 self.v_y_velocity = 0.0
@@ -1646,12 +1654,12 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                         self.animator.current_frame = getattr(self.animator, 'current_frame', 0)
                 
             # 2. Channeling Readjustments
-            elif anim_state in ['hooh_channeling'] and getattr(self, 'hooh_phase', 0) == 1:
+            elif anim_state == 'hooh_channeling':
+                anim_state = 'walking' if getattr(self, 'hooh_phase', 0) == 0 else 'idle'
+            elif anim_state in ['kyogre_channeling', 'dialga_channeling', 'palkia_channeling', 'groudon_channeling']:
                 anim_state = 'idle'
-            elif anim_state == 'kyogre_channeling' and getattr(self, 'kyogre_phase', 0) == 1:
-                anim_state = 'idle'
-            elif anim_state == 'dialga_channeling':
-                anim_state = 'jump' if getattr(self, 'dialga_step', 0) < 2 else 'idle'
+            elif anim_state == 'lugia_channeling':
+                anim_state = 'walking'
             elif anim_state in ['giratina_dash_prep', 'giratina_dash']:
                 anim_state = 'walking'
             elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling', 'heatran_channeling', 'heatran_jump_down', 'heatran_storm', 'heatran_falling', 'lati_channeling']:
@@ -1927,6 +1935,13 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             getattr(self, handler_name)()
         else:
             self._fsm_active()
+            
+        # FIX: Global Egg Safeguard
+        # If an egg was forcefully transitioned to an adult state by a legendary mechanic, revert it.
+        if getattr(self, 'is_egg', False):
+            allowed_egg_states = ['egg_idle', 'egg_wiggle', 'falling_egg', 'dragged', 'falling', 'thrown', 'exiting', 'spawning_wild', 'despawning_wild']
+            if self.current_state not in allowed_egg_states and not self.current_state.startswith('falling_'):
+                self.current_state = 'egg_idle'
 
     def _fsm_exiting(self):
         pass 

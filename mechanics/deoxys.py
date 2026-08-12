@@ -98,7 +98,7 @@ class DeoxysRock:
         for i in range(8):
             dx = random.uniform(-10, 10)
             dy = random.uniform(-10, 10)
-            self.canvas.create_oval(self.size//2-2, self.size//2-2, self.size//2+2, self.size//2+2, fill="#795548", outline="#3E2723", tags=f"p_{i}")
+            self.canvas.create_rectangle(self.size//2-2, self.size//2-2, self.size//2+2, self.size//2+2, fill="#795548", outline="#3E2723", tags=f"p_{i}")
             self.canvas.move(f"p_{i}", dx, dy)
         self.canvas.delete(self.canvas_image_id)
         self.window.after(200, self.window.destroy)
@@ -421,8 +421,8 @@ class DeoxysMechanics:
         p1_x = cx + offset
         p2_x = cx - offset
         
-        self.deoxys_particles.append({'id': self.deoxys_canvas.create_oval(p1_x-4, cy-4, p1_x+4, cy+4, fill="#00BCD4", outline="#00BCD4", tags="pt"), 'x': p1_x, 'y': cy, 'type': 'dna', 'life': 15})
-        self.deoxys_particles.append({'id': self.deoxys_canvas.create_oval(p2_x-4, cy-4, p2_x+4, cy+4, fill="#FF5722", outline="#FF5722", tags="pt"), 'x': p2_x, 'y': cy, 'type': 'dna', 'life': 15})
+        self.deoxys_particles.append({'id': self.deoxys_canvas.create_rectangle(p1_x-4, cy-4, p1_x+4, cy+4, fill="#00BCD4", outline="#00BCD4", tags="pt"), 'x': p1_x, 'y': cy, 'type': 'dna', 'life': 15})
+        self.deoxys_particles.append({'id': self.deoxys_canvas.create_rectangle(p2_x-4, cy-4, p2_x+4, cy+4, fill="#FF5722", outline="#FF5722", tags="pt"), 'x': p2_x, 'y': cy, 'type': 'dna', 'life': 15})
         
         if self.y < self.v_y - 200:
             self.current_state = 'deoxys_wait'
@@ -479,9 +479,9 @@ class DeoxysMechanics:
             tx = cx + random.randint(-40, 40)
             ty = cy - random.randint(40, 160)
             color = random.choice(["#FF5722", "#FFC107", "#F44336"])
-            self.deoxys_particles.append({'id': self.deoxys_canvas.create_oval(tx-10, ty-10, tx+10, ty+10, fill=color, outline=color, tags="pt"), 'type': 'meteor_trail', 'life': 5})
+            self.deoxys_particles.append({'id': self.deoxys_canvas.create_rectangle(tx-10, ty-10, tx+10, ty+10, fill=color, outline=color, tags="pt"), 'type': 'meteor_trail', 'life': 5})
             
-        meteor_id = self.deoxys_canvas.create_polygon(*translated_pts, fill="#5D4037", outline="#3E2723", width=4, tags="meteor")
+        meteor_id = self._draw_pixel_polygon(self.deoxys_canvas, translated_pts, fill="#5D4037", outline="", p_size=8, tags="meteor")
         self.deoxys_particles.append({'id': meteor_id, 'type': 'meteor', 'life': 1})
         
         current_env, _ = self.get_window_environment()
@@ -496,8 +496,8 @@ class DeoxysMechanics:
             self.v_y_velocity = -5.0 # Fly up a bit from explosion
             
             # Massive explosion visual
-            exp_id = self.deoxys_canvas.create_oval(cx-10, cy-10, cx+10, cy+10, fill="white", outline="#FF5722", width=10, tags="pt")
-            self.deoxys_particles.append({'id': exp_id, 'type': 'giant_explosion', 'life': 20})
+            exp_id = self._draw_pixel_circle_bbox(self.deoxys_canvas, cx-10, cy-10, cx+10, cy+10, fill="white", outline="#FF5722", width=10, tags="pt")
+            self.deoxys_particles.append({'id': exp_id, 'type': 'giant_explosion', 'life': 20, 'bbox': (cx-10, cy-10, cx+10, cy+10)})
             
             # Push nearby pets
             global_cx = self.x + self.size_w/2
@@ -590,11 +590,11 @@ class DeoxysMechanics:
             elif p.get('type') == 'giant_explosion':
                 if p['life'] > 0:
                     p['life'] -= 1
-                    coords = self.deoxys_canvas.coords(p['id'])
-                    if coords:
-                        # expand very fast
-                        self.deoxys_canvas.coords(p['id'], coords[0]-25, coords[1]-25, coords[2]+25, coords[3]+25)
-                        alive.append(p)
+                    b = p['bbox']
+                    p['bbox'] = (b[0]-25, b[1]-25, b[2]+25, b[3]+25)
+                    self.deoxys_canvas.delete(p['id'])
+                    p['id'] = self._draw_pixel_circle_bbox(self.deoxys_canvas, *p['bbox'], fill="white", outline="#FF5722", width=10, tags="pt")
+                    alive.append(p)
                 else:
                     self.deoxys_canvas.delete(p['id'])
                     

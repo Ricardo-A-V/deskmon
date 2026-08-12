@@ -173,7 +173,7 @@ class CelebiMechanics:
                 color = random.choice(["#8A2BE2", "#9370DB", "#4B0082", "#DDA0DD"])
                 s = random.choice([3, 4, 5])
                 
-                pid = self.celebi_vfx_canvas.create_oval(px-s, py-s, px+s, py+s, fill=color, outline="")
+                pid = self.celebi_vfx_canvas.create_rectangle(px-s, py-s, px+s, py+s, fill=color, outline="")
                 self.celebi_particles.append({'id': pid, 'x': px, 'y': py, 'vx': 0, 'vy': 0, 'life': 8, 'type': 'spiral'})
 
         self._process_celebi_particles()
@@ -187,7 +187,7 @@ class CelebiMechanics:
                 for _ in range(20):
                     a = random.uniform(0, 2 * math.pi)
                     sp = random.uniform(5.0, 15.0)
-                    pid = self.celebi_vfx_canvas.create_oval(cx-3, cy-3, cx+3, cy+3, fill="#32CD32", outline="")
+                    pid = self.celebi_vfx_canvas.create_rectangle(cx-3, cy-3, cx+3, cy+3, fill="#32CD32", outline="")
                     self.celebi_particles.append({'id': pid, 'x': cx, 'y': cy, 'vx': math.cos(a)*sp, 'vy': math.sin(a)*sp, 'life': 15, 'type': 'blast'})
             
             self.celebi_phase = 1
@@ -287,7 +287,7 @@ class CelebiMechanics:
             t_px = self.x - self.v_x + self.size_w / 2 + random.uniform(-10, 10)
             t_py = self.y - self.v_y + self.size_h / 2 + random.uniform(-10, 10)
             color = random.choice(["#FFFF00", "#FFD700", "#FFFACD"])
-            t_pid = self.celebi_vfx_canvas.create_oval(t_px-2, t_py-2, t_px+2, t_py+2, fill=color, outline="")
+            t_pid = self.celebi_vfx_canvas.create_rectangle(t_px-2, t_py-2, t_px+2, t_py+2, fill=color, outline="")
             self.celebi_particles.append({'id': t_pid, 'x': t_px, 'y': t_py, 'vx': random.uniform(-1, 1), 'vy': random.uniform(3.0, 7.0), 'life': 15, 'type': 'trail'})
         
         if dist < max(self.size_w, self.size_h) * 0.8:
@@ -345,7 +345,7 @@ class CelebiMechanics:
             for _ in range(25):
                 angle = random.uniform(0, 2 * math.pi)
                 speed = random.uniform(8.0, 20.0)
-                pid = self.celebi_vfx_canvas.create_oval(cx-3, cy-3, cx+3, cy+3, fill="#FF69B4", outline="")
+                pid = self.celebi_vfx_canvas.create_rectangle(cx-3, cy-3, cx+3, cy+3, fill="#FF69B4", outline="")
                 self.celebi_particles.append({'id': pid, 'x': cx, 'y': cy, 'vx': math.cos(angle)*speed, 'vy': math.sin(angle)*speed, 'life': 20, 'type': 'blast'})
                 
             if target_dict.get('id'):

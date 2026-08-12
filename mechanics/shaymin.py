@@ -196,7 +196,7 @@ class GracideaFloor:
             self.canvas.delete("all")
             import time
             for i in range(1, 9):
-                self.canvas.create_oval(20-i*2, 20-i*2, 20+i*2, 20+i*2, outline="#FFFFFF", width=2)
+                self.canvas.create_rectangle(20-i*2, 20-i*2, 20+i*2, 20+i*2, outline="#FFFFFF", width=2)
                 self.canvas.update()
                 time.sleep(0.02)
             self.win.destroy()
@@ -242,7 +242,7 @@ class ShayminMechanics:
         if type_p == 'joy_sparkle':
             pid = self.shaymin_canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="", tags="pt")
         else:
-            pid = self.shaymin_canvas.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="", tags="pt")
+            pid = self.shaymin_canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="", tags="pt")
         self.shaymin_particles.append({'id': pid, 'vx': v_x, 'vy': v_y, 'life': life})
         if len(self.shaymin_particles) == 1:
             self._process_shaymin_particles()

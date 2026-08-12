@@ -208,8 +208,8 @@ class YveltalMechanics:
                         
                     r = exp_state['radius']
                     w = int(exp_state['width'])
-                    self.yveltal_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#1A0000", width=w, tags="vfx_y_exp")
-                    self.yveltal_canvas.create_oval(cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#E60000", width=max(1, w//2), tags="vfx_y_exp")
+                    self._draw_pixel_circle_bbox(self.yveltal_canvas, cx-r, cy-r, cx+r, cy+r, outline="#1A0000", width=w, tags="vfx_y_exp")
+                    self._draw_pixel_circle_bbox(self.yveltal_canvas, cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#E60000", width=max(1, w//2), tags="vfx_y_exp")
                     
                     self.window.after(30, animate_yveltal_shockwave)
                 except:

@@ -54,7 +54,7 @@ class LatiTwinsMechanics:
                 color = "#E91E63" # fallback
                 
             self.lati_particles.append({
-                'id': self.lati_canvas.create_oval(spawn_x-3, spawn_y-3, spawn_x+3, spawn_y+3, fill=color, outline=color, tags="pt"),
+                'id': self.lati_canvas.create_rectangle(spawn_x-3, spawn_y-3, spawn_x+3, spawn_y+3, fill=color, outline=color, tags="pt"),
                 'x': spawn_x, 'y': spawn_y,
                 'target_x': cx, 'target_y': cy,
                 'speed': random.uniform(4.0, 8.0)
@@ -90,7 +90,7 @@ class LatiTwinsMechanics:
         cx = self.x - self.v_x + self.size_w/2
         cy = self.y - self.v_y + self.size_h/2
         self.lati_particles.append({
-            'id': self.lati_canvas.create_oval(cx-6, cy-6, cx+6, cy+6, fill=color, outline=color, tags="pt"),
+            'id': self.lati_canvas.create_rectangle(cx-6, cy-6, cx+6, cy+6, fill=color, outline=color, tags="pt"),
             'x': cx, 'y': cy, 'type': 'trail', 'life': 30
         })
         
@@ -172,7 +172,7 @@ class LatiTwinsMechanics:
         
         for _ in range(4):
             self.lati_particles.append({
-                'id': self.lati_canvas.create_oval(cx-6, cy-6, cx+6, cy+6, fill=color, outline=color, tags="pt"),
+                'id': self.lati_canvas.create_rectangle(cx-6, cy-6, cx+6, cy+6, fill=color, outline=color, tags="pt"),
                 'x': cx + random.randint(-20, 20), 'y': cy + random.randint(-20, 20), 'type': 'trail', 'life': 30
             })
             
@@ -191,10 +191,10 @@ class LatiTwinsMechanics:
                         p.v_y_velocity = self.lati_dash_vy * 0.8 - 40.0
                         
                         # Add explosion ring
-                        inner = self.lati_canvas.create_oval(pcx-self.v_x-10, pcy-self.v_y-10, pcx-self.v_x+10, pcy-self.v_y+10, fill="white", outline="white", tags="pt")
-                        outer = self.lati_canvas.create_oval(pcx-self.v_x-20, pcy-self.v_y-20, pcx-self.v_x+20, pcy-self.v_y+20, outline=color, width=4, tags="pt")
-                        self.lati_particles.append({'id': inner, 'type': 'explosion', 'life': 10})
-                        self.lati_particles.append({'id': outer, 'type': 'explosion_ring', 'life': 10})
+                        inner = self._draw_pixel_circle_bbox(self.lati_canvas, pcx-self.v_x-10, pcy-self.v_y-10, pcx-self.v_x+10, pcy-self.v_y+10, fill="white", outline="", tags="pt")
+                        outer = self._draw_pixel_circle_bbox(self.lati_canvas, pcx-self.v_x-20, pcy-self.v_y-20, pcx-self.v_x+20, pcy-self.v_y+20, outline=color, width=4, tags="pt")
+                        self.lati_particles.append({'id': inner, 'type': 'explosion', 'life': 10, 'bbox': (pcx-self.v_x-10, pcy-self.v_y-10, pcx-self.v_x+10, pcy-self.v_y+10), 'color': "white"})
+                        self.lati_particles.append({'id': outer, 'type': 'explosion_ring', 'life': 10, 'bbox': (pcx-self.v_x-20, pcy-self.v_y-20, pcx-self.v_x+20, pcy-self.v_y+20), 'color': color})
                         
                         if hasattr(p, 'play_sound'):
                             try: p.play_sound("hit.wav")
@@ -238,19 +238,21 @@ class LatiTwinsMechanics:
             elif p.get('type') == 'explosion':
                 if p['life'] > 0:
                     p['life'] -= 1
-                    coords = self.lati_canvas.coords(p['id'])
-                    if coords:
-                        self.lati_canvas.coords(p['id'], coords[0]-2, coords[1]-2, coords[2]+2, coords[3]+2)
-                        alive.append(p)
+                    b = p['bbox']
+                    p['bbox'] = (b[0]-2, b[1]-2, b[2]+2, b[3]+2)
+                    self.lati_canvas.delete(p['id'])
+                    p['id'] = self._draw_pixel_circle_bbox(self.lati_canvas, *p['bbox'], fill=p['color'], outline="", tags="pt")
+                    alive.append(p)
                 else:
                     self.lati_canvas.delete(p['id'])
             elif p.get('type') == 'explosion_ring':
                 if p['life'] > 0:
                     p['life'] -= 1
-                    coords = self.lati_canvas.coords(p['id'])
-                    if coords:
-                        self.lati_canvas.coords(p['id'], coords[0]-5, coords[1]-5, coords[2]+5, coords[3]+5)
-                        alive.append(p)
+                    b = p['bbox']
+                    p['bbox'] = (b[0]-3, b[1]-3, b[2]+3, b[3]+3)
+                    self.lati_canvas.delete(p['id'])
+                    p['id'] = self._draw_pixel_circle_bbox(self.lati_canvas, *p['bbox'], outline=p['color'], width=4, tags="pt")
+                    alive.append(p)
                 else:
                     self.lati_canvas.delete(p['id'])
             else:

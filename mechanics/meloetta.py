@@ -101,7 +101,7 @@ class MeloettaMechanics:
                         coords = self.mel_vfx_canvas.coords(p['id'])
                         if coords:
                             for _ in range(8):
-                                self.mel_particles.append({'id': self.mel_vfx_canvas.create_oval(coords[0]-3, coords[1]-3, coords[0]+3, coords[1]+3, fill="#88FF88", outline=""), 'vx': random.uniform(-4, 4), 'vy': random.uniform(-6, -1), 'life': 20, 'type': 'explosion'})
+                                self.mel_particles.append({'id': self.mel_vfx_canvas.create_rectangle(coords[0]-3, coords[1]-3, coords[0]+3, coords[1]+3, fill="#88FF88", outline=""), 'vx': random.uniform(-4, 4), 'vy': random.uniform(-6, -1), 'life': 20, 'type': 'explosion'})
                         self.mel_vfx_canvas.delete(p['id'])
                         continue
                     self.mel_vfx_canvas.move(p['id'], p['vx'], p['vy'])
@@ -119,7 +119,7 @@ class MeloettaMechanics:
                                         self.apply_meloetta_dance(other_pet)
                                         p['life'] = 0
                                         for _ in range(8):
-                                            self.mel_particles.append({'id': self.mel_vfx_canvas.create_oval(coords[0]-3, coords[1]-3, coords[0]+3, coords[1]+3, fill="#88FF88", outline=""), 'vx': random.uniform(-4, 4), 'vy': random.uniform(-6, -1), 'life': 20, 'type': 'explosion'})
+                                            self.mel_particles.append({'id': self.mel_vfx_canvas.create_rectangle(coords[0]-3, coords[1]-3, coords[0]+3, coords[1]+3, fill="#88FF88", outline=""), 'vx': random.uniform(-4, 4), 'vy': random.uniform(-6, -1), 'life': 20, 'type': 'explosion'})
                                         break
                     elif p.get('type') == 'explosion':
                         p['vy'] += 0.4
@@ -187,7 +187,7 @@ class MeloettaMechanics:
         py = cy + math.sin(self.meloetta_angle * 3) * r
         
         if hasattr(self, 'mel_vfx_canvas'):
-            pid = self.mel_vfx_canvas.create_oval(px-3, py-3, px+3, py+3, fill="#88FF88", outline="")
+            pid = self.mel_vfx_canvas.create_rectangle(px-3, py-3, px+3, py+3, fill="#88FF88", outline="")
             dx = (cx - px) / 10.0
             dy = (cy - py) / 10.0
             self.mel_particles.append({'id': pid, 'vx': dx, 'vy': dy, 'life': 10, 'type': 'spiral'})
@@ -265,7 +265,7 @@ class MeloettaMechanics:
             self.meloetta_timer = 0
             if hasattr(self, 'mel_vfx_canvas'):
                 colors = ["#55FF55", "#00FF00", "#88FF88"]
-                pid = self.mel_vfx_canvas.create_text(cx, cy, text="♪", font=("Arial", 24), fill=random.choice(colors))
+                pid = self.mel_vfx_canvas.create_text(cx, cy, text="♪", font=("Fixedsys", 24), fill=random.choice(colors))
                 self.mel_drawn_notes.append({'id': pid, 'x': cx, 'y': cy})
                 
         if reached:
@@ -407,7 +407,7 @@ class MeloettaMechanics:
                 for _ in range(10):
                     vx = random.uniform(-3, 3)
                     vy = random.uniform(-3, 3)
-                    pid_p = self.mel_vfx_canvas.create_oval(cx-2, cy-2, cx+2, cy+2, fill="#FF5555", outline="")
+                    pid_p = self.mel_vfx_canvas.create_rectangle(cx-2, cy-2, cx+2, cy+2, fill="#FF5555", outline="")
                     self.mel_particles.append({'id': pid_p, 'vx': vx, 'vy': vy, 'life': 15, 'type': 'explosion'})
                     
         # Update orbits

@@ -204,7 +204,7 @@ class SeaGuardiansMechanics:
         colors = ["#4D94FF", "#0055FF", "#B3D1FF", "#00BFFF"]
         color = random.choice(colors)
         size = random.choice([2, 3])
-        pid = self.sg_vfx_canvas.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
+        pid = self.sg_vfx_canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
         self.sg_particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': life, 'max_life': life, 'tag': tag})
         if len(self.sg_particles) == 1:
             self._process_sg_particles()

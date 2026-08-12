@@ -334,7 +334,7 @@ class KoraidonMechanics:
         vfx_cx = self.x - self.v_x + self.size_w / 2
         vfx_cy = self.y - self.v_y + self.size_h / 2
         
-        ring = self.krd_vfx_canvas.create_oval(vfx_cx - 10, vfx_cy - 10, vfx_cx + 10, vfx_cy + 10, outline="#E74C3C", width=16)
+        ring = self.krd_vfx_canvas.create_rectangle(vfx_cx - 10, vfx_cy - 10, vfx_cx + 10, vfx_cy + 10, outline="#E74C3C", width=16)
         self._animate_shockwave_ring(ring, vfx_cx, vfx_cy, 10, 0)
 
         if not getattr(self, 'get_all_pets', None): return
@@ -400,15 +400,18 @@ class KoraidonMechanics:
 
     def _animate_shockwave_ring(self, ring_id, cx, cy, radius, frame):
         if not hasattr(self, 'krd_vfx_canvas') or not self.krd_vfx_canvas: return
-        if frame > 25:
-            self.krd_vfx_canvas.delete(ring_id)
-            return
+        self.krd_vfx_canvas.delete(ring_id)
+        if frame >= 20: return
             
-        new_radius = radius + 60
-        self.krd_vfx_canvas.coords(ring_id, cx - new_radius, cy - new_radius, cx + new_radius, cy + new_radius)
+        new_radius = radius + 25
         
-        color_fade = ["#FF4500", "#E74C3C", "#E67E22", "#D35400", "#78281F", "#3b140f"]
-        idx = min(len(color_fade)-1, int(frame / 4))
-        self.krd_vfx_canvas.itemconfig(ring_id, outline=color_fade[idx])
+        color_fade = ["#E74C3C", "#E67E22", "#F39C12", "#F1C40F", "#FFFFFF"]
+        idx = min(frame // 4, 4)
+        
+        ring_id = self._draw_pixel_circle_bbox(
+            self.krd_vfx_canvas, 
+            cx - new_radius, cy - new_radius, cx + new_radius, cy + new_radius, 
+            outline=color_fade[idx], width=16
+        )
         
         self.window.after(16, lambda: self._animate_shockwave_ring(ring_id, cx, cy, new_radius, frame + 1))

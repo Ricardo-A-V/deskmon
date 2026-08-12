@@ -13,15 +13,59 @@ class DialgaMechanics:
                 self.current_state = 'ascending'
             else:
                 self.current_state = 'falling'
+                
+        if hasattr(self, 'dialga_absorb_particles'):
+            for p in self.dialga_absorb_particles:
+                self.canvas.delete(p['id'])
+            self.dialga_absorb_particles = []
 
     def _fsm_dialga_channeling(self):
         if not hasattr(self, 'dialga_phase'):
             self.dialga_phase = 0
+            self.dialga_absorb_timer = 100
+            self.dialga_absorb_particles = []
             
         if self.dialga_phase == 0:
-            self.v_y_velocity = -28.0
-            self.dialga_phase = 1
+            self.dialga_absorb_timer -= 1
             
+            if self.dialga_absorb_timer % 3 == 0:
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(80, 150)
+                cx = self.size_w // 2
+                cy = self.size_h // 2
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#4B0082", "#8A2BE2", "#9B59B6", "#3498DB", "#2E86C1"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_dialga_absorb")
+                self.dialga_absorb_particles.append({'id': pid, 'x': px, 'y': py, 'cx': cx, 'cy': cy})
+                
+            alive = []
+            for p in self.dialga_absorb_particles:
+                dx = p['cx'] - p['x']
+                dy = p['cy'] - p['y']
+                d = math.sqrt(dx**2 + dy**2)
+                if d > 10.0:
+                    speed = 6.0 + (100 - self.dialga_absorb_timer) * 0.05
+                    move_x = (dx/d) * speed
+                    move_y = (dy/d) * speed
+                    self.canvas.move(p['id'], move_x, move_y)
+                    p['x'] += move_x
+                    p['y'] += move_y
+                    alive.append(p)
+                else:
+                    self.canvas.delete(p['id'])
+            self.dialga_absorb_particles = alive
+            
+            if self.dialga_absorb_timer <= 0:
+                for p in self.dialga_absorb_particles:
+                    self.canvas.delete(p['id'])
+                self.dialga_absorb_particles = []
+                self.v_y_velocity = -28.0
+                self.dialga_phase = 1
+                
         elif self.dialga_phase == 1:
             gravity = 4.0
             self.v_y_velocity = getattr(self, 'v_y_velocity', 0.0) + gravity

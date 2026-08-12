@@ -358,7 +358,7 @@ class ZamazentaMechanics:
             points.append(x)
             points.append(y)
             
-        self.zam_canvas.create_polygon(points, fill="#E74C3C", outline="#F1C40F", width=2)
+        self._draw_pixel_polygon(self.zam_canvas, points, fill="#E74C3C", outline="")
 
     def spawn_zam_explosion(self, cx, cy):
         if not hasattr(self, 'get_all_pets'): return
@@ -393,8 +393,8 @@ class ZamazentaMechanics:
                     
                 r = exp_state['radius']
                 w = int(exp_state['width'])
-                cv.create_oval(ox-r, oy-r, ox+r, oy+r, outline="#E74C3C", width=w)
-                cv.create_oval(ox-r*0.8, oy-r*0.8, ox+r*0.8, oy+r*0.8, outline="#F1C40F", width=max(1, w//2))
+                self._draw_pixel_circle_bbox(cv, ox-r, oy-r, ox+r, oy+r, outline="#E74C3C", width=w)
+                self._draw_pixel_circle_bbox(cv, ox-r*0.8, oy-r*0.8, ox+r*0.8, oy+r*0.8, outline="#F1C40F", width=max(1, w//2))
                 
                 self.window.after(30, animate)
             except: pass

@@ -7,6 +7,15 @@ import os
 
 class HoOhMechanics:
     def cancel_hooh_arts(self):
+        if hasattr(self, 'hooh_absorb_particles'):
+            for p in self.hooh_absorb_particles:
+                self.canvas.delete(p['id'])
+            self.hooh_absorb_particles = []
+        if hasattr(self, 'hooh_trail_particles'):
+            for p in self.hooh_trail_particles:
+                self.canvas.delete(p['id'])
+            self.hooh_trail_particles = []
+            
         if self.current_state not in ['dragged', 'exiting']:
             self.current_state = 'falling'
             
@@ -50,9 +59,94 @@ class HoOhMechanics:
             if dist > fly_speed:
                 self.x += (dx/dist) * fly_speed
                 self.y += (dy/dist) * fly_speed
+                
+                if not hasattr(self, 'hooh_trail_timer'):
+                    self.hooh_trail_timer = 0
+                    self.hooh_trail_particles = []
+                self.hooh_trail_timer += 1
+                
+                if self.hooh_trail_timer % 2 == 0:
+                    colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#00BFFF", "#4B0082", "#9400D3"]
+                    for i, color in enumerate(colors):
+                        offset_y = (i - 3) * 6  # Spread vertically (-18 to +18)
+                        
+                        start_x = self.size_w//2
+                        start_y = (self.size_h//2 + 25) + offset_y
+                        
+                        size = 3
+                        pid = self.canvas.create_rectangle(start_x-size, start_y-size, start_x+size, start_y+size, fill=color, outline=color, tags="vfx_hooh_trail")
+                        
+                        # Move backwards relative to flight, plus some outward spread
+                        vx = -(dx/dist) * random.uniform(1.5, 2.5) + random.uniform(-0.5, 0.5)
+                        vy = -(dy/dist) * random.uniform(1.5, 2.5) + (offset_y * 0.05) + random.uniform(-0.5, 0.5)
+                        self.hooh_trail_particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': 25})
+                    
+                alive = []
+                for p in self.hooh_trail_particles:
+                    p['life'] -= 1
+                    if p['life'] > 0:
+                        self.canvas.move(p['id'], p['vx'], p['vy'])
+                        alive.append(p)
+                    else:
+                        self.canvas.delete(p['id'])
+                self.hooh_trail_particles = alive
+                
             else:
                 self.x = self.hooh_target_x
                 self.y = target_y
+                self.hooh_phase = 0.5 
+                self.hooh_absorb_timer = 100
+                self.hooh_absorb_particles = []
+                
+        elif self.hooh_phase == 0.5:
+            if hasattr(self, 'hooh_trail_particles'):
+                alive = []
+                for p in self.hooh_trail_particles:
+                    p['life'] -= 1
+                    if p['life'] > 0:
+                        self.canvas.move(p['id'], p['vx'], p['vy'])
+                        alive.append(p)
+                    else:
+                        self.canvas.delete(p['id'])
+                self.hooh_trail_particles = alive
+
+            self.hooh_absorb_timer -= 1
+            
+            if self.hooh_absorb_timer % 3 == 0:
+                angle = random.uniform(0, 2 * math.pi)
+                dist_p = random.uniform(80, 150)
+                cx = self.size_w // 2
+                cy = self.size_h // 2
+                px = cx + math.cos(angle) * dist_p
+                py = cy + math.sin(angle) * dist_p
+                
+                color = random.choice(["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#00BFFF", "#4B0082", "#9400D3"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_hooh_absorb")
+                self.hooh_absorb_particles.append({'id': pid, 'x': px, 'y': py, 'cx': cx, 'cy': cy})
+                
+            alive = []
+            for p in self.hooh_absorb_particles:
+                dx_p = p['cx'] - p['x']
+                dy_p = p['cy'] - p['y']
+                d_p = math.sqrt(dx_p**2 + dy_p**2)
+                if d_p > 10.0:
+                    speed = 6.0 + (100 - self.hooh_absorb_timer) * 0.05
+                    move_x = (dx_p/d_p) * speed
+                    move_y = (dy_p/d_p) * speed
+                    self.canvas.move(p['id'], move_x, move_y)
+                    p['x'] += move_x
+                    p['y'] += move_y
+                    alive.append(p)
+                else:
+                    self.canvas.delete(p['id'])
+            self.hooh_absorb_particles = alive
+            
+            if self.hooh_absorb_timer <= 0:
+                for p in self.hooh_absorb_particles:
+                    self.canvas.delete(p['id'])
+                self.hooh_absorb_particles = []
                 self.hooh_phase = 1
                 
                 # STRUCTURAL FIX: Hijack at Moment Zero.

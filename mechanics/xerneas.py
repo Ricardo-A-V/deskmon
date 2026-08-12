@@ -87,7 +87,7 @@ class XerneasMechanics:
             size = random.choice([2, 4, 6])
             color = random.choice(["#FFB6C1", "#FF69B4", "#DA70D6", "#FFC0CB"])
             
-            pid = self.xerneas_canvas.create_oval(
+            pid = self.xerneas_canvas.create_rectangle(
                 px-size, py-size, px+size, py+size,
                 fill=color, outline=color, tags="vfx_x"
             )

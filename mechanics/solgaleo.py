@@ -227,9 +227,9 @@ class SolgaleoMechanics:
             r2 = r1 * (0.85 + inner_pulse_mod)
             r3 = r1 * (0.60 + inner_pulse_mod)
             
-            self.solgaleo_canvas.create_oval(cx-r1, cy-r1, cx+r1, cy+r1, fill="#FF4500", outline="#FF4500", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
-            self.solgaleo_canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, fill="#FFD700", outline="#FFD700", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
-            self.solgaleo_canvas.create_oval(cx-r3, cy-r3, cx+r3, cy+r3, fill="#FFFFFF", outline="#FFFFFF", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
+            self._draw_pixel_circle_bbox(self.solgaleo_canvas, cx-r1, cy-r1, cx+r1, cy+r1, fill="#FF4500", outline="#FF4500", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
+            self._draw_pixel_circle_bbox(self.solgaleo_canvas, cx-r2, cy-r2, cx+r2, cy+r2, fill="#FFD700", outline="#FFD700", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
+            self._draw_pixel_circle_bbox(self.solgaleo_canvas, cx-r3, cy-r3, cx+r3, cy+r3, fill="#FFFFFF", outline="#FFFFFF", tags=("vfx_s_fireball", "vfx_s_fireball_rings"))
             
             for _ in range(4):
                 angle = random.uniform(0, 2 * math.pi)
@@ -343,8 +343,8 @@ class SolgaleoMechanics:
                         
                     r = exp_state['radius']
                     w = int(exp_state['width'])
-                    self.solgaleo_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#FF8C00", width=w, tags="vfx_s_exp")
-                    self.solgaleo_canvas.create_oval(cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#FFD700", width=max(1, w//2), tags="vfx_s_exp")
+                    self._draw_pixel_circle_bbox(self.solgaleo_canvas, cx-r, cy-r, cx+r, cy+r, outline="#FF8C00", width=w, tags="vfx_s_exp")
+                    self._draw_pixel_circle_bbox(self.solgaleo_canvas, cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#FFD700", width=max(1, w//2), tags="vfx_s_exp")
                     
                     self.window.after(30, animate_solgaleo_shockwave)
                 except:

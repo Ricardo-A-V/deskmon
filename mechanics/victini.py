@@ -165,7 +165,7 @@ class VictiniMechanics:
         color = random.choice(["#E74C3C", "#E67E22", "#F1C40F", "#FF5733"])
         size = random.choice([4, 6, 8])
         
-        pid = self.vic_vfx_canvas.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
+        pid = self.vic_vfx_canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
         if not hasattr(self, 'vic_particles'): self.vic_particles = []
         self.vic_particles.append({'id': pid, 'vx': vx, 'vy': vy, 'life': life, 'max_life': life, 'max_size': size, 'type': p_type})
 
@@ -279,8 +279,8 @@ class VictiniMechanics:
             cy = win_size / 2
             
             # Expanding blast rings
-            w_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#E74C3C", width=int(state['alpha_width']), tags="wave")
-            w_canvas.create_oval(cx-r*0.8, cy-r*0.8, cx+r*0.8, cy+r*0.8, outline="#F1C40F", width=int(state['alpha_width']*0.8), tags="wave")
+            self._draw_pixel_circle_bbox(w_canvas, cx-r, cy-r, cx+r, cy+r, outline="#E74C3C", width=max(1, int(state['alpha_width'])), tags="wave")
+            self._draw_pixel_circle_bbox(w_canvas, cx-r*0.8, cy-r*0.8, cx+r*0.8, cy+r*0.8, outline="#F1C40F", width=max(1, int(state['alpha_width']*0.8)), tags="wave")
             
             # Massive Expanding V - Multi-layered for fiery effect
             vs = state['v_scale'] * 35

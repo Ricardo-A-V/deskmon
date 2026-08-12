@@ -61,6 +61,11 @@ class KyogreMechanics:
         self.kyogre_master = None
         if master and master.window.winfo_exists():
             master.cancel_kyogre_arts()
+            
+        if hasattr(self, 'kyogre_absorb_particles'):
+            for p in self.kyogre_absorb_particles:
+                self.canvas.delete(p['id'])
+            self.kyogre_absorb_particles = []
 
     def _fsm_kyogre_channeling(self):
         if not hasattr(self, 'kyogre_target_x'):
@@ -86,7 +91,49 @@ class KyogreMechanics:
             else:
                 self.x = self.kyogre_target_x
                 self.y = target_y
-                self.kyogre_phase = 1 
+                self.kyogre_phase = 0.5 
+                self.kyogre_absorb_timer = 100
+                self.kyogre_absorb_particles = []
+                
+        elif self.kyogre_phase == 0.5:
+            self.kyogre_absorb_timer -= 1
+            
+            if self.kyogre_absorb_timer % 3 == 0:
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(80, 150)
+                cx = self.size_w // 2
+                cy = self.size_h // 2
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#0000FF", "#1E90FF", "#00BFFF", "#87CEFA", "#4682B4"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_kyogre_absorb")
+                self.kyogre_absorb_particles.append({'id': pid, 'x': px, 'y': py, 'cx': cx, 'cy': cy})
+                
+            alive = []
+            for p in self.kyogre_absorb_particles:
+                dx = p['cx'] - p['x']
+                dy = p['cy'] - p['y']
+                d = math.sqrt(dx**2 + dy**2)
+                if d > 10.0:
+                    speed = 6.0 + (100 - self.kyogre_absorb_timer) * 0.05
+                    move_x = (dx/d) * speed
+                    move_y = (dy/d) * speed
+                    self.canvas.move(p['id'], move_x, move_y)
+                    p['x'] += move_x
+                    p['y'] += move_y
+                    alive.append(p)
+                else:
+                    self.canvas.delete(p['id'])
+            self.kyogre_absorb_particles = alive
+            
+            if self.kyogre_absorb_timer <= 0:
+                for p in self.kyogre_absorb_particles:
+                    self.canvas.delete(p['id'])
+                self.kyogre_absorb_particles = []
+                self.kyogre_phase = 1
                 
                 if not hasattr(self, 'flood_overlay') or not self.flood_overlay:
                     self.flood_overlay = FloodOverlay(self.window.master, self.v_x, self.v_y, self.v_width, self.v_height)

@@ -3,6 +3,84 @@ import math
 import os
 
 class SharedVFX:
+    def _draw_pixel_circle_bbox(self, canvas, x1, y1, x2, y2, **kwargs):
+        import math
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
+        r = abs(x2 - x1) / 2
+        fill = kwargs.get('fill', '')
+        outline = kwargs.get('outline', '')
+        tags = kwargs.get('tags', '')
+        width = kwargs.get('width', 1)
+        p_size = 6
+        if r <= p_size:
+            return canvas.create_rectangle(cx-r, cy-r, cx+r, cy+r, fill=fill, outline=outline, width=width, tags=tags)
+        
+        r = int(r)
+        half_pts = []
+        for y in range(-r, r, p_size):
+            y_top = y
+            y_bottom = min(y + p_size, r)
+            eval_y = min(abs(y_top), abs(y_bottom))
+            try: x = math.sqrt(r**2 - eval_y**2)
+            except: x = 0
+            x = round(x / p_size) * p_size
+            if x == 0: x = p_size
+            half_pts.extend([x, y_top, x, y_bottom])
+            
+        pts = []
+        for i in range(0, len(half_pts), 2):
+            pts.extend([cx + half_pts[i], cy + half_pts[i+1]])
+        for i in range(len(half_pts)-2, -1, -2):
+            pts.extend([cx - half_pts[i], cy + half_pts[i+1]])
+            
+        return canvas.create_polygon(*pts, fill=fill, outline=outline, width=width, tags=tags, smooth=False)
+
+    def _draw_pixel_polygon(self, canvas, *pts, **kwargs):
+        import random
+        fill = kwargs.get('fill', '')
+        outline = kwargs.get('outline', '')
+        tags = kwargs.get('tags', '')
+        p_size = 6
+        
+        uid = f"pix_poly_{random.randint(10000, 99999)}"
+        all_tags = (tags, uid) if tags else (uid,)
+        
+        flat_pts = []
+        for p in pts:
+            if isinstance(p, (list, tuple)): flat_pts.extend(p)
+            else: flat_pts.append(p)
+                
+        edges = []
+        for i in range(0, len(flat_pts), 2):
+            x1, y1 = flat_pts[i], flat_pts[i+1]
+            nx, ny = flat_pts[(i+2)%len(flat_pts)], flat_pts[(i+3)%len(flat_pts)]
+            edges.append((x1, y1, nx, ny))
+            
+        min_y = min(flat_pts[1::2])
+        max_y = max(flat_pts[1::2])
+        
+        min_y = round(min_y / p_size) * p_size
+        max_y = round(max_y / p_size) * p_size
+        
+        for y in range(int(min_y), int(max_y) + p_size, p_size):
+            y_mid = y + p_size / 2.0
+            intersects = []
+            for ex1, ey1, ex2, ey2 in edges:
+                if (ey1 <= y_mid < ey2) or (ey2 <= y_mid < ey1):
+                    t = (y_mid - ey1) / (ey2 - ey1)
+                    ix = ex1 + t * (ex2 - ex1)
+                    intersects.append(ix)
+            
+            intersects.sort()
+            for i in range(0, len(intersects)-1, 2):
+                x_start = round(intersects[i] / p_size) * p_size
+                x_end = round(intersects[i+1] / p_size) * p_size
+                if x_start == x_end: x_end += p_size
+                
+                canvas.create_rectangle(x_start, y, x_end, y + p_size, fill=fill, outline="", tags=all_tags)
+        return uid
+
     def show_dirt_vfx(self):
         particles = []
         cx = self.size_w // 2

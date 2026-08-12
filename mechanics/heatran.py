@@ -139,7 +139,7 @@ class HeatranMechanics:
                 spawn_y = self.v_y - 20
                 
                 rock = {
-                    'id': self.hea_canvas.create_oval(spawn_x-24, spawn_y-24, spawn_x+24, spawn_y+24, fill="#795548", outline="#3E2723", width=2, tags="rock"),
+                    'id': self._draw_pixel_circle_bbox(self.hea_canvas, spawn_x-24-self.v_x, spawn_y-24-self.v_y, spawn_x+24-self.v_x, spawn_y+24-self.v_y, fill="#795548", outline="#3E2723", width=2, tags="rock"),
                     'x': spawn_x - self.v_x, 'y': spawn_y - self.v_y,
                     'vx': random.uniform(-1, 1),
                     'vy': random.uniform(5, 10),
@@ -165,11 +165,10 @@ class HeatranMechanics:
         self.hea_canvas.delete("trail")
         
         for rock in self.hea_rocks:
+            self.hea_canvas.move(rock['id'], rock['vx'], rock['vy'])
             rock['x'] += rock['vx']
             rock['y'] += rock['vy']
             rock['vy'] += 0.3 # gravity
-            
-            self.hea_canvas.coords(rock['id'], rock['x']-24, rock['y']-24, rock['x']+24, rock['y']+24)
             
             rock['trail'].append({'x': rock['x'] + random.randint(-24, 24), 'y': rock['y'] + random.randint(-24, 24) - 10, 'life': 12})
             
@@ -179,7 +178,7 @@ class HeatranMechanics:
                     t['y'] -= 1 
                     size = t['life'] / 2
                     color = random.choice(["#E67E22", "#F1C40F", "#C0392B"])
-                    self.hea_canvas.create_oval(t['x']-size, t['y']-size, t['x']+size, t['y']+size, fill=color, outline=color, tags="trail")
+                    self.hea_canvas.create_rectangle(t['x']-size, t['y']-size, t['x']+size, t['y']+size, fill=color, outline=color, tags="trail")
                     t['life'] -= 1
                     alive_trail.append(t)
             rock['trail'] = alive_trail
@@ -252,8 +251,8 @@ class HeatranMechanics:
                 return
                 
             r = state['radius']
-            c.create_oval(size/2-r, size/2-r, size/2+r, size/2+r, outline="#E74C3C", width=state['alpha'], tags="exp")
-            c.create_oval(size/2-r*0.8, size/2-r*0.8, size/2+r*0.8, size/2+r*0.8, outline="#E67E22", width=max(1, state['alpha']-5), tags="exp")
+            self._draw_pixel_circle_bbox(c, size/2-r, size/2-r, size/2+r, size/2+r, outline="#E74C3C", width=state['alpha'], tags="exp")
+            self._draw_pixel_circle_bbox(c, size/2-r*0.8, size/2-r*0.8, size/2+r*0.8, size/2+r*0.8, outline="#E67E22", width=max(1, state['alpha']-5), tags="exp")
             
             exp_win.after(30, anim)
             

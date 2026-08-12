@@ -14,12 +14,17 @@ class LugiaMechanics:
                 self.current_state = 'ascending'
             else:
                 self.current_state = 'falling'
+                
+        if hasattr(self, 'lugia_absorb_particles'):
+            for p in self.lugia_absorb_particles:
+                self.canvas.delete(p['id'])
+            self.lugia_absorb_particles = []
 
     def _fsm_lugia_channeling(self):
-        # FIX: Calculate target only once and save it in static memory
         if not hasattr(self, 'lugia_target_x'):
+            self.lugia_absorb_timer = 100
+            self.lugia_absorb_particles = []
             self.lugia_dash_direction = self.is_facing_right 
-            
             
             if self.lugia_dash_direction:
                 self.lugia_target_x = self.v_x - 300
@@ -27,6 +32,49 @@ class LugiaMechanics:
                 self.lugia_target_x = self.v_x + self.v_width + 300
                 
             self.lugia_target_y = self.v_y + (self.v_height * 0.3)
+            
+        if getattr(self, 'lugia_absorb_timer', 0) > 0:
+            self.lugia_absorb_timer -= 1
+            
+            if self.lugia_absorb_timer % 3 == 0:
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(80, 150)
+                cx = self.size_w // 2
+                cy = self.size_h // 2
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#FFFFFF", "#F0F8FF", "#E6E6FA", "#D8BFD8", "#C0C0C0"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_lugia_absorb")
+                self.lugia_absorb_particles.append({'id': pid, 'x': px, 'y': py, 'cx': cx, 'cy': cy})
+                
+            alive = []
+            for p in self.lugia_absorb_particles:
+                dx = p['cx'] - p['x']
+                dy = p['cy'] - p['y']
+                d = math.sqrt(dx**2 + dy**2)
+                if d > 10.0:
+                    speed = 6.0 + (100 - self.lugia_absorb_timer) * 0.05
+                    move_x = (dx/d) * speed
+                    move_y = (dy/d) * speed
+                    self.canvas.move(p['id'], move_x, move_y)
+                    p['x'] += move_x
+                    p['y'] += move_y
+                    alive.append(p)
+                else:
+                    self.canvas.delete(p['id'])
+            self.lugia_absorb_particles = alive
+            
+            if self.lugia_absorb_timer <= 0:
+                for p in self.lugia_absorb_particles:
+                    self.canvas.delete(p['id'])
+                self.lugia_absorb_particles = []
+            
+            self.update_position()
+            self.schedule_loop(30, self.physics_loop)
+            return
 
         dx = self.lugia_target_x - self.x
         dy = self.lugia_target_y - self.y

@@ -115,7 +115,7 @@ class CresseliaMechanics:
         if self.cresselia_timer % 3 == 0:
             cx, cy = self.size_w / 2, self.size_h / 2
             color = random.choice(["#FF69B4", "#00FFFF", "#FFFACD"]) 
-            pid = self.canvas.create_oval(cx-2, cy-2, cx+2, cy+2, fill=color, outline="", tags="cresselia_vfx")
+            pid = self.canvas.create_rectangle(cx-2, cy-2, cx+2, cy+2, fill=color, outline="", tags="cresselia_vfx")
             self.canvas.tag_lower(pid, self.canvas_image_id)
             
             angle = random.uniform(0, 2 * math.pi)
@@ -215,8 +215,8 @@ class CresseliaMechanics:
         cx, cy = 600, 600
         
         # Dual-layer shockwave
-        pid_outer = c.create_oval(cx-10, cy-10, cx+10, cy+10, outline="#00FFFF", width=8)
-        pid_inner = c.create_oval(cx-5, cy-5, cx+5, cy+5, outline="#FF69B4", width=4)
+        pid_outer = c.create_rectangle(cx-10, cy-10, cx+10, cy+10, outline="#00FFFF", width=8)
+        pid_inner = c.create_rectangle(cx-5, cy-5, cx+5, cy+5, outline="#FF69B4", width=4)
         
         def animate_pulse(step, radius):
             if not pulse_win.winfo_exists(): return
@@ -248,7 +248,7 @@ class CresseliaMechanics:
             for _ in range(random.randint(1, 2)): 
                 px = random.uniform(0, self.aurora_width)
                 size = random.choice([4, 6, 8])
-                pid = self.aurora_canvas.create_oval(px, -10, px+size, -10+size, fill=random.choice(colors), outline="")
+                pid = self.aurora_canvas.create_rectangle(px, -10, px+size, -10+size, fill=random.choice(colors), outline="")
                 
                 speed_y = random.uniform(2.0, 5.0) 
                 phase = random.uniform(0, math.pi * 2)

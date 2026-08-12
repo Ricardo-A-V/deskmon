@@ -67,7 +67,7 @@ class JirachiMechanics:
                 points.extend([px, py])
                 
                 if i % 2 == 0:
-                    self.canvas.create_oval(px-2, py-2, px+2, py+2, fill="#FFFFFF", outline="", tags="jirachi_star_vfx")
+                    self.canvas.create_rectangle(px-2, py-2, px+2, py+2, fill="#FFFFFF", outline="", tags="jirachi_star_vfx")
             
             # FIX: Desempaquetado estricto (*points) para prevenir excepciones de sintaxis de Tkinter
             self.canvas.create_polygon(*points, outline="#FFD700", fill="", width=2, tags="jirachi_star_vfx")
@@ -116,7 +116,7 @@ class JirachiMechanics:
             vy = math.sin(angle) * speed
             size = random.choice([2, 3, 4])
             color = random.choice(["#FFD700", "#FFFFFF"])
-            pid = c.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
+            pid = c.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
             particles.append({'id': pid, 'x': cx, 'y': cy, 'vx': vx, 'vy': vy})
             
         def animate_exp(step):
@@ -205,7 +205,7 @@ class JirachiMechanics:
             oy = random.uniform(-10, 10)
             size = random.choice([2, 3])
             
-            pid = self.canvas.create_oval(cx+ox-size, cy+oy-size, cx+ox+size, cy+oy+size, fill="#FFD700", outline="", tags="jirachi_trail_vfx")
+            pid = self.canvas.create_rectangle(cx+ox-size, cy+oy-size, cx+ox+size, cy+oy+size, fill="#FFD700", outline="", tags="jirachi_trail_vfx")
             self.canvas.tag_lower(pid, self.canvas_image_id)
             
             vx = random.uniform(-2.0, 0.0)
@@ -269,7 +269,7 @@ class JirachiMechanics:
         real_star_y = pd['y'] + 180
         
         if random.randint(1, 100) <= 60:
-            pid = s_canvas.create_oval(18, 178, 22, 182, fill="#FFD700", outline="")
+            pid = s_canvas.create_rectangle(18, 178, 22, 182, fill="#FFD700", outline="")
             pd['trails'].append({'id': pid, 'life': 15})
             
         alive_trails = []
@@ -326,7 +326,7 @@ class JirachiMechanics:
         rx = cx + random.randint(-20, 20)
         ry = cy + random.randint(-20, 20)
         size = random.choice([2, 3])
-        pid = target.canvas.create_oval(rx-size, ry-size, rx+size, ry+size, fill="#FFD700", outline="")
+        pid = target.canvas.create_rectangle(rx-size, ry-size, rx+size, ry+size, fill="#FFD700", outline="")
         
         def fade(p_id):
             if not target.canvas.winfo_exists(): return
@@ -356,7 +356,7 @@ class JirachiMechanics:
             particles.append({'x': 50, 'y': 50, 'vx': math.cos(angle)*speed, 'vy': math.sin(angle)*speed, 'id': None})
             
         for p in particles:
-            p['id'] = c.create_oval(p['x']-2, p['y']-2, p['x']+2, p['y']+2, fill="#FFD700", outline="")
+            p['id'] = c.create_rectangle(p['x']-2, p['y']-2, p['x']+2, p['y']+2, fill="#FFD700", outline="")
             
         def animate_shatter(step):
             if not exp_win.winfo_exists(): return

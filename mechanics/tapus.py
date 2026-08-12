@@ -163,7 +163,7 @@ class TapusMechanics:
                 if self.tapu_type == "electric":
                     pid = pet.canvas.create_rectangle(cx-2, cy-2, cx+2, cy+2, fill=self.tapu_color, outline="", tags="tapu_pet_particle")
                 else:
-                    pid = pet.canvas.create_oval(cx-2, cy-2, cx+2, cy+2, fill=self.tapu_color, outline="", tags="tapu_pet_particle")
+                    pid = pet.canvas.create_rectangle(cx-2, cy-2, cx+2, cy+2, fill=self.tapu_color, outline="", tags="tapu_pet_particle")
                 pet.schedule_loop(500, lambda id=pid: pet.canvas.delete(id))
             except: pass
 
@@ -197,7 +197,7 @@ class TapusMechanics:
             if self.tapu_type == "electric":
                 pid = self.tapu_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=self.tapu_color, outline="")
             else:
-                pid = self.tapu_canvas.create_oval(px-size, py-size, px+size, py+size, fill=self.tapu_color, outline="")
+                pid = self.tapu_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=self.tapu_color, outline="")
                 
             vx = random.uniform(-1, 1)
             vy = random.uniform(-1, 1)

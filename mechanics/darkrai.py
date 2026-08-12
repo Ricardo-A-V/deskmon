@@ -91,7 +91,7 @@ class DarkraiMechanics:
             if random.randint(1, 100) <= 80:
                 cx, cy = self.size_w / 2, self.size_h / 2
                 size = random.choice([6, 8, 12])
-                pid = self.canvas.create_oval(cx-size, cy-size, cx+size, cy+size, fill="#1A1A1A", outline="#4B0082", width=2, tags="darkrai_vfx")
+                pid = self.canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill="#1A1A1A", outline="#4B0082", width=2, tags="darkrai_vfx")
                 self.canvas.tag_lower(pid, self.canvas_image_id)
                 
                 def fade_shadow(step, p_id):
@@ -130,7 +130,7 @@ class DarkraiMechanics:
             distance = random.uniform(400.0, 500.0)
             color = random.choice(["#4B0082", "#8A2BE2", "#1A1A1A"])
             
-            pid = self.aoe_canvas.create_oval(0, 0, 0, 0, fill=color, outline="")
+            pid = self.aoe_canvas.create_rectangle(0, 0, 0, 0, fill=color, outline="")
             
             def animate_spiral(step, p_id, current_angle, current_dist):
                 if self.current_state not in ['darkrai_channeling', 'darkrai_aoe'] or not hasattr(self, 'aoe_canvas') or not self.aoe_canvas.winfo_exists(): return
@@ -259,7 +259,7 @@ class DarkraiMechanics:
                 px = 500 + math.cos(angle) * self.aoe_radius
                 py = 500 + math.sin(angle) * self.aoe_radius
                 size = random.choice([2, 3])
-                pid = self.aoe_canvas.create_oval(px-size, py-size, px+size, py+size, fill="#8A2BE2", outline="")
+                pid = self.aoe_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill="#8A2BE2", outline="")
                 
                 def fade_aoe(step, p_id):
                     if not self.aoe_canvas.winfo_exists(): return
@@ -375,7 +375,7 @@ class DarkraiMechanics:
             vy = math.sin(angle) * speed
             size = random.choice([3, 5, 7])
             color = random.choice(["#4B0082", "#1A1A1A", "#8A2BE2", "#000000"])
-            pid = c.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
+            pid = c.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
             particles.append({'id': pid, 'x': cx, 'y': cy, 'vx': vx, 'vy': vy})
             
         def animate_exp(step):

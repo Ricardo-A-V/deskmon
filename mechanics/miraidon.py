@@ -443,7 +443,7 @@ class MiraidonMechanics:
         cx = self.x - self.v_x + self.size_w / 2
         cy = self.y - self.v_y + self.size_h / 2
         
-        ring = self.mrd_vfx_canvas.create_oval(cx - 10, cy - 10, cx + 10, cy + 10, outline="#00FFFF", width=10)
+        ring = self.mrd_vfx_canvas.create_rectangle(cx - 10, cy - 10, cx + 10, cy + 10, outline="#00FFFF", width=10)
         self._animate_mrd_shockwave_ring(ring, cx, cy, 10, 0)
 
         if not getattr(self, 'get_all_pets', None): return

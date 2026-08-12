@@ -113,7 +113,7 @@ class LunalaMechanics:
             
             size = random.choice([2, 3])
             color = random.choice(["#00BFFF", "#87CEEB", "#E0FFFF"]) 
-            pid = self.canvas.create_oval(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_l_charge")
+            pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="vfx_l_charge")
             
             if not hasattr(self, 'l_particles'): self.l_particles = []
             self.l_particles.append({'id': pid, 'life': 3}) 
@@ -266,8 +266,8 @@ class LunalaMechanics:
                         
                     r = exp_state['radius']
                     w = int(exp_state['width'])
-                    self.lunala_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#800080", width=w, tags="vfx_l_exp")
-                    self.lunala_canvas.create_oval(cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#00BFFF", width=max(1, w//2), tags="vfx_l_exp")
+                    self._draw_pixel_circle_bbox(self.lunala_canvas, cx-r, cy-r, cx+r, cy+r, outline="#800080", width=w, tags="vfx_l_exp")
+                    self._draw_pixel_circle_bbox(self.lunala_canvas, cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#00BFFF", width=max(1, w//2), tags="vfx_l_exp")
                     
                     self.window.after(30, animate_lunala_shockwave)
                 except:

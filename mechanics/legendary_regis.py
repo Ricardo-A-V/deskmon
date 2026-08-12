@@ -122,7 +122,7 @@ class LegendaryRegisMechanics:
         vy_in = (dy / dist) * 8.0 if dist > 0 else 0
         
         e_size = 3
-        pid_energy = self.canvas.create_oval(ex-e_size, ey-e_size, ex+e_size, ey+e_size, fill="#FFD700", outline="")
+        pid_energy = self.canvas.create_rectangle(ex-e_size, ey-e_size, ex+e_size, ey+e_size, fill="#FFD700", outline="")
 
         def animate_fx(step, c_px, c_py, c_ex, c_ey):
             if self.current_state == 'exiting' or not self.canvas.winfo_exists(): return
@@ -159,7 +159,7 @@ class LegendaryRegisMechanics:
             vx = random.uniform(-0.5, 0.5)
             
         size = random.choice([2, 3, 4])
-        pid = self.canvas.create_oval(px-size, py-size, px+size, py+size, fill=color, outline="")
+        pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline="")
         
         def animate_particle(step, current_px, current_py):
             if self.current_state == 'exiting' or not self.canvas.winfo_exists(): return
@@ -530,14 +530,14 @@ class LegendaryRegisMechanics:
                 wave_win.destroy()
                 return
                 
-            w_canvas.create_oval(cx-state['r'], cy-state['r'], cx+state['r'], cy+state['r'], outline=color, width=int(state['width']), tags="wave")
+            self._draw_pixel_circle_bbox(w_canvas, cx-state['r'], cy-state['r'], cx+state['r'], cy+state['r'], outline=color, width=max(1, int(state['width'])), tags="wave")
             wave_win.after(20, animate)
         animate()
 
     def _spawn_regi_trail(self, color):
         cx = self.size_w / 2
         cy = self.size_h / 2
-        pid = self.canvas.create_oval(cx-3, cy-3, cx+3, cy+3, fill=color, outline="")
+        pid = self.canvas.create_rectangle(cx-3, cy-3, cx+3, cy+3, fill=color, outline="")
         
         def fade(step):
             if self.current_state == 'exiting' or not self.canvas.winfo_exists(): return
@@ -707,7 +707,7 @@ class LegendaryRegisMechanics:
             ry = cy + random.randint(-15, 15)
             color = random.choice(["#000000", "#DC143C"])
             size = random.choice([2, 3])
-            pid = self.canvas.create_oval(rx-size, ry-size, rx+size, ry+size, fill=color, outline="")
+            pid = self.canvas.create_rectangle(rx-size, ry-size, rx+size, ry+size, fill=color, outline="")
             def fade(p_id):
                 if self.current_state == 'exiting' or not self.canvas.winfo_exists(): return
                 self.canvas.delete(p_id)

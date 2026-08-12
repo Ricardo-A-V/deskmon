@@ -66,8 +66,9 @@ class LakeTrioMechanics:
             r = random.uniform(30, 60)
             color = self.get_lake_color()
             self.lake_particles.append({
-                'id': self.lake_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline=color, width=2, tags="pt"),
-                'type': 'absorb_ring', 'x': cx, 'y': cy, 'r': r, 'speed': random.uniform(1.0, 2.0)
+                'id': self._draw_pixel_circle_bbox(self.lake_canvas, cx-r, cy-r, cx+r, cy+r, outline=color, width=2, tags="pt"),
+                'x': cx, 'y': cy, 'r': r, 'speed': random.uniform(2, 4),
+                'type': 'absorb_ring', 'color': color
             })
             
         if self.lake_timer <= 0:
@@ -97,7 +98,7 @@ class LakeTrioMechanics:
                 speed = random.uniform(5.0, 15.0)
                 color = random.choice(colors)
                 self.lake_particles.append({
-                    'id': self.lake_canvas.create_oval(mx-3, my-3, mx+3, my+3, fill=color, outline=color, tags="pt"),
+                    'id': self.lake_canvas.create_rectangle(mx-3, my-3, mx+3, my+3, fill=color, outline=color, tags="pt"),
                     'type': 'explosion', 'x': mx, 'y': my, 'vx': math.cos(angle)*speed, 'vy': math.sin(angle)*speed, 'life': 20
                 })
             self.current_state = 'thrown'
@@ -151,7 +152,7 @@ class LakeTrioMechanics:
         cy = self.y - self.v_y + self.size_h/2
         color = self.get_lake_color()
         self.lake_particles.append({
-            'id': self.lake_canvas.create_oval(cx-4, cy-4, cx+4, cy+4, fill=color, outline=color, tags="pt"),
+            'id': self.lake_canvas.create_rectangle(cx-4, cy-4, cx+4, cy+4, fill=color, outline=color, tags="pt"),
             'type': 'trail', 'life': 10
         })
         
@@ -190,7 +191,7 @@ class LakeTrioMechanics:
                             for _ in range(3):
                                 bcolor = random.choice(["#0088FF", "#FF0088", "#FFDD00"])
                                 self.lake_particles.append({
-                                    'id': self.lake_canvas.create_oval(collision_x-2, collision_y-2, collision_x+2, collision_y+2, fill=bcolor, outline=bcolor, tags="pt"),
+                                    'id': self.lake_canvas.create_rectangle(collision_x-2, collision_y-2, collision_x+2, collision_y+2, fill=bcolor, outline=bcolor, tags="pt"),
                                     'type': 'explosion', 'x': collision_x, 'y': collision_y, 'vx': random.uniform(-1.5, 1.5), 'vy': random.uniform(-1.5, 1.5), 'life': 6
                                 })
 
@@ -211,7 +212,8 @@ class LakeTrioMechanics:
             if p.get('type') == 'absorb_ring':
                 p['r'] -= p['speed']
                 if p['r'] > 5:
-                    self.lake_canvas.coords(p['id'], p['x']-p['r'], p['y']-p['r'], p['x']+p['r'], p['y']+p['r'])
+                    self.lake_canvas.delete(p['id'])
+                    p['id'] = self._draw_pixel_circle_bbox(self.lake_canvas, p['x']-p['r'], p['y']-p['r'], p['x']+p['r'], p['y']+p['r'], outline=p['color'], width=2, tags="pt")
                     alive.append(p)
                 else:
                     self.lake_canvas.delete(p['id'])
