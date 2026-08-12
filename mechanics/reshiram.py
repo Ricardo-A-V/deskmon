@@ -3,6 +3,30 @@ import math
 import tkinter as tk
 
 class ReshiramMechanics:
+    def _draw_pixel_circle(self, canvas, cx, cy, r, fill, outline, tags, width=1, p_size=6):
+        if r <= p_size:
+            canvas.create_rectangle(cx-r, cy-r, cx+r, cy+r, fill=fill, outline=outline, width=width, tags=tags)
+            return
+        r = int(r)
+        half_pts = []
+        for y in range(-r, r, p_size):
+            y_top = y
+            y_bottom = min(y + p_size, r)
+            eval_y = min(abs(y_top), abs(y_bottom))
+            try: x = math.sqrt(r**2 - eval_y**2)
+            except: x = 0
+            x = round(x / p_size) * p_size
+            if x == 0: x = p_size
+            half_pts.extend([x, y_top, x, y_bottom])
+            
+        pts = []
+        for i in range(0, len(half_pts), 2):
+            pts.extend([cx + half_pts[i], cy + half_pts[i+1]])
+        for i in range(len(half_pts)-2, -1, -2):
+            pts.extend([cx - half_pts[i], cy + half_pts[i+1]])
+            
+        canvas.create_polygon(*pts, fill=fill, outline=outline, width=width, tags=tags, smooth=False)
+
     def cancel_reshiram_arts(self):
         if hasattr(self, 'res_win') and self.res_win and self.res_win.winfo_exists():
             self.res_win.destroy()
@@ -150,9 +174,9 @@ class ReshiramMechanics:
             r2 = r1 * (0.85 + inner_pulse_mod)
             r3 = r1 * (0.60 + inner_pulse_mod)
             
-            self.res_canvas.create_oval(cx-r1, cy-r1, cx+r1, cy+r1, fill="#C0392B", outline="#C0392B", tags="vfx_res")
-            self.res_canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, fill="#E67E22", outline="#E67E22", tags="vfx_res")
-            self.res_canvas.create_oval(cx-r3, cy-r3, cx+r3, cy+r3, fill="#F1C40F", outline="#F1C40F", tags="vfx_res")
+            self._draw_pixel_circle(self.res_canvas, cx, cy, r1, "#C0392B", "#C0392B", "vfx_res")
+            self._draw_pixel_circle(self.res_canvas, cx, cy, r2, "#E67E22", "#E67E22", "vfx_res")
+            self._draw_pixel_circle(self.res_canvas, cx, cy, r3, "#F1C40F", "#F1C40F", "vfx_res")
             
             # LOGICAL FIX: 360 degree radial particle emission
             for _ in range(4):
@@ -233,8 +257,8 @@ class ReshiramMechanics:
             cy = win_size / 2
             
             # Multiple fire rings for the shockwave
-            w_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#C0392B", width=int(state['alpha_width']), tags="wave")
-            w_canvas.create_oval(cx-r*0.9, cy-r*0.9, cx+r*0.9, cy+r*0.9, outline="#E67E22", width=int(state['alpha_width']*0.8), tags="wave")
+            self._draw_pixel_circle(w_canvas, cx, cy, r, "", "#C0392B", "wave", width=int(state['alpha_width']))
+            self._draw_pixel_circle(w_canvas, cx, cy, r*0.9, "", "#E67E22", "wave", width=int(state['alpha_width']*0.8))
             
             wave_win.after(20, animate_wave)
             

@@ -3,6 +3,46 @@ import random
 import tkinter as tk
 
 class LegendaryGeniesMechanics:
+    def _draw_pixel_line(self, canvas, pts, fill, width, tags=""):
+        import math, random
+        p_size = max(4, int(width))
+        uid = f"pix_line_{random.randint(10000, 99999)}"
+        all_tags = (tags, uid) if tags else (uid,)
+        
+        ortho_pts = []
+        for i in range(0, len(pts)-2, 2):
+            x0, y0 = pts[i], pts[i+1]
+            x1, y1 = pts[i+2], pts[i+3]
+            
+            x0 = round(x0 / p_size) * p_size
+            y0 = round(y0 / p_size) * p_size
+            x1 = round(x1 / p_size) * p_size
+            y1 = round(y1 / p_size) * p_size
+            
+            if i == 0: ortho_pts.extend([x0, y0])
+            
+            dist = math.hypot(x1 - x0, y1 - y0)
+            if dist == 0: continue
+            
+            steps = max(1, int(dist / (p_size * 0.8)))
+            cx, cy = x0, y0
+            for step in range(1, steps + 1):
+                t = step / steps
+                nx = round((x0 + (x1 - x0) * t) / p_size) * p_size
+                ny = round((y0 + (y1 - y0) * t) / p_size) * p_size
+                
+                if nx != cx or ny != cy:
+                    if nx != cx and ny != cy: ortho_pts.extend([nx, cy])
+                    cx, cy = nx, ny
+                    ortho_pts.extend([cx, cy])
+                    
+        if len(ortho_pts) >= 4:
+            canvas.create_line(
+                *ortho_pts, fill=fill, width=p_size, 
+                capstyle="projecting", joinstyle="miter", tags=all_tags
+            )
+        return uid
+
     def _clear_victim_state(self, target):
         if target.current_state == 'bubbled':
             if hasattr(target, 'manage_bubble_vfx'): target.manage_bubble_vfx(False)
@@ -191,7 +231,7 @@ class LegendaryGeniesMechanics:
                 size = random.uniform(1.5, 4.0)
                 color = random.choice(colors)
                 
-                pid = self.genie_vfx_canvas.create_oval(px-size, py-size, px+size, py+size, fill=color, outline="")
+                pid = self.genie_vfx_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline="")
                 self.genie_particles.append({'id': pid, 'x': px, 'y': py, 'vx': vx, 'vy': vy, 'life': 30, 'size': size, 'color': color, 'type': 'spiral_in'})
         
         alive = []
@@ -235,7 +275,7 @@ class LegendaryGeniesMechanics:
                 vy = math.sin(spawn_angle) * speed
                 size = random.uniform(2, 5)
                 color = random.choice(colors)
-                pid = self.genie_vfx_canvas.create_oval(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
+                pid = self.genie_vfx_canvas.create_rectangle(cx-size, cy-size, cx+size, cy+size, fill=color, outline="")
                 self.genie_particles.append({'id': pid, 'x': cx, 'y': cy, 'vx': vx, 'vy': vy, 'life': 15, 'size': size, 'color': color, 'type': 'explosion'})
             
             target = getattr(self, 'genie_target', None)
@@ -296,7 +336,7 @@ class LegendaryGeniesMechanics:
                 py = sp['y'] + math.sin(angle) * dist
                 size = random.uniform(3, 7)
                 color = random.choice(colors)
-                pid = self.genie_vfx_canvas.create_oval(px-size, py-size, px+size, py+size, fill=color, outline="")
+                pid = self.genie_vfx_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline="")
                 self.genie_particles.append({'id': pid, 'x': px, 'y': py, 'vx': sp['vx']*0.5 + random.uniform(-3,3), 'vy': sp['vy']*0.5 + random.uniform(-3,3), 'life': 5, 'size': size, 'type': 'core'})
             
             for _ in range(6):
@@ -309,7 +349,7 @@ class LegendaryGeniesMechanics:
                 
                 tvx = -sp['vx'] * random.uniform(0.1, 0.5) + random.uniform(-2, 2)
                 tvy = -sp['vy'] * random.uniform(0.1, 0.5) + random.uniform(-2, 2)
-                pid = self.genie_vfx_canvas.create_oval(px-size, py-size, px+size, py+size, fill=color, outline="")
+                pid = self.genie_vfx_canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline="")
                 self.genie_particles.append({'id': pid, 'x': px, 'y': py, 'vx': tvx, 'vy': tvy, 'life': 15, 'size': size, 'color': color, 'type': 'trail'})
             
             for target_pet in self.get_all_pets():
@@ -421,7 +461,7 @@ class LegendaryGeniesMechanics:
                     
                 colors = self._get_genie_colors()
                 for _ in range(2):
-                    pid = self.genie_vfx_canvas.create_oval(0, 0, 0, 0, fill=random.choice(colors), outline="")
+                    pid = self.genie_vfx_canvas.create_rectangle(0, 0, 0, 0, fill=random.choice(colors), outline="")
                     self.genie_particles.append({'id': pid, 'cx': t['x'], 'cy': t['y'], 'angle': random.uniform(0, 2*math.pi), 'dist': random.uniform(20, 80), 'size': random.randint(3, 6), 'life': 20, 'type': 'tornado_part'})
                 
                 for target in self.get_all_pets():
@@ -491,7 +531,8 @@ class LegendaryGeniesMechanics:
                             new_flat.extend([bx, by])
                         else:
                             new_flat.extend([bx + random.uniform(-20, 20), by + random.uniform(-20, 20)])
-                    self.genie_vfx_canvas.coords(p['id'], *new_flat)
+                    self.genie_vfx_canvas.delete(p['id'])
+                    p['id'] = self._draw_pixel_line(self.genie_vfx_canvas, new_flat, fill=p['color'], width=p['w'])
                     w = max(1, p.get('w', 2) - 1)
                     p['w'] = w
                     self.genie_vfx_canvas.itemconfig(p['id'], width=w, fill=random.choice(["#FFFFFF", p['color']]))
@@ -533,7 +574,7 @@ class LegendaryGeniesMechanics:
             vx = random.uniform(-15, 15)
             vy = random.uniform(-15, 15)
             size = random.uniform(4, 9)
-            pid = self.genie_vfx_canvas.create_oval(ix-size, iy-size, ix+size, iy+size, fill=random.choice(colors), outline="")
+            pid = self.genie_vfx_canvas.create_rectangle(ix-size, iy-size, ix+size, iy+size, fill=random.choice(colors), outline="")
             self.genie_particles.append({'id': pid, 'x': ix, 'y': iy, 'vx': vx, 'vy': vy, 'size': size, 'life': 40, 'type': 'explosion'})
         
         if self.genie_type == "tornadus":
@@ -558,7 +599,7 @@ class LegendaryGeniesMechanics:
                 color = random.choice(colors)
                 
                 flat_pts = [coord for pt in pts for coord in pt]
-                pid = self.genie_vfx_canvas.create_line(*flat_pts, fill=color, width=w)
+                pid = self._draw_pixel_line(self.genie_vfx_canvas, flat_pts, fill=color, width=w)
                 self.genie_particles.append({
                     'id': pid, 'base_pts': pts, 'color': color, 'w': w, 
                     'life': 8, 'type': 'lightning' 

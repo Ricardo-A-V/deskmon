@@ -3,6 +3,30 @@ import math
 import tkinter as tk
 
 class ZekromMechanics:
+    def _draw_pixel_circle(self, canvas, cx, cy, r, fill, outline, tags, width=1, p_size=6):
+        if r <= p_size:
+            canvas.create_rectangle(cx-r, cy-r, cx+r, cy+r, fill=fill, outline=outline, width=width, tags=tags)
+            return
+        r = int(r)
+        half_pts = []
+        for y in range(-r, r, p_size):
+            y_top = y
+            y_bottom = min(y + p_size, r)
+            eval_y = min(abs(y_top), abs(y_bottom))
+            try: x = math.sqrt(r**2 - eval_y**2)
+            except: x = 0
+            x = round(x / p_size) * p_size
+            if x == 0: x = p_size
+            half_pts.extend([x, y_top, x, y_bottom])
+            
+        pts = []
+        for i in range(0, len(half_pts), 2):
+            pts.extend([cx + half_pts[i], cy + half_pts[i+1]])
+        for i in range(len(half_pts)-2, -1, -2):
+            pts.extend([cx - half_pts[i], cy + half_pts[i+1]])
+            
+        canvas.create_polygon(*pts, fill=fill, outline=outline, width=width, tags=tags, smooth=False)
+
     def cancel_zekrom_arts(self):
         for attr in ['zekrom_phase', 'zekrom_timer', 'zekrom_vfx_active', 'zekrom_target_x', 'zekrom_target_y', 'zekrom_vx', 'zekrom_vy', 'zekrom_pulse']:
             if hasattr(self, attr): delattr(self, attr)
@@ -127,9 +151,9 @@ class ZekromMechanics:
             r2 = r1 * (0.85 + inner_pulse_mod)
             r3 = r1 * (0.60 + inner_pulse_mod)
             
-            self.canvas.create_oval(cx-r1, cy-r1, cx+r1, cy+r1, fill="#008B8B", outline="#008B8B", tags="vfx_zekrom")
-            self.canvas.create_oval(cx-r2, cy-r2, cx+r2, cy+r2, fill="#00FFFF", outline="#00FFFF", tags="vfx_zekrom")
-            self.canvas.create_oval(cx-r3, cy-r3, cx+r3, cy+r3, fill="#FFFFFF", outline="#FFFFFF", tags="vfx_zekrom")
+            self._draw_pixel_circle(self.canvas, cx, cy, r1, "#008B8B", "#008B8B", "vfx_zekrom")
+            self._draw_pixel_circle(self.canvas, cx, cy, r2, "#00FFFF", "#00FFFF", "vfx_zekrom")
+            self._draw_pixel_circle(self.canvas, cx, cy, r3, "#FFFFFF", "#FFFFFF", "vfx_zekrom")
             
             for _ in range(3):
                 a1 = random.uniform(0, 2*math.pi)
@@ -211,7 +235,7 @@ class ZekromMechanics:
             cx = win_size / 2
             cy = win_size / 2
             
-            w_canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#00FFFF", width=int(state['alpha_width']), tags="wave")
+            self._draw_pixel_circle(w_canvas, cx, cy, r, "", "#00FFFF", "wave", width=int(state['alpha_width']))
             wave_win.after(20, animate_wave)
             
         animate_wave()

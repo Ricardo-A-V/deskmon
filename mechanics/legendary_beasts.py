@@ -4,6 +4,75 @@ import random
 import tkinter as tk
 
 class LegendaryBeastsMechanics:
+    def _draw_pixel_line(self, canvas, pts, fill, width, tags=""):
+        import math, random
+        p_size = max(4, int(width))
+        uid = f"pix_line_{random.randint(10000, 99999)}"
+        all_tags = (tags, uid) if tags else (uid,)
+        
+        ortho_pts = []
+        for i in range(0, len(pts)-2, 2):
+            x0, y0 = pts[i], pts[i+1]
+            x1, y1 = pts[i+2], pts[i+3]
+            
+            x0 = round(x0 / p_size) * p_size
+            y0 = round(y0 / p_size) * p_size
+            x1 = round(x1 / p_size) * p_size
+            y1 = round(y1 / p_size) * p_size
+            
+            if i == 0: ortho_pts.extend([x0, y0])
+            
+            dist = math.hypot(x1 - x0, y1 - y0)
+            if dist == 0: continue
+            
+            steps = max(1, int(dist / (p_size * 0.8)))
+            cx, cy = x0, y0
+            for step in range(1, steps + 1):
+                t = step / steps
+                nx = round((x0 + (x1 - x0) * t) / p_size) * p_size
+                ny = round((y0 + (y1 - y0) * t) / p_size) * p_size
+                
+                if nx != cx or ny != cy:
+                    if nx != cx and ny != cy: ortho_pts.extend([nx, cy])
+                    cx, cy = nx, ny
+                    ortho_pts.extend([cx, cy])
+                    
+        if len(ortho_pts) >= 4:
+            canvas.create_line(
+                *ortho_pts, fill=fill, width=p_size, 
+                capstyle="projecting", joinstyle="miter", tags=all_tags
+            )
+        return uid
+
+    def _draw_pixel_polygon(self, canvas, pts, fill, outline, p_size=6, tags=""):
+        import random
+        uid = f"pix_poly_{random.randint(10000, 99999)}"
+        all_tags = (tags, uid) if tags else (uid,)
+        edges = []
+        for i in range(0, len(pts), 2):
+            x1, y1 = pts[i], pts[i+1]
+            nx, ny = pts[(i+2)%len(pts)], pts[(i+3)%len(pts)]
+            edges.append((x1, y1, nx, ny))
+        min_y = min(pts[1::2])
+        max_y = max(pts[1::2])
+        min_y = round(min_y / p_size) * p_size
+        max_y = round(max_y / p_size) * p_size
+        for y in range(int(min_y), int(max_y) + p_size, p_size):
+            y_mid = y + p_size / 2.0
+            intersects = []
+            for ex1, ey1, ex2, ey2 in edges:
+                if (ey1 <= y_mid < ey2) or (ey2 <= y_mid < ey1):
+                    t = (y_mid - ey1) / (ey2 - ey1)
+                    ix = ex1 + t * (ex2 - ex1)
+                    intersects.append(ix)
+            intersects.sort()
+            for i in range(0, len(intersects)-1, 2):
+                x_start = round(intersects[i] / p_size) * p_size
+                x_end = round(intersects[i+1] / p_size) * p_size
+                if x_start == x_end: x_end += p_size
+                canvas.create_rectangle(x_start, y, x_end, y + p_size, fill=fill, outline="", tags=all_tags)
+        return uid
+
     def cancel_beast_arts(self):
         # Flushes VFX memory immediately upon interruption
         if hasattr(self, 'beast_vfx_win') and self.beast_vfx_win and self.beast_vfx_win.winfo_exists():
@@ -163,7 +232,7 @@ class LegendaryBeastsMechanics:
                 
                 # Flattens the array for Tkinter
                 flat_pts = [coord for pt in pts for coord in pt]
-                pid = self.beast_vfx_canvas.create_line(*flat_pts, fill=color, width=w, tags="beast_lightning")
+                pid = self._draw_pixel_line(self.beast_vfx_canvas, flat_pts, fill=color, width=w, tags="beast_lightning")
                 
                 self.beast_particles.append({
                     'id': pid, 'base_pts': pts, 'color': color, 'w': w, 
@@ -189,7 +258,7 @@ class LegendaryBeastsMechanics:
                 s = random.randint(8, 16 + (self.beast_roar_level * 8))
                 color = random.choice(["#FFFFFF", "#F1C40F", "#FFA500", "#FF4500", "#FF0000", "#8B0000"])
                 
-                pid = self.beast_vfx_canvas.create_oval(px-s, py-s, px+s, py+s, fill=color, outline="", tags="beast_fire")
+                pid = self.beast_vfx_canvas.create_rectangle(px-s, py-s, px+s, py+s, fill=color, outline="", tags="beast_fire")
                 
                 # vy - 2.0 creates a forced updraft defying standard radial gravity
                 self.beast_particles.append({
@@ -214,13 +283,10 @@ class LegendaryBeastsMechanics:
             for direction in [-1, 1]:
                 color = "#00BFFF" if self.beast_roar_level == 2 else "#87CEFA"
                 
-                # Initializes empty polygon with B-Spline smoothing to simulate organic water curves
-                pid = self.beast_vfx_canvas.create_polygon(0, 0, 0, 0, fill=color, outline="#E0FFFF", width=2, smooth=True, tags="beast_wave")
-                
                 self.beast_particles.append({
-                    'id': pid, 'x': cx, 'y': floor_y, 'vx': speed * direction, 'vy': 0, 
+                    'id': "dummy", 'x': cx, 'y': floor_y, 'vx': speed * direction, 'vy': 0, 
                     'life': life, 'size': size, 'dir': direction, 'type': 'wave', 
-                    'level': self.beast_roar_level, 'phase': 0.0
+                    'level': self.beast_roar_level, 'phase': 0.0, 'color': color
                 })
 
     def _apply_radial_hitbox(self, impact_radius, b_type):
@@ -255,9 +321,10 @@ class LegendaryBeastsMechanics:
                     else:
                         new_flat.extend([bx + random.uniform(-12, 12), by + random.uniform(-12, 12)])
                 
-                self.beast_vfx_canvas.coords(p['id'], *new_flat)
-                # Rapidly alternates thickness and color to simulate strobe light
-                self.beast_vfx_canvas.itemconfig(p['id'], width=random.randint(1, p['w'] + 3), fill=random.choice(["#FFFFFF", p['color']]))
+                new_width = random.randint(1, p['w'] + 3)
+                new_color = random.choice(["#FFFFFF", p['color']])
+                self.beast_vfx_canvas.delete(p['id'])
+                p['id'] = self._draw_pixel_line(self.beast_vfx_canvas, new_flat, fill=new_color, width=new_width, tags="beast_lightning")
 
             elif p['type'] == 'fire':
                 # Implements aerial friction to compress the burst as it expands
@@ -298,13 +365,14 @@ class LegendaryBeastsMechanics:
                         bx + s*0.9, by - s*0.2
                     ]
                 
-                self.beast_vfx_canvas.coords(p['id'], *pts)
+                self.beast_vfx_canvas.delete(p['id'])
+                p['id'] = self._draw_pixel_polygon(self.beast_vfx_canvas, pts, fill=p.get('color', "#87CEFA"), outline="", p_size=8, tags="beast_wave")
                 
                 # Emits white foam particles consistently from the oscillating apex
                 if random.randint(1, 100) <= 60:
                     crest_x = bx + (s*0.2 * d)
                     crest_y = by - s + crest_offset
-                    f_pid = self.beast_vfx_canvas.create_oval(crest_x-5, crest_y-5, crest_x+5, crest_y+5, fill="#FFFFFF", outline="")
+                    f_pid = self.beast_vfx_canvas.create_rectangle(crest_x-5, crest_y-5, crest_x+5, crest_y+5, fill="#FFFFFF", outline="")
                     self.beast_particles.append({'id': f_pid, 'x': crest_x, 'y': crest_y, 'vx': p['vx']*0.3 + random.uniform(-3, 3), 'vy': random.uniform(-4, 1), 'life': 12, 'type': 'splash'})
 
                 wave_abs_x = p['x'] + self.v_x
@@ -322,7 +390,7 @@ class LegendaryBeastsMechanics:
                     for _ in range(35):
                         drop_vx = random.uniform(-15.0, 15.0)
                         drop_vy = random.uniform(-25.0, 0.0)
-                        d_pid = self.beast_vfx_canvas.create_oval(p['x']-4, p['y']-s/2-4, p['x']+4, p['y']-s/2+4, fill="#00FFFF", outline="")
+                        d_pid = self.beast_vfx_canvas.create_rectangle(p['x']-4, p['y']-s/2-4, p['x']+4, p['y']-s/2+4, fill="#00FFFF", outline="")
                         self.beast_particles.append({'id': d_pid, 'x': p['x'], 'y': p['y']-s/2, 'vx': drop_vx, 'vy': drop_vy, 'life': 25, 'type': 'splash'})
                 else:
                     if getattr(self, 'get_all_pets', None):
