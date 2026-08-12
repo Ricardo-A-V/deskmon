@@ -32,6 +32,7 @@ class ZekromMechanics:
             if hasattr(self, attr): delattr(self, attr)
 
         self.canvas.delete("vfx_zekrom")
+        self.canvas.delete("zek_channel_elec")
         self.canvas.itemconfig(self.canvas_image_id, state='normal')
 
         if self.current_state not in ['dragged', 'exiting']:
@@ -47,14 +48,53 @@ class ZekromMechanics:
 
     def _fsm_zekrom_channeling(self):
         if not hasattr(self, 'zekrom_phase'):
-            self.zekrom_phase = 0
-            self.zekrom_timer = 0
-            self.zekrom_vfx_active = True
-            self.zekrom_vfx_radius = 0.0
-            self.zekrom_pulse = 0.0
+            self.zekrom_phase = -1
+            self.zekrom_timer = 100
             
-            self.canvas.itemconfig(self.canvas_image_id, state='hidden')
-            self.zekrom_aura_loop()
+        if self.zekrom_phase == -1:
+            self.zekrom_timer -= 1
+            if self.zekrom_timer % 3 == 0:
+                cx = self.size_w // 2
+                cy = self.size_h // 2 + 10
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(60, 150)
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#00FFFF", "#1E90FF", "#FFFFFF", "#87CEFA"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="zek_channel_elec")
+                
+                def animate_spiral(pid=pid, current_dist=dist, current_angle=angle, step=20):
+                    if not hasattr(self, 'zekrom_phase') or getattr(self, 'current_state', '') != 'zekrom_channeling' or step <= 0:
+                        try: self.canvas.delete(pid)
+                        except: pass
+                        return
+                    try:
+                        next_dist = current_dist * 0.85
+                        next_angle = current_angle + 0.4
+                        nx = cx + math.cos(next_angle) * next_dist
+                        ny = cy + math.sin(next_angle) * next_dist
+                        
+                        curr_coords = self.canvas.coords(pid)
+                        if curr_coords:
+                            dx = nx - (curr_coords[0] + curr_coords[2])/2
+                            dy = ny - (curr_coords[1] + curr_coords[3])/2
+                            self.canvas.move(pid, dx, dy)
+                            self.window.after(30, lambda: animate_spiral(pid, next_dist, next_angle, step-1))
+                    except: pass
+                animate_spiral()
+                
+            if self.zekrom_timer <= 0:
+                self.zekrom_phase = 0
+                self.zekrom_timer = 0
+                self.zekrom_vfx_active = True
+                self.zekrom_vfx_radius = 0.0
+                self.zekrom_pulse = 0.0
+                
+                self.canvas.itemconfig(self.canvas_image_id, state='hidden')
+                self.zekrom_aura_loop()
             
         target_y = self.v_y + (self.v_height * 0.25) 
 
@@ -76,8 +116,13 @@ class ZekromMechanics:
                 self.zekrom_phase = 2
                 self.zekrom_timer = 15 
                 
-                self.zekrom_target_x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.size_w - 50)
-                self.zekrom_target_y = self.default_floor_y
+                t = self.get_random_valid_target()
+                if t:
+                    self.zekrom_target_x = t.x + t.size_w // 2
+                    self.zekrom_target_y = t.y + t.size_h // 2
+                else:
+                    self.zekrom_target_x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.size_w - 50)
+                    self.zekrom_target_y = self.default_floor_y
                 
                 self.is_facing_right = (self.zekrom_target_x > self.x)
                 

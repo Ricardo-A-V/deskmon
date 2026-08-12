@@ -8,7 +8,9 @@ class YveltalMechanics:
             self.yveltal_win.destroy()
             self.yveltal_win = None
 
-        for attr in ['yveltal_phase', 'yveltal_timer', 'yveltal_beam_step', 'yveltal_exploded', 'yveltal_energy_lines']:
+        self.canvas.delete("yveltal_lightning")
+        
+        for attr in ['yveltal_phase', 'yveltal_timer', 'yveltal_channel_timer', 'yveltal_beam_step', 'yveltal_exploded', 'yveltal_energy_lines']:
             if hasattr(self, attr): delattr(self, attr)
 
         if self.current_state not in ['dragged', 'exiting']:
@@ -45,17 +47,51 @@ class YveltalMechanics:
                 self.y += (dy / dist) * speed
             else:
                 self.yveltal_phase = 1
+                self.yveltal_channel_timer = 100 
+                
+        elif self.yveltal_phase == 1:
+            self.yveltal_channel_timer -= 1
+            
+            if self.yveltal_channel_timer % 3 == 0:
+                px = self.size_w // 2
+                py = (self.size_h // 2) + 25
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(80, 200)
+                end_x = px + math.cos(angle) * dist
+                end_y = py + math.sin(angle) * dist
+                
+                pts = []
+                curr_x, curr_y = end_x, end_y
+                steps = 4
+                for i in range(steps):
+                    pts.extend([curr_x, curr_y])
+                    frac = (i + 1) / steps
+                    cx = end_x + (px - end_x) * frac
+                    cy = end_y + (py - end_y) * frac
+                    curr_x = cx + random.randint(-15, 15)
+                    curr_y = cy + random.randint(-15, 15)
+                pts.extend([px, py])
+                
+                color = random.choice(["#3B1348", "#8B0000", "#FF0000", "#000000"])
+                pid = self.canvas.create_line(*pts, fill=color, width=random.randint(2, 4), tags="yveltal_lightning")
+                self.window.after(100, lambda p=pid: self.canvas.delete(p))
+                
+            if self.yveltal_channel_timer <= 0:
+                self.yveltal_phase = 2
                 self.yveltal_beam_step = 0
                 self.yveltal_timer = 100 
                 
-                self.beam_target_x = random.randint(self.v_x, self.v_x + self.v_width)
+                t = self.get_random_valid_target()
+                if t:
+                    self.beam_target_x = t.x + t.size_w // 2
+                else:
+                    self.beam_target_x = random.randint(self.v_x, self.v_x + self.v_width)
                 self.beam_target_y = self.v_y + self.v_height + 150 
                 
                 self.is_facing_right = (self.beam_target_x > self.x)
-                
                 self.spawn_yveltal_beam_vfx()
                 
-        elif self.yveltal_phase == 1:
+        elif self.yveltal_phase == 2:
             self.yveltal_timer -= 1
             self.yveltal_beam_step += 1
             
@@ -66,13 +102,12 @@ class YveltalMechanics:
                 self.yveltal_exploded = True
             
             if self.yveltal_timer <= 0:
-                self.yveltal_phase = 2
+                self.yveltal_phase = 3
                 self.yveltal_timer = 10 
                 
-        elif self.yveltal_phase == 2:
+        elif self.yveltal_phase == 3:
             self.yveltal_timer -= 1
             if self.yveltal_timer <= 0:
-                # LOGICAL FIX: Removed overwrite to 'idle' to prevent massive teleportation
                 self.cancel_yveltal_arts()
                 self.yveltal_cooldown = 72000 
 
@@ -188,7 +223,7 @@ class YveltalMechanics:
                     self.apply_petrification(target)
 
     def yveltal_explode(self):
-        impact_radius = 1000 
+        impact_radius = 600 
         
         if hasattr(self, 'yveltal_canvas'):
             cx = self.beam_target_x - self.v_x

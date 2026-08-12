@@ -335,6 +335,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             'evolving_finish': 'wait',
             'despawning_wild': 'wait',
             'spawning_wild': 'wait',
+            'falling_egg': 'falling',
             'falling_pokeball': 'falling',
             'falling_legendary': 'falling',
             'idle': 'active', 
@@ -1947,6 +1948,15 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         pass 
 
     def _fsm_wait(self):
+        if getattr(self, 'is_egg', False) and not getattr(self, 'is_dragging', False):
+            current_env, _ = self.get_window_environment()
+            if self.y < current_env['y'] - 15:
+                self.current_state = 'falling_egg'
+                self.v_y_velocity = 0.0
+            else:
+                self.y = current_env['y']
+                self.floor_y = current_env['y']
+                self.update_position()
         self.schedule_loop(50, self.physics_loop)
 
     def _fsm_thrown(self):
@@ -4177,5 +4187,8 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         for p in self.get_all_pets():
             if p != self and p.current_state in blocking_states:
                 return True
-                
         return False
+        
+    def get_random_valid_target(self):
+        valid = [p for p in self.get_all_pets() if p != self and p.current_state not in ['exiting', 'despawning_wild', 'spawning_wild', 'falling_pokeball', 'falling_egg', 'celebi_frozen']]
+        return random.choice(valid) if valid else None

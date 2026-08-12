@@ -11,6 +11,7 @@ class KyuremMechanics:
         for attr in ['kyurem_phase', 'kyurem_timer']:
             if hasattr(self, attr): delattr(self, attr)
 
+        self.canvas.delete("kyu_channel_ice")
         self.canvas.itemconfig(self.canvas_image_id, state='normal')
         self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
 
@@ -23,8 +24,47 @@ class KyuremMechanics:
 
     def _fsm_kyurem_channeling(self):
         if not hasattr(self, 'kyurem_phase'):
-            self.kyurem_phase = 0
-            self.kyurem_timer = 40 
+            self.kyurem_phase = -1
+            self.kyurem_timer = 100 
+            
+        if self.kyurem_phase == -1:
+            self.kyurem_timer -= 1
+            if self.kyurem_timer % 3 == 0:
+                cx = self.size_w // 2
+                cy = self.size_h // 2 + 10
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(60, 150)
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#E0FFFF", "#AFEEEE", "#FFFFFF", "#40E0D0"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="kyu_channel_ice")
+                
+                def animate_spiral(pid=pid, current_dist=dist, current_angle=angle, step=20):
+                    if not hasattr(self, 'kyurem_phase') or getattr(self, 'current_state', '') != 'kyurem_channeling' or step <= 0:
+                        try: self.canvas.delete(pid)
+                        except: pass
+                        return
+                    try:
+                        next_dist = current_dist * 0.85
+                        next_angle = current_angle + 0.4
+                        nx = cx + math.cos(next_angle) * next_dist
+                        ny = cy + math.sin(next_angle) * next_dist
+                        
+                        curr_coords = self.canvas.coords(pid)
+                        if curr_coords:
+                            dx = nx - (curr_coords[0] + curr_coords[2])/2
+                            dy = ny - (curr_coords[1] + curr_coords[3])/2
+                            self.canvas.move(pid, dx, dy)
+                            self.window.after(30, lambda: animate_spiral(pid, next_dist, next_angle, step-1))
+                    except: pass
+                animate_spiral()
+                
+            if self.kyurem_timer <= 0:
+                self.kyurem_phase = 0
+                self.kyurem_timer = 40
 
         if self.kyurem_phase == 0:
             ox = random.choice([-4, 0, 4])

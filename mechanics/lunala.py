@@ -67,7 +67,11 @@ class LunalaMechanics:
                 # LOGICAL FIX: Total beam duration halved exactly (20 ticks instead of 40)
                 self.lunala_timer = 10 
                 
-                self.beam_target_x = random.randint(self.v_x, self.v_x + self.v_width)
+                t = self.get_random_valid_target()
+                if t:
+                    self.beam_target_x = t.x + t.size_w // 2
+                else:
+                    self.beam_target_x = random.randint(self.v_x, self.v_x + self.v_width)
                 self.beam_target_y = self.v_y + self.v_height + 150 
                 self.is_facing_right = (self.beam_target_x > self.x)
                 

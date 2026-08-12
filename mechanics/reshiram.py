@@ -31,6 +31,8 @@ class ReshiramMechanics:
         if hasattr(self, 'res_win') and self.res_win and self.res_win.winfo_exists():
             self.res_win.destroy()
             self.res_win = None
+            
+        self.canvas.delete("res_channel_fire")
 
         for attr in ['res_phase', 'res_timer', 'res_target_x', 'res_target_y', 'res_vx', 'res_vy', 'res_pulse']:
             if hasattr(self, attr): delattr(self, attr)
@@ -44,31 +46,69 @@ class ReshiramMechanics:
 
     def _fsm_reshiram_channeling(self):
         if not hasattr(self, 'res_phase'):
-            self.res_phase = 0
-            self.res_timer = 0
-            self.res_pulse = 0.0
-            self.res_vfx_radius = 0.0
+            self.res_phase = -1
+            self.res_timer = 100
             
-            # 1. Spawn independent window for the spherical projectile
-            self.res_win = tk.Toplevel(self.window.master)
-            self.res_win.title("VFX_Reshiram_Ignore") # TECHNICAL FIX: Prevent physical collision
-            self.res_win.overrideredirect(True)
-            self.res_win.attributes('-topmost', True)
-            TRANS_COLOR = '#010101'
-            self.res_win.config(bg=TRANS_COLOR)
-            try: self.res_win.wm_attributes('-transparentcolor', TRANS_COLOR)
-            except: pass
-            
-            self.res_size = 250 
-            self.res_canvas = tk.Canvas(self.res_win, width=self.res_size, height=self.res_size, bg=TRANS_COLOR, highlightthickness=0)
-            self.res_canvas.pack()
-            
-            self.res_x = self.x + self.size_w / 2 - self.res_size / 2
-            self.res_y = self.y + self.size_h / 2 - self.res_size / 2
-            self.res_win.geometry(f"{self.res_size}x{self.res_size}+{int(self.res_x)}+{int(self.res_y)}")
-            
-            self.res_particles = []
-            self.reshiram_sphere_loop()
+        if self.res_phase == -1:
+            self.res_timer -= 1
+            if self.res_timer % 3 == 0:
+                cx = self.size_w // 2
+                cy = self.size_h // 2 + 10
+                angle = random.uniform(0, 2 * math.pi)
+                dist = random.uniform(60, 150)
+                px = cx + math.cos(angle) * dist
+                py = cy + math.sin(angle) * dist
+                
+                color = random.choice(["#FF4500", "#FF8C00", "#FFD700", "#FF0000"])
+                size = random.choice([2, 3])
+                
+                pid = self.canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="res_channel_fire")
+                
+                def animate_spiral(pid=pid, current_dist=dist, current_angle=angle, step=20):
+                    if not hasattr(self, 'res_phase') or getattr(self, 'current_state', '') != 'reshiram_channeling' or step <= 0:
+                        try: self.canvas.delete(pid)
+                        except: pass
+                        return
+                    try:
+                        next_dist = current_dist * 0.85
+                        next_angle = current_angle + 0.4
+                        nx = cx + math.cos(next_angle) * next_dist
+                        ny = cy + math.sin(next_angle) * next_dist
+                        
+                        curr_coords = self.canvas.coords(pid)
+                        if curr_coords:
+                            dx = nx - (curr_coords[0] + curr_coords[2])/2
+                            dy = ny - (curr_coords[1] + curr_coords[3])/2
+                            self.canvas.move(pid, dx, dy)
+                            self.window.after(30, lambda: animate_spiral(pid, next_dist, next_angle, step-1))
+                    except: pass
+                animate_spiral()
+                
+            if self.res_timer <= 0:
+                self.res_phase = 0
+                self.res_timer = 0
+                self.res_pulse = 0.0
+                self.res_vfx_radius = 0.0
+                
+                self.res_win = tk.Toplevel(self.window.master)
+                self.res_win.title("VFX_Reshiram_Ignore")
+                self.res_win.overrideredirect(True)
+                self.res_win.attributes('-topmost', True)
+                TRANS_COLOR = '#010101'
+                self.res_win.config(bg=TRANS_COLOR)
+                try: self.res_win.wm_attributes('-transparentcolor', TRANS_COLOR)
+                except: pass
+                
+                self.res_size = 250 
+                self.res_canvas = tk.Canvas(self.res_win, width=self.res_size, height=self.res_size, bg=TRANS_COLOR, highlightthickness=0)
+                self.res_canvas.pack()
+                
+                self.res_x = self.x + self.size_w / 2 - self.res_size / 2
+                self.res_y = self.y + self.size_h / 2 - self.res_size / 2
+                self.res_win.geometry(f"{self.res_size}x{self.res_size}+{int(self.res_x)}+{int(self.res_y)}")
+                
+                self.res_particles = []
+                self.reshiram_sphere_loop()
             
         # 2. Reshiram stays still reloading
         self.v_x_velocity = 0.0
@@ -80,7 +120,7 @@ class ReshiramMechanics:
                 self.y += 4.0
                 if self.y > physical_floor: self.y = physical_floor
         
-        target_y = self.v_y + (self.v_height * 0.25) - self.res_size / 2
+        target_y = self.v_y + (self.v_height * 0.25) - getattr(self, 'res_size', 250) / 2
 
         if self.res_phase == 0:
             self.res_y -= 4.0 
@@ -100,8 +140,13 @@ class ReshiramMechanics:
                 self.res_phase = 2
                 self.res_timer = 15 
                 
-                self.res_target_x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.res_size - 50)
-                self.res_target_y = self.default_floor_y - self.res_size / 2
+                t = self.get_random_valid_target()
+                if t:
+                    self.res_target_x = t.x + t.size_w // 2
+                    self.res_target_y = t.y + t.size_h // 2
+                else:
+                    self.res_target_x = random.randint(self.v_x + 50, self.v_x + self.v_width - self.res_size - 50)
+                    self.res_target_y = self.default_floor_y - self.res_size / 2
                 
                 self.is_facing_right = (self.res_target_x > self.x)
                 
