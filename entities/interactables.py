@@ -15,7 +15,7 @@ except ImportError:
     HAS_WIN32 = False
 
 class InteractivePokeball:
-    def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback):
+    def __init__(self, parent_root, base_dir, get_pets_callback, on_destroy_callback, start_coords=None):
         self.window = tk.Toplevel(parent_root)
         self.window.title("Toy Pokeball")
         self.window.overrideredirect(True)
@@ -42,8 +42,12 @@ class InteractivePokeball:
         self.default_floor_y = (self.v_y + self.v_height) - self.size - self.offset_y
         self.floor_y = self.default_floor_y
         
-        self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size)
-        self.y = self.v_y - self.size
+        if start_coords:
+            self.x = start_coords[0]
+            self.y = start_coords[1]
+        else:
+            self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size)
+            self.y = self.v_y - self.size
         self.v_x_velocity = 0.0
         self.v_y_velocity = 0.0
         

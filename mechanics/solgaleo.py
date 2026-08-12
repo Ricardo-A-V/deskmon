@@ -389,7 +389,6 @@ class SolgaleoMechanics:
         target.current_state = 'thrown'
         target.v_x_velocity = random.uniform(25.0, 35.0) * push_dir
         target.v_y_velocity = random.uniform(-18.0, -25.0)
-        target.is_flying = False 
         
         self.spawn_solgaleo_knockback_vfx(target)
 

@@ -92,9 +92,9 @@ class LegendaryBeastsMechanics:
 
     def trigger_beast_arts(self):
         name = self.pet_name.lower().replace("_", "").replace("-", "")
-        if name in ["raikou"]: self.beast_type = "raikou"
-        elif name in ["entei"]: self.beast_type = "entei"
-        elif name in ["suicune"]: self.beast_type = "suicune"
+        if name in ["raikou", "ragingbolt"]: self.beast_type = "raikou"
+        elif name in ["entei", "gougingfire"]: self.beast_type = "entei"
+        elif name in ["suicune", "walkingwake"]: self.beast_type = "suicune"
         else: return
 
         # Validates physical altitude. If anchored to a window, preemptively routes to a dismount sequence.

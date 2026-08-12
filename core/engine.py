@@ -10,6 +10,7 @@ from core.discord_rpc import DiscordRPC
 from entities.pet import DesktopPet
 from entities.interactables import InteractiveBerry, InteractivePokeball
 from ui.menus import StarterSelectionWindow
+from entities.trainer import DesktopTrainer
 
 class GameController:
     def __init__(self):
@@ -123,6 +124,18 @@ class GameController:
         self.btn_toy = tk.Button(toy_row, text="Toy (Pokéball)", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
         self.btn_toy.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 0))
 
+        trainer_row = tk.Frame(content_frame, bg=bg_main)
+        trainer_row.pack(fill=tk.X, padx=10, pady=(0, 5))
+        tk.Label(trainer_row, text="Trainer:", font=("Segoe UI", 8), bg=bg_main).pack(side=tk.LEFT)
+        saved_trainer = self.save_mgr.data.get("settings", {}).get("trainer_selection", "None")
+        self.trainer_var = tk.StringVar(value=saved_trainer)
+        self.trainer_combo = ttk.Combobox(trainer_row, textvariable=self.trainer_var, state="readonly", justify="center", values=["None", "Boy", "Girl"])
+        self.trainer_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+        self.trainer_combo.bind("<<ComboboxSelected>>", self.on_trainer_select)
+        self.trainer = None
+        if saved_trainer != "None":
+            self._spawn_new_trainer(saved_trainer, spawn_from_side=True)
+
         bottom_row = tk.Frame(content_frame, bg=bg_main)
         bottom_row.pack(fill=tk.X, padx=10, pady=(0, 5))
         
@@ -165,13 +178,38 @@ class GameController:
             self.active_toy.destroy()
         else:
             base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            self.active_toy = InteractivePokeball(self.root, base_dir, self.get_all_pets, self.clear_toy)
+            start_coords = (self.trainer.x, self.trainer.y) if self.trainer else None
+            self.active_toy = InteractivePokeball(self.root, base_dir, self.get_all_pets, self.clear_toy, start_coords=start_coords)
+            if self.trainer:
+                self.active_toy.x = self.trainer.x
+                self.active_toy.y = self.trainer.y
+                self.active_toy.v_x_velocity = random.choice([-15, 15])
+                self.active_toy.v_y_velocity = -20
             self.btn_toy.config(text="Remove Toy", bg="#E74C3C")
             
     def clear_toy(self):
         self.active_toy = None
         if hasattr(self, 'btn_toy') and self.btn_toy.winfo_exists():
             self.btn_toy.config(text="Toy (Pokéball)", bg="#E67E22")
+
+    def on_trainer_select(self, event=None):
+        selection = self.trainer_var.get()
+        if "settings" not in self.save_mgr.data: self.save_mgr.data["settings"] = {}
+        self.save_mgr.data["settings"]["trainer_selection"] = selection
+        self.save_mgr.save_data()
+        
+        if self.trainer:
+            self.trainer.walk_away_and_destroy(lambda: self._spawn_new_trainer(selection, spawn_from_side=True))
+        else:
+            self._spawn_new_trainer(selection, spawn_from_side=True)
+            
+    def _spawn_new_trainer(self, selection, spawn_from_side=False):
+        if selection == "Boy":
+            self.trainer = DesktopTrainer(self, "boy", spawn_from_side=spawn_from_side)
+        elif selection == "Girl":
+            self.trainer = DesktopTrainer(self, "girl", spawn_from_side=spawn_from_side)
+        else:
+            self.trainer = None
 
     def get_all_pets(self):
         return self.active_instances + self.wild_instances + self.overflow_instances
@@ -437,7 +475,23 @@ class GameController:
         available_pet = next((p for p in owned_matches if p["id"] not in active_ids), None)
         
         if available_pet:
-            self.spawn_entity(available_pet, is_wild=False)
+            if self.trainer:
+                target_x = random.randint(100, self.root.winfo_screenwidth() - 100)
+                floor_y = self.trainer.default_floor_y + self.trainer.size_h - self.trainer.offset_y
+                target_y = floor_y - 24
+                def on_reach(pb_file=None):
+                    try:
+                        import pygame
+                        snd_path = os.path.join(self.trainer.base_dir, "game_env", "sounds", "return.wav")
+                        if os.path.exists(snd_path):
+                            snd = pygame.mixer.Sound(snd_path)
+                            snd.set_volume(0.05)
+                            snd.play()
+                    except: pass
+                    self.spawn_entity(available_pet, is_wild=False, coords=(target_x, "floor"))
+                self.trainer.spawn_pokeball_to(target_x, target_y, on_reach)
+            else:
+                self.spawn_entity(available_pet, is_wild=False)
         else:
             print(f"[!] You already have all your {target_species} (lvl.{target_level}) on screen.")
 

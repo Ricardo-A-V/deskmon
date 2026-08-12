@@ -112,7 +112,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
             "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus", "enamorus1",
-            "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt"
+            "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt", "ragingbolt", "gougingfire", "ironboulder", "ironcrown"
         }
         
         rpg_data = self.config.get("rpg_data", {})
@@ -262,13 +262,15 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         
         if spawn_coords:
             self.x = spawn_coords[0]
-            self.y = spawn_coords[1]
-            
-            # Prevents spawned eggs from inheriting the sky altitude (target_floor_y) of a flying parent.
-            if self.is_egg:
-                self.floor_y = self.default_floor_y
+            if spawn_coords[1] == "floor":
+                self.y = self.default_floor_y
+                self.floor_y = self.y
             else:
-                self.floor_y = spawn_coords[1] 
+                self.y = spawn_coords[1]
+                if self.is_egg:
+                    self.floor_y = self.default_floor_y
+                else:
+                    self.floor_y = spawn_coords[1]
 
             if is_mid_evo:
                 self.evo_channel = evo_channel
@@ -281,7 +283,12 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                     self.v_x_velocity = random.choice([-2.0, 2.0])
                     self.v_y_velocity = -4.0 # Small parabolic jump when laid by the mother
                 else:
-                    self.current_state = 'idle'
+                    if self.is_flying and spawn_coords[1] == "floor":
+                        self.current_state = 'ascending'
+                    else:
+                        self.current_state = 'idle'
+                    self.spawn_particles = []
+                    self.animate_spawn_glow()
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             if self.is_egg:
@@ -619,7 +626,8 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             "meloetta", "meloetta1", "giratina1", "zacian1", "zamazenta1", "shaymin1",
             "thundurus", "thundurus1", "tornadus", "tornadus1", "landorus", "landorus1",
             "enamorus", "enamorus1", "dialga", "dialga1", "palkia", "palkia1",
-            "keldeo1", "hoopa", "hoopa1", "urshifu", "urshifu1", "terapagos1"
+            "keldeo1", "hoopa", "hoopa1", "urshifu", "urshifu1", "terapagos1",
+            "deoxys", "deoxys1", "deoxys2", "deoxys3"
         ]
         if normalized_name in shakeable_forms:
             dx = pointer_x - getattr(self, 'last_mouse_x', pointer_x)
@@ -1090,6 +1098,41 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             return
         self.schedule_loop(50, lambda: self.start_evolution_vfx(target_species, step+1))
 
+    def animate_spawn_glow(self, step=0):
+        if not hasattr(self, 'spawn_particles'):
+            self.spawn_particles = []
+        if step == 0:
+            for _ in range(12):
+                px = self.size_w / 2
+                py = self.size_h / 2
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(4, 10)
+                vx = math.cos(angle) * speed
+                vy = math.sin(angle) * speed
+                p_id = self.canvas.create_rectangle(px-2, py-2, px+2, py+2, fill="white", outline="")
+                self.spawn_particles.append({'id': p_id, 'x': px, 'y': py, 'vx': vx, 'vy': vy, 'life': 15})
+        
+        active_p = []
+        for p in self.spawn_particles:
+            p['life'] -= 1
+            if p['life'] <= 0:
+                self.canvas.delete(p['id'])
+            else:
+                p['x'] += p['vx']
+                p['y'] += p['vy']
+                p['vx'] *= 0.85
+                p['vy'] *= 0.85
+                self.canvas.coords(p['id'], p['x']-2, p['y']-2, p['x']+2, p['y']+2)
+                active_p.append(p)
+        self.spawn_particles = active_p
+        
+        frames = 30
+        if step <= frames:
+            self.spawn_blend = 1.0 - (step / frames)
+            self.schedule_loop(33, lambda: self.animate_spawn_glow(step + 1))
+        else:
+            self.spawn_blend = 0.0
+
     def finish_evolution_vfx(self, step=0):
         if step == 0 and getattr(self, 'evo_channel', None):
             try: self.evo_channel.fadeout(2000)
@@ -1271,7 +1314,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         self.canvas.create_image(w//2, h, image=self.egg_tk_falling, anchor=tk.S, tags="spawn_egg")
         self.schedule_loop(30, lambda: self.animate_egg_spawn(step + 1))
 
-    def animate_vfx(self, action_type, step=0):
+    def animate_vfx(self, action_type, step=0, pb_file=None):
         frames = 15 
         if step == 0:
             self.current_state = 'exiting' 
@@ -1287,8 +1330,9 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             except: pass 
             try:
                 pb_dir = os.path.join(self.base_dir, "game_env", "ui")
-                available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
-                pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
+                if not pb_file:
+                    available_pbs = [f for f in os.listdir(pb_dir) if f.startswith("pokeball") and f.endswith(".png")]
+                    pb_file = random.choice(available_pbs) if available_pbs else "pokeball.png"
                 raw_img = Image.open(os.path.join(pb_dir, pb_file)).convert("RGBA")
                 r, g, b, a = raw_img.split()
                 a = a.point(lambda p: 255 if p > 127 else 0) 
@@ -1321,7 +1365,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             self.vfx_img = ImageTk.PhotoImage(rotated)
             self.canvas.delete("vfx")
             self.canvas.create_image(cx, cy, image=self.vfx_img, anchor=tk.CENTER, tags="vfx")
-            self.schedule_loop(30, lambda: self.animate_vfx(action_type, step + 1))
+            self.schedule_loop(30, lambda: self.animate_vfx(action_type, step + 1, pb_file))
         else:
             self.schedule_loop(100, self.window.destroy)
 
@@ -1401,6 +1445,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         else:
             self.canvas.delete("spawn_vfx")
             self.current_state = 'idle'
+            self.animate_spawn_glow()
             return
 
         self.vfx_tk = ImageTk.PhotoImage(self.spawn_vfx_raw.resize((w, int(h/1.5)), Image.Resampling.NEAREST))
@@ -1531,11 +1576,25 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 self.mew_master = None
                 
             if self.is_wild:
-                self.on_catch(self)
-                self.animate_vfx("catch")
+                if getattr(self, 'game_controller', None) and getattr(self.game_controller, 'trainer', None):
+                    self.current_state = 'idle'
+                    def on_hit(pb_file=None):
+                        self.on_catch(self)
+                        self.animate_vfx("catch", pb_file=pb_file)
+                    self.game_controller.trainer.spawn_pokeball_to(self.x + self.size_w/2, self.y + self.size_h/2, on_hit)
+                else:
+                    self.on_catch(self)
+                    self.animate_vfx("catch")
             else:
-                self.on_remove(self)
-                self.animate_vfx("return")
+                if getattr(self, 'game_controller', None) and getattr(self.game_controller, 'trainer', None):
+                    self.current_state = 'idle'
+                    def on_hit_return(pb_file=None):
+                        self.on_remove(self)
+                        self.animate_vfx("return", pb_file=pb_file)
+                    self.game_controller.trainer.spawn_pokeball_to(self.x + self.size_w/2, self.y + self.size_h/2, on_hit_return)
+                else:
+                    self.on_remove(self)
+                    self.animate_vfx("return")
 
     def handle_double_click(self, event):
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
@@ -1599,7 +1658,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             except: 
                 pass 
 
-        blend = getattr(self, 'evo_blend', 0.0)
+        blend = max(getattr(self, 'evo_blend', 0.0), getattr(self, 'spawn_blend', 0.0))
         
         # --- GEOMETRIC FIX: VISUAL INVERSION FOR OPPOSITE EDGES ---
         render_facing_right = self.is_facing_right
@@ -2394,6 +2453,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 self.canvas.delete("spawn_pb")
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 self.play_shiny_sound()
+                self.animate_spawn_glow()
                 try:
                     snd_path = os.path.join(self.base_dir, "game_env", "sounds", "return.wav")
                     if os.path.exists(snd_path):
@@ -2889,7 +2949,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 return
 
         # --- EXCLUSIVE MECHANIC: LEGENDARY BEASTS (RAIKOU, ENTEI, SUICUNE) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["raikou", "entei", "suicune"] and getattr(self, 'beast_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["raikou", "entei", "suicune", "ragingbolt", "gougingfire", "walkingwake"] and getattr(self, 'beast_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.beast_cooldown = 72000 
                 self.trigger_beast_arts()
@@ -2955,7 +3015,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 return
 
         # --- EXCLUSIVE MECHANIC: METEOR STRIKE (DEOXYS) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["deoxys", "deoxysnormal", "deoxysattack", "deoxysdefense", "deoxysspeed"] and getattr(self, 'deoxys_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+        if self.pet_name.lower().replace("_", "").replace("-", "") in ["deoxys", "deoxys1", "deoxys2", "deoxys3"] and getattr(self, 'deoxys_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.deoxys_cooldown = 72000
                 self.current_state = 'deoxys_channeling'
@@ -3984,7 +4044,11 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             "hoopa1": ("hoopa", ["#800080", "#FFD700", "#FF1493"]),
             "urshifu": ("urshifu_1", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
             "urshifu1": ("urshifu", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
-            "terapagos1": ("terapagos", ["#0000FF", "#00FFFF", "#FFFFFF"])
+            "terapagos1": ("terapagos", ["#0000FF", "#00FFFF", "#FFFFFF"]),
+            "deoxys": ("deoxys_1", ["#FF4500", "#00FFFF", "#FFA500"]),
+            "deoxys1": ("deoxys_2", ["#FF4500", "#00FFFF", "#FFA500"]),
+            "deoxys2": ("deoxys_3", ["#FF4500", "#00FFFF", "#FFA500"]),
+            "deoxys3": ("deoxys", ["#FF4500", "#00FFFF", "#FFA500"])
         }
         
         if name in form_mappings:

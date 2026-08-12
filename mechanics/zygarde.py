@@ -607,14 +607,9 @@ class ZygardeMechanics:
         target.v_y_velocity = vy
         
         # FLIGHT RECOVERY FIX
-        was_flyer = getattr(target, 'is_flying', False)
-        is_currently_grounded = (target.current_state == 'zygarde_grounded')
-        
-        if was_flyer and is_currently_grounded:
-            target.is_flying = True
+        if getattr(target, 'is_flying', False):
             target.current_state = 'zygarde_launched_flyer'
         else:
-            target.is_flying = False 
             target.current_state = 'zygarde_launched' 
         
     def _fsm_zygarde_launched(self):
