@@ -4,7 +4,11 @@ import os
 
 class RayquazaMechanics:
     def cancel_rayquaza_arts(self):
-        for attr in ['rayquaza_phase', 'rayquaza_start_x', 'rayquaza_end_x', 'rayquaza_target_y', 'rayquaza_global_timer', 'rayquaza_sweeps_done', 'rayquaza_sweeps_total', 'rayquaza_sweep_duration']:
+        if hasattr(self, 'rayquaza_vfx_win') and self.rayquaza_vfx_win and self.rayquaza_vfx_win.winfo_exists():
+            self.rayquaza_vfx_win.destroy()
+            self.rayquaza_vfx_win = None
+            
+        for attr in ['rayquaza_phase', 'rayquaza_start_x', 'rayquaza_end_x', 'rayquaza_target_y', 'rayquaza_global_timer', 'rayquaza_sweeps_done', 'rayquaza_sweeps_total', 'rayquaza_sweep_duration', 'rayquaza_charge_lines']:
             if hasattr(self, attr): delattr(self, attr)
             
         if self.current_state not in ['dragged', 'exiting']:
@@ -50,11 +54,64 @@ class RayquazaMechanics:
             else:
                 self.x = target_x
                 self.y = self.rayquaza_target_y
+                self.rayquaza_phase = 0.5
+                self.rayquaza_timer = 100 # 3 seconds (3000ms / 30ms)
+
+        elif self.rayquaza_phase == 0.5:
+            if not hasattr(self, 'rayquaza_vfx_win') or not self.rayquaza_vfx_win:
+                import tkinter as tk
+                self.rayquaza_vfx_win = tk.Toplevel(self.window.master)
+                self.rayquaza_vfx_win.overrideredirect(True)
+                self.rayquaza_vfx_win.attributes('-topmost', True)
+                TRANS_COLOR = '#010101'
+                self.rayquaza_vfx_win.config(bg=TRANS_COLOR)
+                try: self.rayquaza_vfx_win.wm_attributes('-transparentcolor', TRANS_COLOR)
+                except: pass
+                
+                self.rayquaza_vfx_size = 400
+                self.rayquaza_vfx_canvas = tk.Canvas(self.rayquaza_vfx_win, width=self.rayquaza_vfx_size, height=self.rayquaza_vfx_size, bg=TRANS_COLOR, highlightthickness=0)
+                self.rayquaza_vfx_canvas.pack()
+                self.rayquaza_charge_lines = []
+                
+            cx = self.x + self.size_w/2
+            cy = self.y + self.size_h/2
+            win_x = cx - self.rayquaza_vfx_size/2
+            win_y = cy - self.rayquaza_vfx_size/2
+            self.rayquaza_vfx_win.geometry(f"{self.rayquaza_vfx_size}x{self.rayquaza_vfx_size}+{int(win_x)}+{int(win_y)}")
+            self.rayquaza_vfx_win.lift()
+            
+            if random.random() < 0.8:
+                angle = random.uniform(0, math.pi * 2)
+                dist = self.rayquaza_vfx_size / 2 - 20
+                length = random.uniform(10, 30)
+                speed = random.uniform(8.0, 15.0)
+                color = random.choice(["#2ECC71", "#1ABC9C", "#FFFFFF"])
+                px = self.rayquaza_vfx_size/2 + math.cos(angle) * dist
+                py = self.rayquaza_vfx_size/2 + math.sin(angle) * dist
+                pid = self.rayquaza_vfx_canvas.create_line(px, py, px - math.cos(angle)*length, py - math.sin(angle)*length, fill=color, width=3, tags="vfx_rq_charge")
+                
+                self.rayquaza_charge_lines.append({'id': pid, 'dist': dist, 'angle': angle, 'length': length, 'speed': speed})
+                
+            alive = []
+            for line in self.rayquaza_charge_lines:
+                line['dist'] -= line['speed']
+                if line['dist'] > 20:
+                    px = self.rayquaza_vfx_size/2 + math.cos(line['angle']) * line['dist']
+                    py = self.rayquaza_vfx_size/2 + math.sin(line['angle']) * line['dist']
+                    self.rayquaza_vfx_canvas.coords(line['id'], px, py, px - math.cos(line['angle'])*line['length'], py - math.sin(line['angle'])*line['length'])
+                    alive.append(line)
+                else:
+                    self.rayquaza_vfx_canvas.delete(line['id'])
+            self.rayquaza_charge_lines = alive
+            
+            self.rayquaza_timer -= 1
+            if self.rayquaza_timer <= 0:
+                self.rayquaza_vfx_win.destroy()
+                self.rayquaza_vfx_win = None
+                
                 self.rayquaza_phase = 1
-                
                 self.rayquaza_timer = self.rayquaza_sweep_duration 
-                self.rayquaza_global_timer = 0 # Constant master chronometer for victims
-                
+                self.rayquaza_global_timer = 0 
                 self.is_facing_right = (self.rayquaza_end_x > self.rayquaza_start_x)
                 
                 active_targets = []

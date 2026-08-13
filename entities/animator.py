@@ -53,7 +53,7 @@ class DesktopPetAnimator:
             print(f"Error loading assets: {e}")
             sys.exit(1)
 
-    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False, scale_mod=1.0, bright_mod=1.0, darkness_mod=0.0, nightmare_filter=False):
+    def update_animation(self, state, facing_right, canvas_image_id, animate_idle, fps_ms, blend_factor=0.0, rotation_angle=0, is_glitching=False, is_darkened=False, scale_mod=1.0, bright_mod=1.0, darkness_mod=0.0, nightmare_filter=False, red_mod=0.0):
         if state in ['exiting', 'landing_shake', 'dark_victim_frozen', 'dark_victim_hidden']: return
         
         current_time = time.time()
@@ -72,10 +72,10 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling', 'necrozma_channeling']:
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling', 'necrozma_channeling', 'hoopa_channeling', 'volcanion_channeling', 'volcanion_shooting', 'volcanion_victim']:
             render_state = 'idle'
             
-        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim']:
+        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'hoopa_flying', 'hoopa_grab_target', 'hoopa_throw']:
             render_state = 'walking'
 
         if render_state == 'walking':
@@ -119,6 +119,11 @@ class DesktopPetAnimator:
             black_layer = Image.new("RGBA", processed_image.size, (0, 0, 0, 255))
             black_layer.putalpha(processed_image.split()[3])
             processed_image = Image.blend(processed_image, black_layer, actual_darkness)
+            
+        if red_mod > 0.0:
+            red_layer = Image.new("RGBA", processed_image.size, (255, 60, 40, 255))
+            red_layer.putalpha(processed_image.split()[3])
+            processed_image = Image.blend(processed_image, red_layer, red_mod)
 
         if blend_factor > 0.0:
             white_layer = Image.new("RGBA", processed_image.size, (255, 255, 255, 255))

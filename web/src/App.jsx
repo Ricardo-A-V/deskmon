@@ -7,22 +7,22 @@ const ROSTER_DATA = [
   {
     region: "Kanto",
     entities: [
-      { name: "Articuno", category: "Legendary", description: "Channels freezing energy before unleashing a flurry of icy pillars that rain down from the top of the monitor. Any pets struck by the falling ice are instantly frozen solid in a block of ice." },
-      { name: "Zapdos", category: "Legendary", description: "Explodes with electric energy, summoning violent lightning bolts that strike down randomly across the screen. The high-voltage strikes instantly paralyze any pets unfortunate enough to be hit by the pillars." },
-      { name: "Moltres", category: "Legendary", description: "Bursts with fiery energy, causing scorching pillars of flame to erupt violently from the bottom of the screen. Pets caught in the blazing updrafts are blasted by the heat and severely burned." },
-      { name: "Mewtwo", category: "Legendary", description: "Levitates with a psychic aura and forcefully pulls other pets into a massive, rapidly accelerating orbital ring around itself. After spinning them through the air, it unleashes a purple energy burst that hurls the trapped pets away at high speeds." },
-      { name: "Mew", category: "Mythical", description: "Bounces rapidly around the screen boundaries inside a glowing pink bubble, leaving a sparkling trail. It captures nearby pets in smaller bubbles, tethering them with a genetic double-helix link and pulling them into its orbit before popping to drop them." }
+      { name: "Articuno", category: "Legendary", description: "Channels freezing energy before unleashing a flurry of icy pillars that rain down from the top of the monitor. Any pokemon struck by the falling ice are instantly frozen solid in a block of ice." },
+      { name: "Zapdos", category: "Legendary", description: "Explodes with electric energy, summoning violent lightning bolts that strike down randomly across the screen. The high-voltage strikes instantly paralyze any pokemon unfortunate enough to be hit by the pillars." },
+      { name: "Moltres", category: "Legendary", description: "Bursts with fiery energy, causing scorching pillars of flame to erupt violently from the bottom of the screen. Pokemon caught in the blazing updrafts are blasted by the heat and severely burned." },
+      { name: "Mewtwo", category: "Legendary", description: "Levitates with a psychic aura and forcefully pulls other pokemon into a massive, rapidly accelerating orbital ring around itself. After spinning them through the air, it unleashes a purple energy burst that hurls the trapped pokemon away at high speeds." },
+      { name: "Mew", category: "Mythical", description: "Bounces rapidly around the screen boundaries inside a glowing pink bubble, leaving a sparkling trail. It captures nearby pokemon in smaller bubbles, tethering them with a genetic double-helix link and pulling them into its orbit before popping to drop them." }
     ]
   },
   {
     region: "Johto",
     entities: [
-      { name: "Raikou", category: "Legendary", description: "Emits a powerful roar that summons crackling fractal lightning bolts branching outwards. The high-voltage shockwave instantly paralyzes any nearby pets, stopping them in their tracks." },
-      { name: "Entei", category: "Legendary", description: "Unleashes a thunderous roar that triggers a massive, erupting burst of fiery particles. The intense heat of the explosion severely burns any pets caught within its wide radius." },
-      { name: "Suicune", category: "Legendary", description: "Roars to summon massive, aerodynamic water waves that surge horizontally and crash against the screen edges. Any pets caught in the sweeping tide are swept up and forcefully thrown away by the hydrodynamic current." },
-      { name: "Lugia", category: "Legendary", description: "Dives off-screen before performing a massive, high-speed horizontal dash across your monitor, violently shaking the PC window. The sheer aerodynamic force creates a visual wind tunnel that blows all other pets away at high speeds." },
-      { name: "Ho-Oh", category: "Legendary", description: "Flies to the top of the screen and unleashes a massive 360-degree nova of fire particles, inflicting pure terror upon all other pets. The terrified pets are forced into a frantic panic, running back and forth across your desktop with flames trailing at their feet." },
-      { name: "Celebi", category: "Mythical", description: "Channels a spiraling energy blast that freezes time, suspending all other pets in mid-air as translucent, immobile ghosts. It then flies directly to each frozen pet, striking them with a burst of pink light to restore them to normal gravity and behavior." }
+      { name: "Raikou", category: "Legendary", description: "Emits a powerful roar that summons crackling fractal lightning bolts branching outwards. The high-voltage shockwave instantly paralyzes any nearby pokemon, stopping them in their tracks." },
+      { name: "Entei", category: "Legendary", description: "Unleashes a thunderous roar that triggers a massive, erupting burst of fiery particles. The intense heat of the explosion severely burns any pokemon caught within its wide radius." },
+      { name: "Suicune", category: "Legendary", description: "Roars to summon massive, aerodynamic water waves that surge horizontally and crash against the screen edges. Any pokemon caught in the sweeping tide are swept up and forcefully thrown away by the hydrodynamic current." },
+      { name: "Lugia", category: "Legendary", description: "Dives off-screen before performing a massive, high-speed horizontal dash across your monitor, violently shaking the PC window. The sheer aerodynamic force creates a visual wind tunnel that blows all other pokemon away at high speeds." },
+      { name: "Ho-Oh", category: "Legendary", description: "Flies to the top of the screen and unleashes a massive 360-degree nova of fire particles, inflicting pure terror upon all other pokemon. The terrified pokemon are forced into a frantic panic, running back and forth across your desktop with flames trailing at their feet." },
+      { name: "Celebi", category: "Mythical", description: "Channels a spiraling energy blast that creates a temporal checkpoint, saving the exact positions and states of all other pokemon. It then flies directly to each pokemon, striking them with a burst of pink light to rewind time and instantly revert them back to that exact saved moment." }
     ]
   },
   {
@@ -30,59 +30,59 @@ const ROSTER_DATA = [
     entities: [
       { name: "Regirock", category: "Legendary", description: "Approaches a target and violently launches them through the air with a brutal physical strike. The sheer force of the impact causes the victim to become physically embedded into the screen's walls or floor upon crashing." },
       { name: "Regice", category: "Legendary", description: "Approaches a nearby target and delivers a powerful strike that sends them flying into the air. When the victim finally crashes into the floor, they are instantly encased and frozen in a block of ice." },
-      { name: "Registeel", category: "Legendary", description: "Steadily approaches a nearby pet and delivers a devastating metallic strike that generates a shockwave. The intense impact sends the victim hurtling across the screen with massive force." },
-      { name: "Latias", category: "Legendary" },
-      { name: "Latios", category: "Legendary" },
-      { name: "Kyogre", category: "Legendary", description: "Channels aquatic energy to summon a massive deluge of water that floods the bottom of your screen. Other pets are caught in the rising tide, floating helplessly and drifting along the water's wavy surface." },
-      { name: "Groudon", category: "Legendary", description: "Leaps into the air and crashes down with immense force, triggering a violent earthquake that physically shakes the user's active window. The massive shockwave forcefully launches all grounded pets into the air, instantly canceling whatever they were doing and scattering them with dirt." },
-      { name: "Rayquaza", category: "Legendary", description: "Flies to the top of the screen and performs rapid horizontal sweeps while conjuring intense emerald cyclones. The swirling vortex aggressively sucks up all other pets, dragging them back and forth across the sky before hurling them away." },
-      { name: "Jirachi", category: "Mythical", description: "Channels energy inside a glowing golden star before teleporting away and flying horizontally across your entire screen, leaving a glittering trail in its wake. As it passes, it summons a shower of falling stars that bounce off windows and grant a glowing speed buff to any pet they strike." },
-      { name: "Deoxys", category: "Mythical" }
+      { name: "Registeel", category: "Legendary", description: "Steadily approaches a nearby pokemon and delivers a devastating metallic strike that generates a shockwave. The intense impact sends the victim hurtling across the screen with massive force." },
+      { name: "Latias", category: "Legendary", description: "Channels energy to form a spiral path around itself before repeatedly dashing across the screen at high speeds, leaving a pink trail behind. If it collides with other pokemon during a dash, it forcefully throws them into the air with an explosion ring effect." },
+      { name: "Latios", category: "Legendary", description: "Channels energy to form a spiral path around itself before repeatedly dashing across the screen at high speeds, leaving a blue trail behind. If it collides with other pokemon during a dash, it forcefully throws them into the air with an explosion ring effect." },
+      { name: "Kyogre", category: "Legendary", description: "Channels aquatic energy to summon a massive deluge of water that floods the bottom of your screen. Other pokemon are caught in the rising tide, floating helplessly and drifting along the water's wavy surface." },
+      { name: "Groudon", category: "Legendary", description: "Leaps into the air and crashes down with immense force, triggering a violent earthquake that physically shakes the user's active window. The massive shockwave forcefully launches all grounded pokemon into the air, instantly canceling whatever they were doing and scattering them with dirt." },
+      { name: "Rayquaza", category: "Legendary", description: "Flies to the top of the screen and performs rapid horizontal sweeps while conjuring intense emerald cyclones. The swirling vortex aggressively sucks up all other pokemon, dragging them back and forth across the sky before hurling them away." },
+      { name: "Jirachi", category: "Mythical", description: "Channels energy inside a glowing golden star before teleporting away and flying horizontally across your entire screen, leaving a glittering trail in its wake. As it passes, it summons a shower of falling stars that bounce off windows and grant a glowing speed buff to any pokemon they strike." },
+      { name: "Deoxys", category: "Mythical", description: "Levitates upward while generating an intertwining DNA strand visual, eventually summoning a massive meteorite that plummets from the top of the screen. The meteor's impact creates a giant explosion that violently hurls nearby pokemon away and scatters multiple draggable, bouncing rocks across the screen." }
     ]
   },
   {
     region: "Sinnoh",
     entities: [
-      { name: "Uxie", category: "Legendary" },
-      { name: "Mesprit", category: "Legendary" },
-      { name: "Azelf", category: "Legendary" },
-      { name: "Dialga", category: "Legendary", description: "Slams violently into the bottom of a window to unleash a temporal shockwave, enveloping itself and all other pets in pulsating ripples of purple and blue energy. This time distortion effect visually alters the pets with continuous energy pulses as they move around the screen." },
-      { name: "Palkia", category: "Legendary", description: "Slams into the bottom of the screen to trigger a spatial distortion aura filled with glowing pink rifts. This reality-bending effect temporarily inverts gravity for all other pets, forcing them to fall upward and walk on the ceiling." },
-      { name: "Heatran", category: "Legendary" },
-      { name: "Regigigas", category: "Legendary", description: "Slowly marches toward a target pet, grabs it, and violently throws it while shaking your actual PC window. The thrown pet bounces around, creating shockwaves and a final global earthquake that embeds it into the screen." },
-      { name: "Giratina", category: "Legendary", description: "Tears open a dark, swirling vortex on your screen with glowing red eyes that forcefully pulls in and completely absorbs all other pets. It then dashes across the screen and reappears later to violently eject the trapped pets back onto your desktop through miniature portals." },
-      { name: "Cresselia", category: "Legendary", description: "Ascends to the top of the screen and summons a glowing aurora that showers colorful light downward. This light blesses all other pets, making them pulse brightly and sprint rapidly back and forth across the desktop." },
-      { name: "Phione", category: "Mythical" },
-      { name: "Manaphy", category: "Mythical" },
-      { name: "Darkrai", category: "Mythical", description: "Teleports to the center of the screen to channel a massive dark field that magnetically pulls in all other pets. Once caught in the shadow, pets are trapped in a nightmare where they uncontrollably spin and bounce rapidly off the screen edges." },
-      { name: "Shaymin", category: "Mythical" },
+      { name: "Uxie", category: "Legendary", description: "Channels energy before continuously orbiting around the user's mouse cursor, leaving behind a yellow trail. If Uxie, Mesprit, and Azelf orbit the cursor simultaneously, they form a protective barrier that violently repels and throws away any other pokemon that come too close to the mouse." },
+      { name: "Mesprit", category: "Legendary", description: "Channels energy before continuously orbiting around the user's mouse cursor, leaving behind a pink trail. If Uxie, Mesprit, and Azelf orbit the cursor simultaneously, they form a protective barrier that violently repels and throws away any other pokemon that come too close to the mouse." },
+      { name: "Azelf", category: "Legendary", description: "Channels energy before continuously orbiting around the user's mouse cursor, leaving behind a blue trail. If Uxie, Mesprit, and Azelf orbit the cursor simultaneously, they form a protective barrier that violently repels and throws away any other pokemon that come too close to the mouse." },
+      { name: "Dialga", category: "Legendary", description: "Slams violently into the bottom of a window to unleash a temporal shockwave, enveloping itself and all other pokemon in pulsating ripples of purple and blue energy. This time distortion effect visually alters the pokemon with continuous energy pulses as they move around the screen." },
+      { name: "Palkia", category: "Legendary", description: "Slams into the bottom of the screen to trigger a spatial distortion aura filled with glowing pink rifts. This reality-bending effect temporarily inverts gravity for all other pokemon, forcing them to fall upward and walk on the ceiling." },
+      { name: "Heatran", category: "Legendary", description: "Scales the walls to position itself at the top center of the screen, where it vibrates and unleashes a magma storm. It rains down a barrage of rocks with fiery trails that will hit and burn other pokemon on the screen before falling back to the floor." },
+      { name: "Regigigas", category: "Legendary", description: "Slowly marches toward a target pokemon, grabs it, and violently throws it while shaking your actual PC window. The thrown pokemon bounces around, creating shockwaves and a final global earthquake that embeds it into the screen." },
+      { name: "Giratina", category: "Legendary", description: "Tears open a dark, swirling vortex on your screen with glowing red eyes that forcefully pulls in and completely absorbs all other pokemon. It then dashes across the screen and reappears later to violently eject the trapped pokemon back onto your desktop through miniature portals." },
+      { name: "Cresselia", category: "Legendary", description: "Ascends to the top of the screen and summons a glowing aurora that showers colorful light downward. This light blesses all other pokemon, making them pulse brightly and sprint rapidly back and forth across the desktop." },
+      { name: "Phione", category: "Mythical", description: "Absorbs water and performs a series of bouncy, high-speed jumps from the floor and walls of the screen. As it bounds around, it leaves a trail of water and creates splash particles whenever it hits the screen's edges." },
+      { name: "Manaphy", category: "Mythical", description: "Absorbs water and performs a long series of bouncy, high-speed jumps from the floor and walls of the screen. As it bounds around, it leaves a trail of water and creates splash particles whenever it hits the screen's edges." },
+      { name: "Darkrai", category: "Mythical", description: "Teleports to the center of the screen to channel a massive dark field that magnetically pulls in all other pokemon. Once caught in the shadow, pokemon are trapped in a nightmare where they uncontrollably spin and bounce rapidly off the screen edges." },
+      { name: "Shaymin", category: "Mythical", description: "A Gracidea leaf falls from the top of the screen; if it touches Shaymin, it transforms into its Sky Form with a burst of sparkles and begins gracefully leaping through the air. As it flies, it periodically drops Gracidea flowers on the floor, which cause any other pokemon that touches them to break out into a special bouncing joy jump." },
       { name: "Arceus", category: "Mythical" }
     ]
   },
   {
     region: "Unova",
     entities: [
-      { name: "Victini", category: "Mythical" },
+      { name: "Victini", category: "Mythical", description: "Flies around the screen leaving a V-shaped trail of fire, then dashes towards a target. When it reaches the target, it triggers a V-shaped explosion that burns any pokemon caught within its wide radius." },
       { name: "Cobalion", category: "Legendary" },
       { name: "Terrakion", category: "Legendary" },
       { name: "Virizion", category: "Legendary" },
-      { name: "Tornadus", category: "Legendary" },
-      { name: "Thundurus", category: "Legendary" },
-      { name: "Reshiram", category: "Legendary", description: "Conjures a massive sphere of fire and hurls it at the bottom of the screen, triggering a huge fiery shockwave upon impact. Any pet caught in the blast area is set on fire, causing them to panic and run frantically around the screen." },
-      { name: "Zekrom", category: "Legendary", description: "Envelops itself in a pulsing electric aura and flies upward before dive-bombing back to the ground. The impact releases a massive cyan shockwave across the screen that paralyzes all other pets, trapping them in a stunned state." },
-      { name: "Landorus", category: "Legendary" },
-      { name: "Kyurem", category: "Legendary", description: "Unleashes a wide-reaching blast of icy wind that scatters freezing particles across the screen. Any pets caught in the chilling area are frozen into solid ice cubes, causing them to slide uncontrollably and bounce off the screen's edges." },
+      { name: "Tornadus", category: "Legendary", description: "Channels elemental energy to shoot a homing sphere at another pokemon, which erupts into an area-of-effect explosion upon impact. The resulting explosion traps victims in a spinning tornado." },
+      { name: "Thundurus", category: "Legendary", description: "Channels elemental energy to shoot a homing sphere at another pokemon, which erupts into an area-of-effect explosion upon impact. The resulting explosion paralyzes victims with lightning strikes." },
+      { name: "Reshiram", category: "Legendary", description: "Conjures a massive sphere of fire and hurls it at the bottom of the screen, triggering a huge fiery shockwave upon impact. Any pokemon caught in the blast area is set on fire, causing them to panic and run frantically around the screen." },
+      { name: "Zekrom", category: "Legendary", description: "Envelops itself in a pulsing electric aura and flies upward before dive-bombing back to the ground. The impact releases a massive cyan shockwave across the screen that paralyzes all other pokemon, trapping them in a stunned state." },
+      { name: "Landorus", category: "Legendary", description: "Channels elemental energy to shoot a homing sphere at another pokemon, which erupts into an area-of-effect explosion upon impact. The resulting explosion forcefully hurls victims away." },
+      { name: "Kyurem", category: "Legendary", description: "Unleashes a wide-reaching blast of icy wind that scatters freezing particles across the screen. Any pokemon caught in the chilling area are frozen into solid ice cubes, causing them to slide uncontrollably and bounce off the screen's edges." },
       { name: "Keldeo", category: "Mythical" },
-      { name: "Meloetta", category: "Mythical" },
-      { name: "Genesect", category: "Mythical" }
+      { name: "Meloetta", category: "Mythical", description: "In its Aria form, Meloetta floats across the screen leaving a pentagram trail and dropping musical notes, which it eventually fires downward as projectiles. In its Pirouette form, it dances on the floor while summoning orbiting notes that it shoots as missiles at other pokemon, forcing anyone hit to break into a synchronized dance." },
+      { name: "Genesect", category: "Mythical", description: "Walks to the edge of the screen, charges up energy, and fires a massive, screen-wide green laser beam. Any pokemon caught in the beam's path is afflicted with a glitch effect, causing them to temporarily teleport erratically around the screen." }
     ]
   },
   {
     region: "Kalos",
     entities: [
-      { name: "Xerneas", category: "Legendary", description: "Projects a wide, shimmering pink fairy aura around itself. Any pets that wander into this radius are immediately pacified, stopping their chaotic actions to peacefully walk around Xerneas." },
-      { name: "Yveltal", category: "Legendary", description: "Fires a devastating dark red beam downward that erupts into a massive dark explosion upon hitting the ground. Any pet caught in the beam's path or the resulting blast is temporarily turned into solid stone and unable to move." },
-      { name: "Zygarde", category: "Legendary", description: "Depending on its form, it either dashes across the screen or sits centrally while emitting green hexagonal cells. It acts as a global artillery unit, firing green arrows to shoot flying pets out of the air, or summoning earth pillars to launch grounded pets upward." },
+      { name: "Xerneas", category: "Legendary", description: "Projects a wide, shimmering pink fairy aura around itself. Any pokemon that wander into this radius are immediately pacified, stopping their chaotic actions to peacefully walk around Xerneas." },
+      { name: "Yveltal", category: "Legendary", description: "Fires a devastating dark red beam downward that erupts into a massive dark explosion upon hitting the ground. Any pokemon caught in the beam's path or the resulting blast is temporarily turned into solid stone and unable to move." },
+      { name: "Zygarde", category: "Legendary", description: "Depending on its form, it either dashes across the screen or sits centrally while emitting green hexagonal cells. It acts as a global artillery unit, firing green arrows to shoot flying pokemon out of the air, or summoning earth pillars to launch grounded pokemon upward." },
       { name: "Diancie", category: "Mythical" },
       { name: "Hoopa", category: "Mythical" },
       { name: "Volcanion", category: "Mythical" }
@@ -93,14 +93,14 @@ const ROSTER_DATA = [
     entities: [
       { name: "Type: Null", category: "Legendary" },
       { name: "Silvally", category: "Legendary" },
-      { name: "Tapu Koko", category: "Legendary" },
-      { name: "Tapu Lele", category: "Legendary" },
-      { name: "Tapu Bulu", category: "Legendary" },
-      { name: "Tapu Fini", category: "Legendary" },
+      { name: "Tapu Koko", category: "Legendary", description: "Channels its power to hover and projects a global yellow aura field that visually borders the screen. This electric terrain affects all other pokemon present, drastically increasing their movement speeds." },
+      { name: "Tapu Lele", category: "Legendary", description: "Channels its power to hover and projects a global pink aura field that visually borders the screen. This psychic terrain affects all other pokemon present, lowering their gravity and causing them to float." },
+      { name: "Tapu Bulu", category: "Legendary", description: "Channels its power to hover and projects a global green aura field that visually borders the screen. This grassy terrain affects all other pokemon present, gradually increasing their size." },
+      { name: "Tapu Fini", category: "Legendary", description: "Channels its power to hover and projects a global blue aura field that visually borders the screen. This misty terrain affects all other pokemon present, drastically decreasing their movement speeds." },
       { name: "Cosmog", category: "Legendary" },
       { name: "Cosmoem", category: "Legendary" },
-      { name: "Solgaleo", category: "Legendary", description: "Transforms into a blazing fireball and crashes down onto the screen, unleashing a massive kinetic explosion. This shockwave forcefully knocks all nearby pets away, interrupting any of their current actions." },
-      { name: "Lunala", category: "Legendary", description: "Channels a massive purple and blue energy beam towards the bottom of the screen that detonates into a giant shockwave. The blast violently knocks back any other pets caught in its radius, cancelling their current actions and sending them flying." },
+      { name: "Solgaleo", category: "Legendary", description: "Transforms into a blazing fireball and crashes down onto the screen, unleashing a massive kinetic explosion. This shockwave forcefully knocks all nearby pokemon away, interrupting any of their current actions." },
+      { name: "Lunala", category: "Legendary", description: "Channels a massive purple and blue energy beam towards the bottom of the screen that detonates into a giant shockwave. The blast violently knocks back any other pokemon caught in its radius, cancelling their current actions and sending them flying." },
       { name: "Nihilego", category: "Ultra Beast" },
       { name: "Buzzwole", category: "Ultra Beast" },
       { name: "Pheromosa", category: "Ultra Beast" },
@@ -108,7 +108,7 @@ const ROSTER_DATA = [
       { name: "Celesteela", category: "Ultra Beast" },
       { name: "Kartana", category: "Ultra Beast" },
       { name: "Guzzlord", category: "Ultra Beast" },
-      { name: "Necrozma", category: "Legendary", description: "Devours light into its core before firing a barrage of glowing projectiles that ricochet off the screen's edges. Pets struck by these projectiles are cursed with a creeping darkness effect, while the stolen light makes Necrozma temporarily grow larger and brighter." },
+      { name: "Necrozma", category: "Legendary", description: "Devours light into its core before firing a barrage of glowing projectiles that ricochet off the screen's edges. Pokemon struck by these projectiles are cursed with a creeping darkness effect, while the stolen light makes Necrozma temporarily grow larger and brighter." },
       { name: "Magearna", category: "Mythical" },
       { name: "Marshadow", category: "Mythical" },
       { name: "Poipole", category: "Ultra Beast" },
@@ -123,18 +123,18 @@ const ROSTER_DATA = [
   {
     region: "Galar & Hisui",
     entities: [
-      { name: "Zacian", category: "Legendary", description: "Absorbs energy before executing a lightning-fast horizontal dash across the screen, leaving a glowing slash trail. Any pets caught in its path are violently stunned and sent flying backward." },
-      { name: "Zamazenta", category: "Legendary", description: "Summons a massive energy shield in front of itself and charges rapidly across the screen, scooping up any pets in its way. Upon hitting the screen's edge, it releases an explosion that launches all the collected pets high into the air." },
-      { name: "Eternatus", category: "Legendary", description: "Ascends off-screen and fires a massive, screen-piercing pink Eternabeam that forcefully injects dynamax energy into any grounded pet caught in its path. Affected pets absorb the blast and grow to an enormous size with red storm clouds orbiting them, before explosively shrinking back down." },
+      { name: "Zacian", category: "Legendary", description: "Absorbs energy before executing a lightning-fast horizontal dash across the screen, leaving a glowing slash trail. Any pokemon caught in its path are violently stunned and sent flying backward." },
+      { name: "Zamazenta", category: "Legendary", description: "Summons a massive energy shield in front of itself and charges rapidly across the screen, scooping up any pokemon in its way. Upon hitting the screen's edge, it releases an explosion that launches all the collected pokemon high into the air." },
+      { name: "Eternatus", category: "Legendary", description: "Ascends off-screen and fires a massive, screen-piercing pink Eternabeam that forcefully injects dynamax energy into any grounded pokemon caught in its path. Affected pokemon absorb the blast and grow to an enormous size with red storm clouds orbiting them, before explosively shrinking back down." },
       { name: "Kubfu", category: "Legendary" },
       { name: "Urshifu", category: "Legendary" },
       { name: "Zarude", category: "Mythical" },
-      { name: "Regieleki", category: "Legendary", description: "Zips across the screen at lightning speed to strike a targeted pet, violently launching them into the air. Upon crashing back down, the victim is left severely paralyzed by the lingering electric shock." },
-      { name: "Regidrago", category: "Legendary", description: "Approaches a target and unleashes a draconic strike that blasts the pet away with a localized shockwave. The lingering draconic energy causes the victim's movements to become significantly slowed once they land." },
+      { name: "Regieleki", category: "Legendary", description: "Zips across the screen at lightning speed to strike a targeted pokemon, violently launching them into the air. Upon crashing back down, the victim is left severely paralyzed by the lingering electric shock." },
+      { name: "Regidrago", category: "Legendary", description: "Approaches a target and unleashes a draconic strike that blasts the pokemon away with a localized shockwave. The lingering draconic energy causes the victim's movements to become significantly slowed once they land." },
       { name: "Glastrier", category: "Legendary" },
       { name: "Spectrier", category: "Legendary" },
       { name: "Calyrex", category: "Legendary" },
-      { name: "Enamorus", category: "Legendary" }
+      { name: "Enamorus", category: "Legendary", description: "Channels elemental energy to shoot a homing sphere at another pokemon, which erupts into an area-of-effect explosion upon impact. The resulting explosion charms victims into a floating joy state with heart visuals." }
     ]
   },
   {
@@ -144,16 +144,16 @@ const ROSTER_DATA = [
       { name: "Chien-Pao", category: "Legendary" },
       { name: "Ting-Lu", category: "Legendary" },
       { name: "Chi-Yu", category: "Legendary" },
-      { name: "Koraidon", category: "Legendary", description: "Climbs the screen's edge and leaps into the air before diving aggressively at a targeted pet. The resulting impact creates a massive fiery shockwave that violently knocks all other pets away from the blast zone." },
-      { name: "Miraidon", category: "Legendary", description: "Dashes aggressively across the screen boundaries, leaving a bright electric trail that paralyzes any pets it touches with a robotic jitter. The frantic dash culminates in an electric shockwave that violently knocks back all pets in its radius." },
-      { name: "Walking Wake", category: "Legendary" },
+      { name: "Koraidon", category: "Legendary", description: "Climbs the screen's edge and leaps into the air before diving aggressively at a targeted pokemon. The resulting impact creates a massive fiery shockwave that violently knocks all other pokemon away from the blast zone." },
+      { name: "Miraidon", category: "Legendary", description: "Dashes aggressively across the screen boundaries, leaving a bright electric trail that paralyzes any pokemon it touches with a robotic jitter. The frantic dash culminates in an electric shockwave that violently knocks back all pokemon in its radius." },
+      { name: "Walking Wake", category: "Legendary", description: "Roars to summon massive, aerodynamic water waves that surge horizontally and crash against the screen edges. Any pokemon caught in the sweeping tide are swept up and forcefully thrown away by the hydrodynamic current." },
       { name: "Iron Leaves", category: "Legendary" },
       { name: "Okidogi", category: "Legendary" },
       { name: "Munkidori", category: "Legendary" },
       { name: "Fezandipiti", category: "Legendary" },
       { name: "Ogerpon", category: "Legendary" },
-      { name: "Gouging Fire", category: "Legendary" },
-      { name: "Raging Bolt", category: "Legendary" },
+      { name: "Gouging Fire", category: "Legendary", description: "Unleashes a thunderous roar that triggers a massive, erupting burst of fiery particles. The intense heat of the explosion severely burns any pokemon caught within its wide radius." },
+      { name: "Raging Bolt", category: "Legendary", description: "Emits a powerful roar that summons crackling fractal lightning bolts branching outwards. The high-voltage shockwave instantly paralyzes any nearby pokemon, stopping them in their tracks." },
       { name: "Iron Boulder", category: "Legendary" },
       { name: "Iron Crown", category: "Legendary" },
       { name: "Terapagos", category: "Legendary" },
@@ -161,7 +161,8 @@ const ROSTER_DATA = [
     ]
   }
 ];
-const SlantedAccordion = ({ name, category, description, backgroundImage, gifPath, isActive, onToggle, imageClassName = "bg-cover" }) => {
+
+const SlantedAccordion = ({ name, category, description, backgroundImage, gifPath, isActive, onToggle, imageClassName = "bg-cover" }) => {
   const [gifExists, setGifExists] = useState(true);
   const activeHeight = (gifPath && gifExists) ? 'h-[500px]' : 'h-72';
   
@@ -200,7 +201,7 @@ const ROSTER_DATA = [
             <div className={`absolute left-80 right-32 top-10 flex flex-col gap-6 transition-all duration-500 ${isActive ? 'opacity-100 translate-x-0 pointer-events-auto delay-100' : 'opacity-0 translate-x-10 pointer-events-none'}`}>
               <div className="max-w-3xl">
                 <h4 className="text-2xl font-bold text-gray-800 mb-3">Details & Effects</h4>
-                <p className="text-gray-700 whitespace-pre-line text-lg leading-relaxed">
+                <p className="text-gray-700 whitespace-pre-line text-lg leading-relaxed text-justify">
                   {description || "Move description and effects are currently pending."}
                 </p>
               </div>
@@ -238,9 +239,9 @@ const RegionDivider = ({ region }) => (
 
 const ViewHome = () => (
   <div className="max-w-3xl px-6 mt-10">
-    <h1 className="text-5xl font-extrabold text-gray-950 mb-6 tracking-tighter">Pokémon Desktop Engine</h1>
+    <h1 className="text-5xl font-extrabold text-gray-950 mb-6 tracking-tighter">Pokemon Desktop Engine</h1>
     <p className="text-xl text-gray-800 leading-relaxed mb-4">
-      This is the internal documentation for the custom, physics-based desktop pet engine. 
+      This is the internal documentation for the custom, physics-based desktop pokemon engine. 
       It details entity-specific states, visual techniques, and user interaction mechanics.
     </p>
   </div>

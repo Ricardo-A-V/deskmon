@@ -8,42 +8,45 @@ import os
 
 class TelekinesisMechanics:
     def manage_tk_aura(self, canvas, w, h, is_active):
-        if is_active:
-            canvas.delete("tk_aura") 
-            t = time.time()
-            cx, cy = w / 2, h / 2
-            base_radius = max(w, h) * 0.6
-            
-            # Swarm of 24 psychic particles generated mathematically in real time
-            for i in range(24):
-                # 1. Asymmetrical speed (Some particles go fast, others slow, others backwards)
-                speed = 1.5 + (math.sin(i * 7.1) * 2.0)
-                angle = (t * speed) + (i * 0.8)
+        try:
+            if is_active:
+                canvas.delete("tk_aura") 
+                t = time.time()
+                cx, cy = w / 2, h / 2
+                base_radius = max(w, h) * 0.6
                 
-                # 2. Radius dispersion (Breaks the circumference to create a chaotic cloud)
-                scatter = math.cos(i * 13.3) * (base_radius * 0.5)
-                r = base_radius + scatter
-                
-                px = cx + math.cos(angle) * r
-                py = cy + math.sin(angle) * r
-                
-                # 3. Individual time-based blinking phase
-                blink_phase = math.sin(t * 12.0 + i * 3.14)
-                
-                if blink_phase > 0.5:
-                    color = "#FFFFFF" # Intense white flash
-                    size = 2
-                elif blink_phase > -0.3:
-                    color = "#D24DFF" # Base energy purple
-                    size = 1
-                else:
-                    continue # Invisible particle (simulates completely turning off)
-                
-                canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
-                
-            canvas.tag_lower("tk_aura") # Force cloud behind the sprite
-        else:
-            canvas.delete("tk_aura")
+                # Swarm of 24 psychic particles generated mathematically in real time
+                for i in range(24):
+                    # 1. Asymmetrical speed (Some particles go fast, others slow, others backwards)
+                    speed = 1.5 + (math.sin(i * 7.1) * 2.0)
+                    angle = (t * speed) + (i * 0.8)
+                    
+                    # 2. Radius dispersion (Breaks the circumference to create a chaotic cloud)
+                    scatter = math.cos(i * 13.3) * (base_radius * 0.5)
+                    r = base_radius + scatter
+                    
+                    px = cx + math.cos(angle) * r
+                    py = cy + math.sin(angle) * r
+                    
+                    # 3. Individual time-based blinking phase
+                    blink_phase = math.sin(t * 12.0 + i * 3.14)
+                    
+                    if blink_phase > 0.5:
+                        color = "#FFFFFF" # Intense white flash
+                        size = 2
+                    elif blink_phase > -0.3:
+                        color = "#D24DFF" # Base energy purple
+                        size = 1
+                    else:
+                        continue # Invisible particle (simulates completely turning off)
+                    
+                    canvas.create_rectangle(px-size, py-size, px+size, py+size, fill=color, outline=color, tags="tk_aura")
+                    
+                canvas.tag_lower("tk_aura") # Force cloud behind the sprite
+            else:
+                canvas.delete("tk_aura")
+        except:
+            pass
 
     def manage_bubble_vfx(self, is_active, progress=1.0):
         if is_active:
@@ -168,7 +171,7 @@ class TelekinesisMechanics:
     def _fsm_tk_channeling(self):
         target = getattr(self, 'tk_target', None)
         
-        if not target or getattr(target, 'current_state', '') not in ['tk_controlled', 'tk_lifted']:
+        if not target or getattr(target, 'current_state', '') not in ['tk_controlled', 'tk_lifted'] or not getattr(target, 'window', None) or not target.window.winfo_exists():
             self.current_state = 'idle'
             self.tk_cooldown = 600
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
@@ -238,31 +241,25 @@ class TelekinesisMechanics:
                 target.y = my_cy + math.sin(angle) * radius - t_h / 2 - 20
 
                 if self.tk_timer <= 0:
-                    # FIX: Organic launch in upper half of orbit (math.sin < -0.1)
-                    # 20% probability makes it release object in different point each time
-                    if math.sin(angle) < -0.1 and (random.randint(1, 100) <= 20 or math.cos(angle) > 0.9):
-                        self.current_state = 'idle'
-                        self.tk_cooldown = 12000
-                        target.current_state = 'thrown'
+                    self.current_state = 'idle'
+                    self.tk_cooldown = 12000
+                    target.current_state = 'thrown'
+                    
+                    # Launch outward relative to where it is in the orbit
+                    launch_angle = angle
+                    
+                    # MASSIVE FORCE ASSIGNMENT ACCORDING TO TARGET MASS
+                    if is_toy:
+                        force = random.uniform(40.0, 55.0)
+                    else:
+                        force = random.uniform(22.0, 32.0)
                         
-                        # Calculate strictly superior parabolic arc (between 180 and 360 degrees)
-                        launch_angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)
-                        # If inverted, force shot towards natural floor
-                        if getattr(self, 'gravity_inverted', False):
-                            launch_angle = random.uniform(0.2, math.pi - 0.2)
-                        
-                        # MASSIVE FORCE ASSIGNMENT ACCORDING TO TARGET MASS
-                        if is_toy:
-                            force = random.uniform(40.0, 55.0)
-                        else:
-                            force = random.uniform(22.0, 32.0)
+                    target.v_x_velocity = math.cos(launch_angle) * force
+                    target.v_y_velocity = math.sin(launch_angle) * force
                             
-                        target.v_x_velocity = math.cos(launch_angle) * force
-                        target.v_y_velocity = math.sin(launch_angle) * force
-                            
-                        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
-                        self.manage_tk_aura(target.canvas, t_w, t_h, False)
-                        target.tk_master = None
+                    self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+                    self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                    target.tk_master = None
 
         target.update_position()
         self.update_position()

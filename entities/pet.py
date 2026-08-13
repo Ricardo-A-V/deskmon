@@ -69,8 +69,9 @@ from mechanics.victini import VictiniMechanics
 from mechanics.genesect import GenesectMechanics
 from mechanics.meloetta import MeloettaMechanics
 from mechanics.legendary_genies import LegendaryGeniesMechanics
+from mechanics.hoopa import HoopaMechanics
 
-class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -109,7 +110,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "shaymin1", "arceus",
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "tornadus1", "thundurus", "thundurus1", "reshiram", "zekrom", "landorus", "landorus1", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
-            "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "volcanion",
+            "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "hoopa1", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
             "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus", "enamorus1",
             "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt", "ragingbolt", "gougingfire", "ironboulder", "ironcrown"
@@ -138,6 +139,8 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         # Forces a strictly larger AABB for physical collision detection
         if normalized_name == "regigigas":
             size_multiplier *= 1.5
+        elif normalized_name == "hoopa1":
+            size_multiplier *= 2.0
 
         speed_multiplier = 2
         physics = self.config.get("physics", {})
@@ -561,6 +564,11 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
             self.cancel_genesect_arts()
 
+        elif hasattr(self, 'cancel_hoopa_arts') and self.current_state.startswith('hoopa_'):
+            self.cancel_hoopa_arts()
+        elif hasattr(self, 'cancel_volcanion_arts') and self.current_state.startswith('volcanion_'):
+            self.cancel_volcanion_arts()
+
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
             self.current_state = 'falling'
@@ -598,6 +606,8 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 elif hasattr(self, 'cancel_kyogre_arts') and self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
                 elif hasattr(self, 'cancel_lugia_arts') and self.current_state == 'lugia_channeling': self.cancel_lugia_arts()
                 elif hasattr(self, 'cancel_hooh_arts') and self.current_state == 'hooh_channeling': self.cancel_hooh_arts()
+                elif hasattr(self, 'cancel_hoopa_arts') and self.current_state.startswith('hoopa_'): self.cancel_hoopa_arts()
+                elif hasattr(self, 'cancel_volcanion_arts') and self.current_state.startswith('volcanion_'): self.cancel_volcanion_arts()
                 
                 self.current_state = 'dragged'
                 self.v_x_velocity = 0.0
@@ -1387,6 +1397,10 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             self.cancel_groudon_arts()
         elif self.current_state == 'rayquaza_channeling':
             self.cancel_rayquaza_arts()
+        elif hasattr(self, 'cancel_hoopa_arts') and self.pet_name.lower().replace("_", "").replace("-", "") in ["hoopa", "hoopa1"]:
+            self.cancel_hoopa_arts()
+        elif hasattr(self, 'cancel_volcanion_arts') and self.pet_name.lower().replace("_", "").replace("-", "") == "volcanion":
+            self.cancel_volcanion_arts()
             
         self.current_state = 'despawning_wild'
         self.animate_wild_despawn(step=0)
@@ -1511,6 +1525,10 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 self.cancel_victini_arts()
             elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
                 self.cancel_genesect_arts()
+            elif hasattr(self, 'cancel_hoopa_arts') and self.pet_name.lower().replace("_", "").replace("-", "") in ["hoopa", "hoopa1"]:
+                self.cancel_hoopa_arts()
+            elif hasattr(self, 'cancel_volcanion_arts') and self.pet_name.lower().replace("_", "").replace("-", "") == "volcanion":
+                self.cancel_volcanion_arts()
             elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
                 self.cancel_kyurem_arts()
             elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'):
@@ -1955,7 +1973,8 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 scale_mod=scale_mod,
                 bright_mod=getattr(self, 'necrozma_bright_mod', 1.0),
                 darkness_mod=getattr(self, 'darkness_mod', 0.0),
-                nightmare_filter=getattr(self, 'nightmare_filter', False)
+                nightmare_filter=getattr(self, 'nightmare_filter', False),
+                red_mod=getattr(self, 'volcanion_burn', 0) / 450.0
             )
         self.schedule_loop(16, self.animate_loop)
 
@@ -2017,6 +2036,39 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 self.floor_y = current_env['y']
                 self.update_position()
         self.schedule_loop(50, self.physics_loop)
+
+    def _fsm_volcanion_channeling(self):
+        import mechanics.volcanion
+        mechanics.volcanion._fsm_volcanion_channeling(self)
+        self.update_position()
+
+    def _fsm_volcanion_shooting(self):
+        import mechanics.volcanion
+        mechanics.volcanion._fsm_volcanion_shooting(self)
+        self.update_position()
+
+    def _fsm_volcanion_victim(self):
+        if not getattr(self, 'is_flying', False) and not getattr(self, 'is_climbing', False):
+            self.v_y_velocity += 1.5
+        self.v_x_velocity *= 0.85
+        self.x += self.v_x_velocity
+        self.y += self.v_y_velocity
+        
+        current_env, _ = self.get_window_environment()
+        
+        target_floor = self.default_floor_y
+        if current_env['hwnd'] and self.y <= current_env['y'] + max(15, abs(int(self.v_y_velocity)) + 15):
+            target_floor = current_env['y']
+            
+        if self.y >= target_floor and self.v_y_velocity >= 0:
+            self.y = target_floor
+            self.v_y_velocity = 0
+            if target_floor == current_env.get('y'):
+                self.anchored_hwnd = current_env['hwnd']
+                self.anchored_rect = current_env['rect']
+            
+        self.update_position()
+        self.schedule_loop(30, self.physics_loop)
 
     def _fsm_thrown(self):
         if getattr(self, 'is_flying', False):
@@ -2123,10 +2175,10 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         else:
             # --- STRUCTURAL PATCH: NEGATIVE GRAVITY (UPWARDS) IN THROWS ---
             if getattr(self, 'gravity_inverted', False):
-                # Gravity now pulls towards negative numbers (up in Tkinter)
-                gravity = -4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity <= 0.5 else -1.5
-                self.v_y_velocity += gravity
-                self.v_x_velocity *= 0.95 
+                if not getattr(self, 'hoopa_thrown', False):
+                    gravity = -4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity <= 0.5 else -1.5
+                    self.v_y_velocity += gravity
+                    self.v_x_velocity *= 0.95
                 self.y += self.v_y_velocity
                 self.x += self.v_x_velocity
 
@@ -2177,12 +2229,14 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 return
             # -------------------------------------------------------------
             
-            gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
-            self.v_y_velocity += gravity
-            
-            gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
-            self.v_y_velocity += gravity
-            self.v_x_velocity *= 0.95 
+            if not getattr(self, 'hoopa_thrown', False):
+                gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
+                self.v_y_velocity += gravity
+                
+                gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
+                self.v_y_velocity += gravity
+            if not getattr(self, 'hoopa_thrown', False):
+                self.v_x_velocity *= 0.95
             self.y += self.v_y_velocity
             self.x += self.v_x_velocity
 
@@ -2194,10 +2248,12 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                     self.x = self.v_x
                     self.v_x_velocity *= -0.7 
                     self.is_facing_right = True
+                    self.hoopa_thrown = False
                 elif self.x >= (self.v_x + self.v_width) - self.size_w:
                     self.x = (self.v_x + self.v_width) - self.size_w
                     self.v_x_velocity *= -0.7
                     self.is_facing_right = False
+                    self.hoopa_thrown = False
 
             current_env, _ = self.get_window_environment()
             
@@ -2210,6 +2266,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 self.y = physical_floor
                 self.floor_y = physical_floor
                 self.v_x_velocity = 0
+                self.hoopa_thrown = False
                 
                 # INTERNAL VIBRATION TRIGGER OF THE POKEMON (Adjusted to 0.75s)
                 if getattr(self, 'heavy_fall', False) and self.v_y_velocity > 15:
@@ -2907,6 +2964,9 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         self.lake_cooldown = max(0, getattr(self, 'lake_cooldown', 0) - 1)
         self.shaymin_cooldown = max(0, getattr(self, 'shaymin_cooldown', 0) - 1)
         self.genie_cooldown = max(0, getattr(self, 'genie_cooldown', 0) - 1)
+        self.hoopa_cooldown = max(0, getattr(self, 'hoopa_cooldown', 0) - 1)
+        self.volcanion_cooldown = max(0, getattr(self, 'volcanion_cooldown', 0) - 1)
+        self.volcanion_cooldown = max(0, getattr(self, 'volcanion_cooldown', 0) - 1)
 
         # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
@@ -2916,6 +2976,18 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             if random.randint(1, 1000) <= 8:
                 self.cresselia_cooldown = 72000 
                 self.trigger_cresselia_arts()
+                return
+
+        # --- EXCLUSIVE MECHANIC: HOOPA ---
+        if normalized_name in ["hoopa", "hoopa1"] and getattr(self, 'hoopa_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_hoopa_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: VOLCANION ---
+        if normalized_name == "volcanion" and getattr(self, 'volcanion_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_volcanion_mechanic()
                 return
 
         # --- EXCLUSIVE MECHANIC: DARKRAI ---
@@ -3573,7 +3645,7 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
                 if target:
                     self.current_state = 'tk_channeling'
                     self.tk_target = target
-                    self.tk_timer = 150 # Levitate for 5 seconds
+                    self.tk_timer = random.randint(100, 166) # Levitate for 3-5 seconds
                     
                     self.tk_orbit_started = False # FIX: Forces orbital phase reset
                     
@@ -4001,6 +4073,35 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
         if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
             anim_dir = os.path.join(anim_dir, "shiny")
         
+        config_path = os.path.join(self.base_dir, "game_env", "pets", target_species, "config.json")
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                new_config = json.load(f)
+                self.config = new_config
+                physics = new_config.get("physics", {})
+                self.is_flying = physics.get("is_flying", False)
+                self.can_screen_wrap = physics.get("can_screen_wrap", False)
+                self.can_teleport = physics.get("can_teleport", False)
+                self.heavy_fall = physics.get("heavy_fall", False)
+                self.telekinetic = physics.get("telekinetic", False)
+                self.bubble_blower = physics.get("bubble_blower", False) 
+                self.can_dig = physics.get("can_dig", False)
+                self.fairy_aura = physics.get("fairy_aura", False)
+                self.dark_arts = physics.get("dark_arts", False)
+                self.aggressive = physics.get("aggressive", False)
+        except Exception:
+            pass
+
+        if getattr(self, 'is_flying', False):
+            fly_height_pct = self.pet_data.get("flying_height_pct", 3.0)
+            max_offset = self.v_height - self.size_h
+            self.target_offset_y = int(max_offset * (fly_height_pct / 100.0))
+            self.target_floor_y = (self.v_y + self.v_height) - self.size_h - self.target_offset_y
+        
+        self.default_floor_y = (self.v_y + self.v_height) - self.size_h - self.offset_y
+        if not getattr(self, 'is_flying', False):
+            self.target_floor_y = self.default_floor_y
+
         bw = getattr(self, 'base_size_w', self.size_w)
         bh = getattr(self, 'base_size_h', self.size_h)
         self.animator = DesktopPetAnimator(
@@ -4066,6 +4167,24 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
             elif name == "shaymin1":
                 if hasattr(self, 'cancel_shaymin_arts'):
                     self.cancel_shaymin_arts()
+                self.swap_form_generic(target_form, colors)
+                
+            elif name in ["hoopa", "hoopa1"]:
+                if name == "hoopa":
+                    self.size_w = int(self.size_w * 2.0)
+                    self.size_h = int(self.size_h * 2.0)
+                else:
+                    self.size_w = int(self.size_w / 2.0)
+                    self.size_h = int(self.size_h / 2.0)
+                    
+                self.base_size_w = self.size_w
+                self.base_size_h = self.size_h
+                try:
+                    self.window.geometry(f"{self.size_w}x{self.size_h}+{int(self.x)}+{int(self.y)}")
+                    self.canvas.config(width=self.size_w, height=self.size_h)
+                    self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+                except: pass
+                
                 self.swap_form_generic(target_form, colors)
                 
             else:
@@ -4256,3 +4375,16 @@ class DesktopPet(LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics,
     def get_random_valid_target(self):
         valid = [p for p in self.get_all_pets() if p != self and p.current_state not in ['exiting', 'despawning_wild', 'spawning_wild', 'falling_pokeball', 'falling_egg', 'celebi_frozen']]
         return random.choice(valid) if valid else None
+
+    def start_hoopa_mechanic(self):
+        self.hoopa_cooldown = 108000
+        import mechanics.hoopa
+        mechanics.hoopa.init_hoopa_arts(self)
+        self.cancel_hoopa_arts = lambda: mechanics.hoopa.cancel_hoopa_arts(self)
+
+    def start_volcanion_mechanic(self):
+        self.volcanion_cooldown = 108000
+        import mechanics.volcanion
+        mechanics.volcanion.init_volcanion_arts(self)
+        self.cancel_volcanion_arts = lambda: mechanics.volcanion.cancel_volcanion_arts(self)
+        self.schedule_loop(50, self.physics_loop)
