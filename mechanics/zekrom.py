@@ -292,6 +292,7 @@ class ZekromMechanics:
             if getattr(target, 'tk_target', None):
                 t_targ = target.tk_target
                 target.manage_tk_aura(t_targ.canvas, t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -328,6 +329,7 @@ class ZekromMechanics:
         target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
         # --------------------------------------
         
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'zekrom_paralyzed'
         target.zekrom_para_timer = 300 
         target.v_x_velocity = 0.0

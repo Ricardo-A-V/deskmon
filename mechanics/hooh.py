@@ -26,6 +26,7 @@ class HoOhMechanics:
                 target.hooh_master = None
                 # FIX: Only cancel victim's action if they had already started running
                 if target.current_state == 'panic_run' and target.current_state not in ['dragged', 'exiting']:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     
         master = getattr(self, 'hooh_master', None)
@@ -171,6 +172,7 @@ class HoOhMechanics:
                                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
                                     
+                                    if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                     t_targ.current_state = 'falling'
                                     if hasattr(t_targ, 'tk_master'):
                                         t_targ.tk_master = None
@@ -196,6 +198,7 @@ class HoOhMechanics:
                         try: target.window.attributes('-alpha', 1.0)
                         except: pass
                         
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'panic_run'
                         target.panic_timer = self.hooh_timer 
                         target.hooh_master = self

@@ -440,6 +440,7 @@ class ShayminMechanics:
         if hasattr(pet, 'animator'):
             pet.animator.custom_crop = None
             
+        if hasattr(pet, 'interrupt_current_state'): pet.interrupt_current_state()
         pet.current_state = 'joy_jump'
         pet.joy_timer = int(15000 / 33) # 15 seconds
         

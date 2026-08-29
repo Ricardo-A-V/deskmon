@@ -485,7 +485,7 @@ class GameController:
                         snd_path = os.path.join(self.trainer.base_dir, "game_env", "sounds", "return.wav")
                         if os.path.exists(snd_path):
                             snd = pygame.mixer.Sound(snd_path)
-                            snd.set_volume(0.05)
+                            snd.set_volume(0.01)
                             snd.play()
                     except: pass
                     self.spawn_entity(available_pet, is_wild=False, coords=(target_x, "floor"))

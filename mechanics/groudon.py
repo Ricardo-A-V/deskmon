@@ -108,6 +108,7 @@ class GroudonMechanics:
                                             t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                             t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                             target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                            if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                             t_targ.current_state = 'falling'
                                             if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
                                     target.tk_target = None
@@ -132,6 +133,7 @@ class GroudonMechanics:
                                 try: target.window.attributes('-alpha', 1.0)
                                 except: pass
                                 
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                                 target.current_state = 'jumping_arc'
                                 target.jump_target_y = physical_floor
                                 target.v_y_velocity = random.uniform(-10.0, -16.0) 

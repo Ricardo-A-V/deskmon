@@ -13,6 +13,7 @@ class CelebiMechanics:
         for ghost in getattr(self, 'celebi_ghosts', []):
             target = ghost.get('target')
             if target and target.window.winfo_exists() and getattr(target, 'current_state', '') == 'celebi_frozen':
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'falling'
                 target.climbing_surface = 'floor'  # Inyección obligatoria
                 target.anchored_hwnd = None        # Purga de seguridad
@@ -223,6 +224,7 @@ class CelebiMechanics:
                         target.canvas.itemconfig(target.canvas_image_id, state='normal')
                         target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                         
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'celebi_frozen'
                     try: target.window.attributes('-alpha', 0.6)
                     except: pass
@@ -369,6 +371,7 @@ class CelebiMechanics:
             # --------------------------------------
             
             target.update_position()
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'falling'
             try: target.window.attributes('-alpha', 1.0)
             except: pass

@@ -51,6 +51,7 @@ class KyogreMechanics:
             if target and target.window.winfo_exists():
                 target.kyogre_master = None
                 if target.current_state == 'deluge_float' and target.current_state not in ['dragged', 'exiting']:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     
         if hasattr(self, 'flood_overlay') and self.flood_overlay:
@@ -153,6 +154,7 @@ class KyogreMechanics:
                                     t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                     t_targ.current_state = 'falling'
                                     if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
                             target.tk_target = None
@@ -177,6 +179,7 @@ class KyogreMechanics:
                         try: target.window.attributes('-alpha', 1.0)
                         except: pass
                         
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'deluge_float'
                         target.kyogre_master = self
                         target.anchored_hwnd = None
@@ -203,6 +206,7 @@ class KyogreMechanics:
                     if target and target.window.winfo_exists():
                         target.kyogre_master = None
                         if target.current_state == 'deluge_float':
+                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                             target.current_state = 'falling'
                 self.kyogre_targets = []
                 

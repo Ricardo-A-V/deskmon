@@ -186,6 +186,7 @@ class LatiTwinsMechanics:
                     pcy = p.y + p.size_h/2
                     dist = math.hypot(global_cx - pcx, global_cy - pcy)
                     if dist < (self.size_w + p.size_w)/2.0:
+                        if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                         p.current_state = 'thrown'
                         p.v_x_velocity = self.lati_dash_vx * 1.2 + random.uniform(-10, 10)
                         p.v_y_velocity = self.lati_dash_vy * 0.8 - 40.0

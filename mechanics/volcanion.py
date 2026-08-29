@@ -30,6 +30,7 @@ def cancel_volcanion_arts(self):
     for t in getattr(self, 'volcanion_targets', []):
         t.is_being_pushed = False
         if t.current_state == 'volcanion_victim':
+            if hasattr(t, 'interrupt_current_state'): t.interrupt_current_state()
             t.current_state = 'idle'
             
     self.volcanion_targets = []
@@ -83,6 +84,7 @@ def _fsm_volcanion_channeling(self):
         self.volcanion_targets = valid_targets[:2]
         
         for t in self.volcanion_targets:
+            if hasattr(t, 'interrupt_current_state'): t.interrupt_current_state()
             t.current_state = 'volcanion_victim'
             t.volcanion_burn = 450  # 15 seconds at 30 ticks
             
@@ -134,6 +136,7 @@ def _fsm_volcanion_shooting(self):
         self.is_global_mechanic = False
         for t in self.volcanion_targets:
             if t.current_state == 'volcanion_victim':
+                if hasattr(t, 'interrupt_current_state'): t.interrupt_current_state()
                 t.current_state = 'idle'
         self.volcanion_targets = []
     

@@ -168,6 +168,7 @@ class ZamazentaMechanics:
                 bounce_dir = -1 if self.is_facing_right else 1
                 for p in self.zam_pushed_pets:
                     if p.window.winfo_exists():
+                        if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                         p.current_state = 'thrown'
                         p.v_x_velocity = random.uniform(80.0, 110.0) * bounce_dir
                         p.v_y_velocity = random.uniform(-40.0, -60.0)

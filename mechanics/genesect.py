@@ -317,4 +317,5 @@ class GenesectMechanics:
         if hasattr(target, 'schedule_glitch_teleport'):
             target.schedule_glitch_teleport()
         else:
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'idle'

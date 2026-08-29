@@ -12,6 +12,7 @@ class MewMechanics:
         for victim in getattr(self, 'mew_victims', []):
             if victim.window.winfo_exists() and getattr(victim, 'current_state', '') == 'mew_tethered':
                 # Force gravity drop for victims instead of teleports
+                if hasattr(victim, 'interrupt_current_state'): victim.interrupt_current_state()
                 victim.current_state = 'thrown'
                 victim.surface_angle = 0
                 victim.mew_master = None
@@ -213,6 +214,7 @@ class MewMechanics:
             target.canvas.itemconfig(target.canvas_image_id, state='normal')
             target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
             
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'mew_tethered'
         target.mew_master = self
         target.anchored_hwnd = None

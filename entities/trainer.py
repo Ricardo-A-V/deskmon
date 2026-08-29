@@ -50,7 +50,14 @@ class DesktopTrainer:
         
         # Default environment calculation (similar to pet)
         self.offset_y = 40  # Push down to fix floating
-        self.default_floor_y = self.window.winfo_screenheight() - 40 - self.size_h + self.offset_y
+        import ctypes
+        user32 = ctypes.windll.user32
+        self.v_x = user32.GetSystemMetrics(76)
+        self.v_y = user32.GetSystemMetrics(77)
+        self.v_width = user32.GetSystemMetrics(78)
+        self.v_height = user32.GetSystemMetrics(79)
+        
+        self.default_floor_y = self.v_y + self.v_height - 40 - self.size_h + self.offset_y
         try:
             import win32gui
             taskbar_handle = win32gui.FindWindow("Shell_TrayWnd", None)
@@ -61,18 +68,17 @@ class DesktopTrainer:
         except:
             pass
         
-        screen_w = self.window.winfo_screenwidth()
         self.y = self.default_floor_y
         
         if spawn_from_side:
             if random.choice([True, False]):
-                self.x = -self.size_w - 50
+                self.x = self.v_x - self.size_w - 50
             else:
-                self.x = screen_w + 50
-            self.target_x = random.randint(100, screen_w - 100 - self.size_w)
+                self.x = self.v_x + self.v_width + 50
+            self.target_x = self.v_x + random.randint(100, self.v_width - 100 - self.size_w)
             self.is_moving = True
         else:
-            self.x = random.randint(100, screen_w - 100 - self.size_w)
+            self.x = self.v_x + random.randint(100, self.v_width - 100 - self.size_w)
             self.target_x = self.x
             self.is_moving = False
             
@@ -85,11 +91,10 @@ class DesktopTrainer:
         
     def walk_away_and_destroy(self, callback=None):
         self.destroy_callback = callback
-        screen_w = self.window.winfo_screenwidth()
-        if self.x > screen_w / 2:
-            self.target_x = screen_w + 50
+        if self.x > self.v_x + self.v_width / 2:
+            self.target_x = self.v_x + self.v_width + 50
         else:
-            self.target_x = -self.size_w - 50
+            self.target_x = self.v_x - self.size_w - 50
         self.is_moving = True
 
     def update_position(self):
@@ -106,7 +111,7 @@ class DesktopTrainer:
             
         if not self.is_moving:
             if random.random() < 0.02:
-                self.target_x = random.randint(50, self.window.winfo_screenwidth() - 50 - self.size_w)
+                self.target_x = self.v_x + random.randint(50, self.v_width - 50 - self.size_w)
                 self.is_moving = True
             else:
                 self.canvas.itemconfig(self.canvas_image_id, image=self.images["front"])

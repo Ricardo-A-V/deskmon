@@ -243,6 +243,7 @@ class TelekinesisMechanics:
                 if self.tk_timer <= 0:
                     self.current_state = 'idle'
                     self.tk_cooldown = 12000
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'thrown'
                     
                     # Launch outward relative to where it is in the orbit

@@ -115,6 +115,7 @@ class XerneasMechanics:
             if getattr(target, 'tk_target', None):
                 t_targ = target.tk_target
                 target.manage_tk_aura(t_targ.canvas, t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -146,6 +147,7 @@ class XerneasMechanics:
         try: target.window.attributes('-alpha', 1.0)
         except: pass
 
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'xerneas_pacified'
         target.xerneas_master = self
 

@@ -309,6 +309,7 @@ class LunalaMechanics:
         
         push_dir = 1.0 if target.x > self.beam_target_x else -1.0
         
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'thrown'
         target.v_x_velocity = random.uniform(25.0, 35.0) * push_dir
         target.v_y_velocity = random.uniform(-18.0, -25.0)

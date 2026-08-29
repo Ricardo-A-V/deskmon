@@ -501,6 +501,7 @@ class ZygardeMechanics:
         try: target.window.attributes('-alpha', 1.0)
         except: pass
             
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'zygarde_grounded'
         target.zygarde_grounded_timer = 200 
         target.zygarde_impact_done = False 
@@ -608,8 +609,10 @@ class ZygardeMechanics:
         
         # FLIGHT RECOVERY FIX
         if getattr(target, 'is_flying', False):
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'zygarde_launched_flyer'
         else:
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'zygarde_launched' 
         
     def _fsm_zygarde_launched(self):

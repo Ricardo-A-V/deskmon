@@ -24,6 +24,7 @@ class RayquazaMechanics:
             if target and target.window.winfo_exists():
                 target.rayquaza_master = None
                 if target.current_state == 'rayquaza_cyclone_victim' and target.current_state not in ['dragged', 'exiting']:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     
         master = getattr(self, 'rayquaza_master', None)
@@ -132,6 +133,7 @@ class RayquazaMechanics:
                                     t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                     target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                     t_targ.current_state = 'falling'
                                     if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
                             target.tk_target = None
@@ -156,6 +158,7 @@ class RayquazaMechanics:
                         try: target.window.attributes('-alpha', 1.0)
                         except: pass
                         
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'rayquaza_cyclone_victim'
                         target.rayquaza_master = self
                         target.rayquaza_angle_offset = random.uniform(0, 2 * math.pi)
@@ -186,6 +189,7 @@ class RayquazaMechanics:
                         if target and target.window.winfo_exists():
                             target.rayquaza_master = None
                             if target.current_state == 'rayquaza_cyclone_victim':
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                                 target.current_state = 'thrown'
                                 target.v_y_velocity = random.uniform(-5.0, 5.0) 
                                 target.v_x_velocity = random.uniform(-40.0, 40.0) 

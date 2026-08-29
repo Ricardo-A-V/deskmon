@@ -37,6 +37,7 @@ class DarkraiMechanics:
             for p in self.get_all_pets():
                 if getattr(p, 'dark_master', None) == self:
                     p.dark_master = None
+                    if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                     p.current_state = 'thrown' 
                     p.surface_angle = 0
                     p.nightmare_filter = False
@@ -190,6 +191,7 @@ class DarkraiMechanics:
                     t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                     target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -289,6 +291,7 @@ class DarkraiMechanics:
                             
                         if dist <= self.aoe_radius:
                             if hasattr(p, 'cancel_darkrai_arts'): p.cancel_darkrai_arts() 
+                            if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                             p.current_state = 'darkrai_nightmare'
                             p.nightmare_timer = self.darkrai_timer 
                             p.nightmare_filter = True 
@@ -297,6 +300,7 @@ class DarkraiMechanics:
                             p.v_x_velocity = -(dx / dist) * 2.5
                             p.v_y_velocity = -(dy / dist) * 2.5
                         else:
+                            if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                             p.current_state = 'dragged'
                             p.dark_master = self
                             p.x += (dx / dist) * 6.0

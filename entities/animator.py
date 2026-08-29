@@ -93,6 +93,7 @@ class DesktopPetAnimator:
                 self.current_frame_index = (self.current_frame_index + 1) % len(self.frames_idle)
 
         if raw_image is None: raw_image = self.frames_idle[0]
+        self.current_raw_image = raw_image
 
         if disable_mirror:
             processed_image = raw_image
@@ -149,5 +150,6 @@ class DesktopPetAnimator:
             r2, g2, b2 = inverted_rgb.split()
             processed_image = Image.merge('RGBA', (r2, g2, b2, a))
 
+        self.current_processed_image = processed_image
         self.tk_image_ref = ImageTk.PhotoImage(processed_image)
         self.canvas.itemconfig(canvas_image_id, image=self.tk_image_ref)

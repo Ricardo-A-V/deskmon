@@ -234,6 +234,7 @@ class LegendaryRegisMechanics:
             if abs(self.x - old_x) < 0.1:
                 self.current_state = 'regigigas_grab'
                 self.rg_walk_ticks = 40 
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'regigigas_lifted'
                 target.v_x_velocity = 0.0
                 target.v_y_velocity = 0.0
@@ -247,6 +248,7 @@ class LegendaryRegisMechanics:
         else:
             self.current_state = 'regigigas_grab'
             self.rg_walk_ticks = 40 
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'regigigas_lifted'
             target.v_x_velocity = 0.0
             target.v_y_velocity = 0.0
@@ -337,6 +339,7 @@ class LegendaryRegisMechanics:
         target.surface_angle = 0
         target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
         
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'regi_victim_flying'
         target.regi_attacker_id = "regigigas"
         target.regi_bounces = 0
@@ -472,6 +475,7 @@ class LegendaryRegisMechanics:
         target.surface_angle = 0
         target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
         
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'regi_victim_flying'
         target.regi_attacker_id = regi_id
         target.regi_bounces = 0
@@ -609,6 +613,7 @@ class LegendaryRegisMechanics:
         if hit_surface:
             if attacker == "regirock":
                 self._embed_victim(surface=hit_surface)
+                return
             elif hit_surface == 'floor':
                 if attacker == "regice":
                     self.current_state = 'regice_frozen'
@@ -661,6 +666,7 @@ class LegendaryRegisMechanics:
             if p != self and p.current_state not in ['exiting', 'regirock_embedded', 'regigigas_lifted']:
                 dist = math.hypot(p.x - self.x, p.y - self.y)
                 if dist < 250:
+                    if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                     p.current_state = 'thrown'
                     push_dir = 1 if p.x > self.x else -1
                     p.v_x_velocity = 20.0 * push_dir
@@ -673,6 +679,7 @@ class LegendaryRegisMechanics:
         
         for p in self.get_all_pets():
             if p != self and p.current_state not in ['exiting', 'regirock_embedded']:
+                if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                 p.current_state = 'thrown'
                 p.v_x_velocity = random.choice([-25.0, 25.0])
                 p.v_y_velocity = -35.0

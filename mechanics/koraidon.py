@@ -367,6 +367,7 @@ class KoraidonMechanics:
                     p.canvas.itemconfig(p.canvas_image_id, state='normal')
                     p.canvas.coords(p.canvas_image_id, p.size_w//2, p.size_h//2)
 
+                if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                 p.current_state = 'thrown'
                 
                 # Real 360-degree vector generation mapping

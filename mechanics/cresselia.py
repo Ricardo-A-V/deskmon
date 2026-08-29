@@ -25,6 +25,7 @@ class CresseliaMechanics:
             for p in self.get_all_pets():
                 if getattr(p, 'cresselia_master', None) == self:
                     p.cresselia_master = None
+                    if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                     p.current_state = 'thrown' 
                     p.necrozma_bright_mod = 1.0 
                     p.v_x_velocity = 0.0
@@ -56,6 +57,7 @@ class CresseliaMechanics:
                     t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                     t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                     target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -274,6 +276,7 @@ class CresseliaMechanics:
                     if p.current_state != 'cresselia_blessing':
                         if hasattr(self, '_purge_victim_state'): self._purge_victim_state(p)
                         
+                        if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                         p.current_state = 'cresselia_blessing'
                         p.blessing_timer = self.cresselia_timer
                         p.cresselia_master = self

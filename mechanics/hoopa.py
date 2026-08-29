@@ -153,9 +153,18 @@ class HoopaMechanics:
         idx = len(self.hoopa_rings)
         pair_idx = idx + 1 if idx % 2 == 0 else idx - 1
         
+        try:
+            cx = self.hoopa_canvas.winfo_rootx()
+            cy = self.hoopa_canvas.winfo_rooty()
+        except:
+            cx = self.v_x
+            cy = self.v_y
+            
         self.hoopa_rings.append({
-            'x': x - self.v_x, 
-            'y': y - self.v_y, 
+            'x': x - cx, 
+            'y': y - cy, 
+            'screen_x': x,
+            'screen_y': y,
             'pair_idx': pair_idx,
             'radius': 0,
             'target_radius': 60,
@@ -230,10 +239,13 @@ class HoopaMechanics:
         if self.hoopa_timer <= 0:
             # Throw towards a random ring
             ring = random.choice(self.hoopa_rings)
-            dx = (ring['x'] + self.v_x) - my_cx
-            dy = (ring['y'] + self.v_y) - my_cy
+            ring_screen_x = ring.get('screen_x', ring['x'] + self.v_x)
+            ring_screen_y = ring.get('screen_y', ring['y'] + self.v_y)
+            dx = ring_screen_x - my_cx
+            dy = ring_screen_y - my_cy
             dist = math.sqrt(dx**2 + dy**2)
             
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'thrown'
             target.hoopa_thrown = True
             if dist > 0:
@@ -300,20 +312,24 @@ class HoopaMechanics:
                         p.hoopa_ring_cd -= 1
                         continue
                         
-                    p_cx = p.x - self.v_x + getattr(p, 'size_w', 64)/2
-                    p_cy = p.y - self.v_y + getattr(p, 'size_h', 64)/2
+                    p_cx = p.x + getattr(p, 'size_w', 64)/2
+                    p_cy = p.y + getattr(p, 'size_h', 64)/2
                     
                     for idx, r in enumerate(self.hoopa_rings):
                         if r['radius'] < 30: continue
-                        dist = math.sqrt((p_cx - r['x'])**2 + (p_cy - r['y'])**2)
+                        ring_screen_x = r.get('screen_x', r['x'] + self.v_x)
+                        ring_screen_y = r.get('screen_y', r['y'] + self.v_y)
+                        dist = math.sqrt((p_cx - ring_screen_x)**2 + (p_cy - ring_screen_y)**2)
                         
                         # Hitbox exactly matches the outer border of the ring
                         if dist < r['radius']:
                             pair = self.hoopa_rings[r['pair_idx']]
                             if pair['radius'] < 30: continue
                             
-                            p.x = pair['x'] + self.v_x - getattr(p, 'size_w', 64)/2
-                            p.y = pair['y'] + self.v_y - getattr(p, 'size_h', 64)/2
+                            pair_screen_x = pair.get('screen_x', pair['x'] + self.v_x)
+                            pair_screen_y = pair.get('screen_y', pair['y'] + self.v_y)
+                            p.x = pair_screen_x - getattr(p, 'size_w', 64)/2
+                            p.y = pair_screen_y - getattr(p, 'size_h', 64)/2
                             p.hoopa_ring_cd = 30
                             p.hoopa_thrown = False
                             p.update_position()

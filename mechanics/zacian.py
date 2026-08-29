@@ -280,6 +280,7 @@ class ZacianMechanics:
     def apply_zacian_stun(self, target, delay_ms, push_dir, mult):
         prev_state = getattr(target, 'current_state', '')
         
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'zacian_stunned'
         target.v_x_velocity = 0.0
         target.v_y_velocity = 0.0
@@ -296,6 +297,7 @@ class ZacianMechanics:
             if getattr(target, 'tk_target', None):
                 t_targ = target.tk_target
                 target.manage_tk_aura(t_targ.canvas, t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -332,11 +334,13 @@ class ZacianMechanics:
             
             target_is_soft = not getattr(target, 'heavy_fall', False) or not getattr(target, 'aggressive', False)
             if getattr(self, 'heavy_fall', False) and target_is_soft:
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'landing_shake'
                 target.shake_timer = 25 
                 target.v_x_velocity = 0.0
                 target.v_y_velocity = 0.0
             else:
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'thrown'
                 target.v_x_velocity = 85.0 * push_dir 
                 target.v_y_velocity = -35.0 * mult    

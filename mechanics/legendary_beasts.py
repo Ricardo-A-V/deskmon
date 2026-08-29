@@ -407,6 +407,7 @@ class LegendaryBeastsMechanics:
                                     target.canvas.itemconfig(target.canvas_image_id, state='normal')
                                     target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                                 
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                                 target.current_state = 'thrown'
                                 target.v_y_velocity = -4.0 # Forces targeted buoyancy inside the wave
                                 target.v_x_velocity = p['vx'] * 0.9

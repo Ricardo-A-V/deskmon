@@ -58,6 +58,7 @@ from mechanics.celebi import CelebiMechanics
 from mechanics.legendary_regis import LegendaryRegisMechanics
 from mechanics.jirachi import JirachiMechanics
 from mechanics.darkrai import DarkraiMechanics
+from mechanics.marshadow import MarshadowMechanics
 from mechanics.cresselia import CresseliaMechanics
 from mechanics.lati_twins import LatiTwinsMechanics
 from mechanics.deoxys import DeoxysMechanics
@@ -70,8 +71,14 @@ from mechanics.genesect import GenesectMechanics
 from mechanics.meloetta import MeloettaMechanics
 from mechanics.legendary_genies import LegendaryGeniesMechanics
 from mechanics.hoopa import HoopaMechanics
+from mechanics.diancie import DiancieMechanics
+from mechanics.ultra_beasts import UltraBeastsMechanics
+from mechanics.magearna import MagearnaMechanics
+from mechanics.zeraora import ZeraoraMechanics
+from mechanics.zarude import ZarudeMechanics
+from mechanics.melmetal import MelmetalMechanics
 
-class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -172,6 +179,8 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.sg_cooldown = 0
         self.victini_cooldown = 0
         self.genesect_cooldown = 0
+        self.magearna_cooldown = 0
+        self.zeraora_cooldown = 0
         self.meloetta_cooldown = 0
 
         self.climbing_surface = 'floor' 
@@ -181,7 +190,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.v_x = user32.GetSystemMetrics(76) 
         self.v_y = user32.GetSystemMetrics(77)
         self.v_width = user32.GetSystemMetrics(78)
-        self.v_height = user32.GetSystemMetrics(79)
+        self.v_height = user32.GetSystemMetrics(79) - 1
         
         self.v_x_velocity = 0.0
         self.v_y_velocity = 0.0
@@ -292,6 +301,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                         self.current_state = 'idle'
                     self.spawn_particles = []
                     self.animate_spawn_glow()
+                    self.play_shiny_sound()
         else:
             self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
             if self.is_egg:
@@ -364,7 +374,8 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             self.schedule_loop(2000, self.keep_on_top)
 
     def on_drag_start(self, event):
-        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating']: return
+        if self.current_state in ['exiting', 'falling_pokeball', 'falling_egg', 'spawning_wild', 'despawning_wild', 'celebi_frozen', 'cresselia_blessing', 'lake_rotating', 'diancie_frozen', 'magearna_victim', 'zeraora_victim_flying', 'zeraora_victim_paralyzed', 'zeraora_victim_vibrate', 'zeraora_victim_paralyzed_fall', 'zarude_victim_grabbed', 'zarude_victim_thrown']: return
+        if self.current_state.startswith('zeraora_victim'): return
 
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
         shakeable_forms = [
@@ -394,6 +405,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 t_w = target.size_w if target.__class__.__name__ == 'DesktopPet' else target.size
                 t_h = target.size_h if target.__class__.__name__ == 'DesktopPet' else target.size
                 self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'falling'
                 target.tk_master = None
             self.tk_target = None
@@ -404,6 +416,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
             master = getattr(self, 'tk_master', None)
             if master and master.current_state == 'tk_channeling':
+                if hasattr(master, 'interrupt_current_state'): master.interrupt_current_state()
                 master.current_state = 'idle'
                 master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
                 master.tk_target = None
@@ -448,6 +461,14 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
 
         elif self.current_state == 'groudon_channeling':
             self.cancel_groudon_arts()
+        elif self.current_state in ['diancie_charging', 'diancie_flying_up', 'diancie_crystallizing', 'diancie_shooting'] and hasattr(self, 'cancel_diancie_arts'):
+            self.cancel_diancie_arts()
+
+        elif self.current_state.startswith('marshadow_') and hasattr(self, 'cancel_marshadow_arts'):
+            self.cancel_marshadow_arts()
+        elif self.current_state.startswith('marshadow_victim_'):
+            self.current_state = 'falling'
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
 
         elif self.current_state == 'rayquaza_channeling':
             self.cancel_rayquaza_arts()
@@ -473,34 +494,45 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
             self.cancel_genesect_arts()
 
-        elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
+        elif self.current_state.startswith('magearna_') and hasattr(self, 'cancel_magearna_arts'):
+            self.cancel_magearna_arts()
+
+        elif self.current_state.startswith('zeraora_') and hasattr(self, 'cancel_zeraora_arts'):
+            self.cancel_zeraora_arts()
+        elif self.current_state.startswith('zarude_') and hasattr(self, 'cancel_zarude_arts'):
+            self.cancel_zarude_arts()
+
+        elif self.current_state.startswith('melmetal_') and hasattr(self, 'cancel_melmetal_arts'):
+            self.cancel_melmetal_arts()
+
+        elif self.current_state.startswith('kyurem_') and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
 
-        elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'): 
+        elif self.current_state.startswith('xerneas_') and hasattr(self, 'cancel_xerneas_arts'): 
             self.cancel_xerneas_arts()
 
-        elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'):
+        elif self.current_state.startswith('yveltal_') and hasattr(self, 'cancel_yveltal_arts'):
             self.cancel_yveltal_arts()
 
-        elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
+        elif self.current_state.startswith('zygarde') and hasattr(self, 'cancel_zygarde_arts'):
             self.cancel_zygarde_arts()
 
-        elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
+        elif self.current_state.startswith('solgaleo_') and hasattr(self, 'cancel_solgaleo_arts'):
             self.cancel_solgaleo_arts()
 
-        elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+        elif self.current_state.startswith('lunala_') and hasattr(self, 'cancel_lunala_arts'):
             self.cancel_lunala_arts()
 
-        elif self.current_state == 'necrozma_channeling' and hasattr(self, 'cancel_necrozma_arts'):
+        elif self.current_state.startswith('necrozma_') and hasattr(self, 'cancel_necrozma_arts'):
             self.cancel_necrozma_arts()
 
-        elif self.current_state == 'zacian_channeling' and hasattr(self, 'cancel_zacian_arts'): 
+        elif self.current_state.startswith('zacian_') and hasattr(self, 'cancel_zacian_arts'): 
             self.cancel_zacian_arts()
 
-        elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
+        elif self.current_state.startswith('zamazenta_') and hasattr(self, 'cancel_zamazenta_arts'):
             self.cancel_zamazenta_arts()
 
-        elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
+        elif self.current_state.startswith('eternatus_') and hasattr(self, 'cancel_eternatus_arts'):
             self.cancel_eternatus_arts()
 
         elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
@@ -513,7 +545,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             self.current_state = 'falling'
 
-        elif self.current_state == 'bird_channeling' and hasattr(self, 'cancel_bird_arts'):
+        elif self.current_state.startswith('bird_') and hasattr(self, 'cancel_bird_arts'):
             self.cancel_bird_arts()
 
         elif self.current_state in ['mew_channeling', 'mew_bounce'] and hasattr(self, 'cancel_mew_arts'):
@@ -564,10 +596,20 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
             self.cancel_genesect_arts()
 
+        elif self.current_state.startswith('magearna_') and hasattr(self, 'cancel_magearna_arts'):
+            self.cancel_magearna_arts()
+
+        elif self.current_state.startswith('zeraora_') and hasattr(self, 'cancel_zeraora_arts'):
+            self.cancel_zeraora_arts()
+        elif self.current_state.startswith('zarude_') and hasattr(self, 'cancel_zarude_arts'):
+            self.cancel_zarude_arts()
+
         elif hasattr(self, 'cancel_hoopa_arts') and self.current_state.startswith('hoopa_'):
             self.cancel_hoopa_arts()
         elif hasattr(self, 'cancel_volcanion_arts') and self.current_state.startswith('volcanion_'):
             self.cancel_volcanion_arts()
+        elif hasattr(self, 'cancel_ub_arts') and self.current_state.startswith('ub_'):
+            self.cancel_ub_arts()
 
         # Inyección Víctima (El Pokémon anclado)
         elif self.current_state == 'mew_tethered':
@@ -608,6 +650,13 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 elif hasattr(self, 'cancel_hooh_arts') and self.current_state == 'hooh_channeling': self.cancel_hooh_arts()
                 elif hasattr(self, 'cancel_hoopa_arts') and self.current_state.startswith('hoopa_'): self.cancel_hoopa_arts()
                 elif hasattr(self, 'cancel_volcanion_arts') and self.current_state.startswith('volcanion_'): self.cancel_volcanion_arts()
+                elif hasattr(self, 'cancel_ub_arts') and self.current_state.startswith('ub_'): self.cancel_ub_arts()
+                elif hasattr(self, 'cancel_diancie_arts') and self.current_state in ['diancie_charging', 'diancie_flying_up', 'diancie_crystallizing', 'diancie_shooting']: self.cancel_diancie_arts()
+                elif hasattr(self, 'cancel_marshadow_arts') and self.current_state.startswith('marshadow_'): self.cancel_marshadow_arts()
+                
+                if self.current_state.startswith('marshadow_victim_'):
+                    self.current_state = 'falling'
+                    self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 
                 self.current_state = 'dragged'
                 self.v_x_velocity = 0.0
@@ -663,6 +712,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
             master = getattr(self, 'tk_master', None)
             if master and master.current_state == 'tk_channeling':
+                if hasattr(master, 'interrupt_current_state'): master.interrupt_current_state()
                 master.current_state = 'idle'
                 master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
                 master.tk_target = None
@@ -724,8 +774,29 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         elif self.current_state.startswith('victini_') and hasattr(self, 'cancel_victini_arts'):
             self.cancel_victini_arts()
 
+        elif self.current_state in ['diancie_charging', 'diancie_flying_up', 'diancie_crystallizing', 'diancie_shooting'] and hasattr(self, 'cancel_diancie_arts'):
+            self.cancel_diancie_arts()
+
+        elif self.current_state.startswith('marshadow_') and hasattr(self, 'cancel_marshadow_arts'):
+            self.cancel_marshadow_arts()
+        elif self.current_state.startswith('marshadow_victim_'):
+            self.current_state = 'falling'
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+
         elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
             self.cancel_genesect_arts()
+
+        elif self.current_state.startswith('magearna_') and hasattr(self, 'cancel_magearna_arts'):
+            self.cancel_magearna_arts()
+
+        elif self.current_state.startswith('zeraora_') and hasattr(self, 'cancel_zeraora_arts'):
+            self.cancel_zeraora_arts()
+
+        elif self.current_state.startswith('zarude_') and hasattr(self, 'cancel_zarude_arts'):
+            self.cancel_zarude_arts()
+
+        elif self.current_state == 'melmetal_channeling' and hasattr(self, 'cancel_melmetal_arts'):
+            self.cancel_melmetal_arts()
 
         elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
             self.cancel_kyurem_arts()
@@ -1283,6 +1354,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                         other.surface_angle = 180 if getattr(other, 'gravity_inverted', False) else 0
                         other.anchored_hwnd = None
                         
+                        if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
                         other.current_state = 'jumping_arc'
                         # Send them to the absolute physical floor, not the surface they were climbing
                         other.jump_target_y = other.default_floor_y
@@ -1325,6 +1397,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.schedule_loop(30, lambda: self.animate_egg_spawn(step + 1))
 
     def animate_vfx(self, action_type, step=0, pb_file=None):
+        if not hasattr(self, 'canvas') or not getattr(self, 'window', None) or not self.window.winfo_exists(): return
         frames = 15 
         if step == 0:
             self.current_state = 'exiting' 
@@ -1378,6 +1451,132 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             self.schedule_loop(30, lambda: self.animate_vfx(action_type, step + 1, pb_file))
         else:
             self.schedule_loop(100, self.window.destroy)
+
+
+    def interrupt_current_state(self):
+        if self.current_state == 'bubbled':
+            if hasattr(self, 'manage_bubble_vfx'): self.manage_bubble_vfx(False)
+            if hasattr(self, 'show_bubble_burst_vfx'): self.show_bubble_burst_vfx()
+        elif self.current_state == 'tk_lifted':
+            if hasattr(self, 'manage_tk_aura'): self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            master = getattr(self, 'tk_master', None)
+            if master and master.current_state == 'tk_channeling':
+                if hasattr(master, 'interrupt_current_state'): master.interrupt_current_state()
+                master.current_state = 'idle'
+                if hasattr(master, 'manage_tk_aura'): master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
+                master.tk_target = None
+            self.tk_master = None
+        elif self.current_state == 'digging':
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+        elif self.current_state.startswith('dark_'):
+            if hasattr(self, 'cancel_dark_arts'): self.cancel_dark_arts()
+        elif self.current_state.startswith('mewtwo_'):
+            if hasattr(self, 'cancel_mewtwo_arts'): self.cancel_mewtwo_arts()
+        elif self.current_state in ['hooh_channeling', 'panic_run']:
+            if hasattr(self, 'cancel_hooh_arts'): self.cancel_hooh_arts()
+        elif self.current_state in ['lugia_channeling', 'lugia_dash']:
+            if hasattr(self, 'cancel_lugia_arts'): self.cancel_lugia_arts()
+        elif self.current_state.startswith('kyogre_'):
+            if hasattr(self, 'cancel_kyogre_arts'): self.cancel_kyogre_arts()
+        elif self.current_state.startswith('groudon_'):
+            if hasattr(self, 'cancel_groudon_arts'): self.cancel_groudon_arts()
+        elif self.current_state.startswith('diancie_'):
+            if hasattr(self, 'cancel_diancie_arts'): self.cancel_diancie_arts()
+        elif self.current_state.startswith('rayquaza_'):
+            if hasattr(self, 'cancel_rayquaza_arts'): self.cancel_rayquaza_arts()
+        elif self.current_state.startswith('giratina_'):
+            if hasattr(self, 'cancel_giratina_arts'): self.cancel_giratina_arts()
+        elif self.current_state.startswith('reshiram_'):
+            if hasattr(self, 'cancel_reshiram_arts'): self.cancel_reshiram_arts()
+        elif self.current_state.startswith('heatran_'):
+            if hasattr(self, 'cancel_heatran_arts'): self.cancel_heatran_arts()
+        elif self.current_state.startswith('zekrom_'):
+            if hasattr(self, 'cancel_zekrom_arts'): self.cancel_zekrom_arts()
+        elif self.current_state.startswith('sea_guardian_'):
+            if hasattr(self, 'cancel_sea_guardian_arts'): self.cancel_sea_guardian_arts()
+        elif self.current_state.startswith('victini_'):
+            if hasattr(self, 'cancel_victini_arts'): self.cancel_victini_arts()
+        elif self.current_state.startswith('genesect_'):
+            if hasattr(self, 'cancel_genesect_arts'): self.cancel_genesect_arts()
+        elif self.current_state.startswith('magearna_'):
+            if hasattr(self, 'cancel_magearna_arts'): self.cancel_magearna_arts()
+        elif self.current_state.startswith('zeraora_'):
+            if hasattr(self, 'cancel_zeraora_arts'): self.cancel_zeraora_arts()
+        elif self.current_state.startswith('zarude_'):
+            if hasattr(self, 'cancel_zarude_arts'): self.cancel_zarude_arts()
+        elif self.current_state.startswith('melmetal_'):
+            if hasattr(self, 'cancel_melmetal_arts'): self.cancel_melmetal_arts()
+        elif self.pet_name.lower().replace('_', '').replace('-', '') in ['hoopa', 'hoopa1']:
+            if hasattr(self, 'cancel_hoopa_arts'): self.cancel_hoopa_arts()
+        elif self.pet_name.lower().replace('_', '').replace('-', '') == 'volcanion':
+            if hasattr(self, 'cancel_volcanion_arts'): self.cancel_volcanion_arts()
+        elif self.current_state.startswith('ub_'):
+            if hasattr(self, 'cancel_ub_arts'): self.cancel_ub_arts()
+        elif self.current_state.startswith('kyurem_'):
+            if hasattr(self, 'cancel_kyurem_arts'): self.cancel_kyurem_arts()
+        elif self.current_state.startswith('xerneas_'):
+            if hasattr(self, 'cancel_xerneas_arts'): self.cancel_xerneas_arts()
+        elif self.current_state.startswith('yveltal_'):
+            if hasattr(self, 'cancel_yveltal_arts'): self.cancel_yveltal_arts()
+        elif self.current_state.startswith('zygarde'):
+            if hasattr(self, 'cancel_zygarde_arts'): self.cancel_zygarde_arts()
+        elif self.current_state.startswith('solgaleo_'):
+            if hasattr(self, 'cancel_solgaleo_arts'): self.cancel_solgaleo_arts()
+        elif self.current_state.startswith('lunala_'):
+            if hasattr(self, 'cancel_lunala_arts'): self.cancel_lunala_arts()
+        elif self.current_state.startswith('zamazenta_'):
+            if hasattr(self, 'cancel_zamazenta_arts'): self.cancel_zamazenta_arts()
+        elif self.current_state.startswith('eternatus_'):
+            if hasattr(self, 'cancel_eternatus_arts'): self.cancel_eternatus_arts()
+        elif self.current_state.startswith('koraidon_'):
+            if hasattr(self, 'cancel_koraidon_arts'): self.cancel_koraidon_arts()
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed':
+            if hasattr(self, 'cancel_miraidon_arts'): self.cancel_miraidon_arts()
+        elif self.current_state == 'miraidon_paralyzed':
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
+            self.current_state = 'falling'
+        elif self.current_state.startswith('bird_'):
+            if hasattr(self, 'cancel_bird_arts'): self.cancel_bird_arts()
+        elif self.current_state in ['mew_channeling', 'mew_bounce']:
+            if hasattr(self, 'cancel_mew_arts'): self.cancel_mew_arts()
+        elif self.current_state.startswith('beast_'):
+            if hasattr(self, 'cancel_beast_arts'): self.cancel_beast_arts()
+        elif self.current_state.startswith('genie_'):
+            if hasattr(self, 'cancel_genie_arts'): self.cancel_genie_arts()
+        elif self.current_state in ['celebi_channeling', 'celebi_wait', 'celebi_freeze', 'celebi_revert_flight']:
+            if hasattr(self, 'cancel_celebi_arts'): self.cancel_celebi_arts()
+        elif self.current_state in ['regi_approach', 'regi_strike']:
+            if hasattr(self, 'cancel_regi_arts'): self.cancel_regi_arts()
+        elif self.current_state in ['jirachi_channeling', 'jirachi_vanished', 'jirachi_flyby']:
+            if hasattr(self, 'cancel_jirachi_arts'): self.cancel_jirachi_arts()
+        elif self.current_state.startswith('darkrai_'):
+            if hasattr(self, 'cancel_darkrai_arts'): self.cancel_darkrai_arts()
+        elif self.current_state.startswith('cresselia_') and self.current_state != 'cresselia_blessing':
+            if hasattr(self, 'cancel_cresselia_arts'): self.cancel_cresselia_arts()
+        elif self.current_state.startswith('lati_'):
+            if hasattr(self, 'cancel_lati_arts'): self.cancel_lati_arts()
+        elif self.current_state.startswith('deoxys_'):
+            if hasattr(self, 'cancel_deoxys_arts'): self.cancel_deoxys_arts()
+        elif self.current_state.startswith('lake_'):
+            if hasattr(self, 'cancel_lake_arts'): self.cancel_lake_arts()
+        elif self.current_state.startswith('shaymin_'):
+            if hasattr(self, 'cancel_shaymin_arts'): self.cancel_shaymin_arts()
+        elif self.current_state.startswith('tapu_'):
+            if hasattr(self, 'cancel_tapu_mechanic'): self.cancel_tapu_mechanic()
+        elif self.current_state.startswith('meloetta_'):
+            if hasattr(self, 'cancel_meloetta_arts'): self.cancel_meloetta_arts()
+        elif self.current_state.startswith('marshadow_') and not self.current_state.startswith('marshadow_victim_'):
+            if hasattr(self, 'cancel_marshadow_arts'): self.cancel_marshadow_arts()
+        elif self.current_state.startswith('marshadow_victim_'):
+            self.current_state = 'falling'
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+        elif self.current_state == 'mew_tethered':
+            self.current_state = 'falling'
+            self.canvas.delete('vfx_mew_bubble')
+            master = getattr(self, 'mew_master', None)
+            if master and hasattr(master, 'mew_victims') and self in master.mew_victims:
+                master.mew_victims.remove(self)
+            self.mew_master = None
 
     def start_wild_despawn(self):
         if self.current_state in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']: return
@@ -1494,7 +1693,9 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
 
     def handle_right_click(self, event):
         if self.is_egg: return
-        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
+        if getattr(self, 'is_being_caught', False): return
+        if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild', 'diancie_frozen']:
+            self.is_being_caught = True
             
             # STRUCTURAL FIX: Release Sinister connections if stored in the Pokeball
             if self.current_state.startswith('dark_'):
@@ -1505,11 +1706,13 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 self.cancel_hooh_arts()
             elif self.current_state in ['lugia_channeling', 'lugia_dash']:
                 self.cancel_lugia_arts()
-            elif self.current_state == 'kyogre_channeling':
+            elif self.current_state.startswith('kyogre_'):
                 self.cancel_kyogre_arts()
-            elif self.current_state == 'groudon_channeling':
+            elif self.current_state.startswith('groudon_'):
                 self.cancel_groudon_arts()
-            elif self.current_state == 'rayquaza_channeling':
+            elif self.current_state.startswith('diancie_') and hasattr(self, 'cancel_diancie_arts'):
+                self.cancel_diancie_arts()
+            elif self.current_state.startswith('rayquaza_'):
                 self.cancel_rayquaza_arts()
             elif self.current_state.startswith('giratina_'):
                 self.cancel_giratina_arts()
@@ -1525,28 +1728,36 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 self.cancel_victini_arts()
             elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
                 self.cancel_genesect_arts()
+            elif self.current_state.startswith('magearna_') and hasattr(self, 'cancel_magearna_arts'):
+                self.cancel_magearna_arts()
+            elif self.current_state.startswith('zeraora_') and hasattr(self, 'cancel_zeraora_arts'):
+                self.cancel_zeraora_arts()
+            elif self.current_state.startswith('zarude_') and hasattr(self, 'cancel_zarude_arts'):
+                self.cancel_zarude_arts()
+            elif self.current_state.startswith('melmetal_') and hasattr(self, 'cancel_melmetal_arts'):
+                self.cancel_melmetal_arts()
             elif hasattr(self, 'cancel_hoopa_arts') and self.pet_name.lower().replace("_", "").replace("-", "") in ["hoopa", "hoopa1"]:
                 self.cancel_hoopa_arts()
             elif hasattr(self, 'cancel_volcanion_arts') and self.pet_name.lower().replace("_", "").replace("-", "") == "volcanion":
                 self.cancel_volcanion_arts()
-            elif self.current_state == 'kyurem_channeling' and hasattr(self, 'cancel_kyurem_arts'):
+            elif hasattr(self, 'cancel_ub_arts') and self.current_state.startswith('ub_'):
+                self.cancel_ub_arts()
+            elif self.current_state.startswith('kyurem_') and hasattr(self, 'cancel_kyurem_arts'):
                 self.cancel_kyurem_arts()
-            elif self.current_state == 'xerneas_channeling' and hasattr(self, 'cancel_xerneas_arts'):
+            elif self.current_state.startswith('xerneas_') and hasattr(self, 'cancel_xerneas_arts'):
                 self.cancel_xerneas_arts()
-            elif self.current_state == 'yveltal_channeling' and hasattr(self, 'cancel_yveltal_arts'):
+            elif self.current_state.startswith('yveltal_') and hasattr(self, 'cancel_yveltal_arts'):
                 self.cancel_yveltal_arts()
-            elif self.current_state in ['zygarde_channeling', 'zygarde50_channeling'] and hasattr(self, 'cancel_zygarde_arts'):
+            elif self.current_state.startswith('zygarde') and hasattr(self, 'cancel_zygarde_arts'):
                 self.cancel_zygarde_arts()
-            elif self.current_state == 'solgaleo_channeling' and hasattr(self, 'cancel_solgaleo_arts'):
+            elif self.current_state.startswith('solgaleo_') and hasattr(self, 'cancel_solgaleo_arts'):
                 self.cancel_solgaleo_arts()
-            elif self.current_state == 'lunala_channeling' and hasattr(self, 'cancel_lunala_arts'):
+            elif self.current_state.startswith('lunala_') and hasattr(self, 'cancel_lunala_arts'):
                 self.cancel_lunala_arts()
-            elif self.current_state == 'zamazenta_channeling' and hasattr(self, 'cancel_zamazenta_arts'):
+            elif self.current_state.startswith('zamazenta_') and hasattr(self, 'cancel_zamazenta_arts'):
                 self.cancel_zamazenta_arts()
-            elif self.current_state == 'eternatus_channeling' and hasattr(self, 'cancel_eternatus_arts'):
+            elif self.current_state.startswith('eternatus_') and hasattr(self, 'cancel_eternatus_arts'):
                 self.cancel_eternatus_arts()
-            elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
-                self.cancel_koraidon_arts()
             elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
                 self.cancel_koraidon_arts()
             elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
@@ -1554,7 +1765,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             elif self.current_state == 'miraidon_paralyzed':
                 self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
                 self.current_state = 'falling'
-            elif self.current_state == 'bird_channeling' and hasattr(self, 'cancel_bird_arts'):
+            elif self.current_state.startswith('bird_') and hasattr(self, 'cancel_bird_arts'):
                 self.cancel_bird_arts()
             elif self.current_state in ['mew_channeling', 'mew_bounce'] and hasattr(self, 'cancel_mew_arts'):
                 self.cancel_mew_arts()
@@ -1613,6 +1824,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 else:
                     self.on_remove(self)
                     self.animate_vfx("return")
+                    self.window.destroy()
 
     def handle_double_click(self, event):
         if self.current_state not in ['exiting', 'evolving_start', 'evolving_finish', 'despawning_wild']:
@@ -1629,6 +1841,9 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
 
     def animate_loop(self):
         if self.current_state == 'exiting': return 
+        if self.current_state == 'diancie_frozen':
+            self.schedule_loop(100, self.animate_loop)
+            return
         
         # 60 FPS Anchor Synchronization (Window Drag Physics)
         if getattr(self, 'anchored_hwnd', None) and self.current_state in ['idle', 'walking', 'socializing', 'attacking', 'digging', 'digging_in', 'digging_out']:
@@ -1740,9 +1955,9 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 anim_state = 'walking'
             elif anim_state in ['giratina_dash_prep', 'giratina_dash']:
                 anim_state = 'walking'
-            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling', 'heatran_channeling', 'heatran_jump_down', 'heatran_storm', 'heatran_falling', 'lati_channeling']:
+            elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling', 'heatran_channeling', 'heatran_jump_down', 'heatran_storm', 'heatran_falling', 'lati_channeling', 'zarude_channeling', 'zarude_victim_grabbed']:
                 anim_state = 'idle'
-            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling', 'heatran_positioning', 'lati_spiral', 'lati_dash', 'lati_return']:
+            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling', 'heatran_positioning', 'lati_spiral', 'lati_dash', 'lati_return', 'zarude_jump_to_ceiling', 'zarude_air', 'zarude_swinging']:
                 anim_state = 'walking' 
             elif anim_state in ['zygarde_grounded']:
                 anim_state = 'idle'
@@ -1751,6 +1966,8 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                     anim_state = 'idle' 
                 else:
                     anim_state = 'walking'
+            elif anim_state == 'melmetal_channeling':
+                anim_state = 'walking' if getattr(self, 'mel_phase', '') == 'running' else 'idle'
 
             # ADD THIS FOR THE 50%
             elif anim_state == 'zygarde50_channeling':
@@ -1760,7 +1977,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                     anim_state = 'idle' # Stays in idle shooting while looking at the target
 
             # --- ADD THIS FOR LAND'S WRATH LAUNCH ---
-            elif anim_state == 'zygarde_launched':
+            elif anim_state in ['zygarde_launched', 'zarude_victim_thrown']:
                 anim_state = 'falling'
 
             elif anim_state == 'lunala_channeling':
@@ -1803,6 +2020,8 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 anim_state = 'idle'
                 
             elif anim_state in ['mew_channeling', 'mew_bounce', 'mew_tethered']:
+                anim_state = 'idle'
+            elif anim_state in ['ub_channeling', 'ub_shooting']:
                 anim_state = 'idle'
 
             elif anim_state in ['beast_channeling', 'beast_roar', 'beast_wait_clear']:
@@ -1862,13 +2081,21 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 anim_state = 'walking' 
                 freeze_animation = True
                 
-            elif anim_state in ['sea_guardian_absorb', 'sea_guardian_wait', 'sea_guardian_braking', 'victini_channeling', 'victini_forming_v']:
+            elif anim_state in ['sea_guardian_absorb', 'sea_guardian_wait', 'sea_guardian_braking', 'victini_channeling', 'victini_forming_v', 'zeraora_channeling']:
                 anim_state = 'idle'
-            elif anim_state in ['sea_guardian_big_jump', 'sea_guardian_jump', 'sea_guardian_last_jump', 'victini_flying', 'victini_dash', 'genesect_walk']:
+            elif anim_state in ['sea_guardian_big_jump', 'sea_guardian_jump', 'sea_guardian_last_jump', 'victini_flying', 'victini_dash', 'genesect_walk', 'magearna_walk']:
                 anim_state = 'walking'
-            elif anim_state in ['genesect_channeling', 'genesect_laser']:
+            elif anim_state in ['genesect_channeling', 'genesect_laser', 'magearna_channeling', 'magearna_laser', 'zeraora_channeling', 'zeraora_dash_to_target', 'zeraora_dash_intercept', 'zeraora_intercept_wait', 'zarude_channeling', 'zarude_jump_to_ceiling', 'zarude_air', 'zarude_swinging']:
                 anim_state = 'walking'
                 freeze_animation = True
+            elif anim_state == 'magearna_victim' or anim_state.startswith('zeraora_victim') or anim_state.startswith('zarude_victim'):
+                anim_state = 'idle'
+
+            # DIANCIE FSM RENDER
+            elif anim_state in ['diancie_charging', 'diancie_crystallizing', 'diancie_shooting']:
+                anim_state = 'idle'
+            elif anim_state in ['diancie_flying_up', 'diancie_returning']:
+                anim_state = 'walking'
 
             # JIRACHI BUFF TIMEOUT EVALUATION
             if getattr(self, 'jirachi_buff_timer', 0) > 0:
@@ -2706,11 +2933,13 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 
                 if target and getattr(target, 'current_state', '') == 'attacking':
                     if getattr(target, 'heavy_fall', False) and self_is_soft:
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'landing_shake'
                         target.shake_timer = 25 
                         target.v_x_velocity = 0.0
                         target.v_y_velocity = 0.0
                     else:
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'thrown'
                         # Apply self force multiplier to target knockback
                         target.v_x_velocity = (25.0 * target_knockback_ratio * my_force) * push_dir 
@@ -2915,8 +3144,14 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.sg_cooldown = max(0, getattr(self, 'sg_cooldown', 0) - 1)
         self.victini_cooldown = max(0, getattr(self, 'victini_cooldown', 0) - 1)
         self.genesect_cooldown = max(0, getattr(self, 'genesect_cooldown', 0) - 1)
+        self.celebi_cooldown = max(0, getattr(self, 'celebi_cooldown', 0) - 1)
+        self.magearna_cooldown = max(0, getattr(self, 'magearna_cooldown', 0) - 1)
+        self.zeraora_cooldown = max(0, getattr(self, 'zeraora_cooldown', 0) - 1)
+        self.zarude_cooldown = max(0, getattr(self, 'zarude_cooldown', 0) - 1)
         self.meloetta_cooldown = max(0, getattr(self, 'meloetta_cooldown', 0) - 1)
         self.social_cooldown = max(0, getattr(self, 'social_cooldown', 0) - 1)
+        self.diancie_cooldown = max(0, getattr(self, 'diancie_cooldown', 0) - 1)
+        self.marshadow_cooldown = max(0, getattr(self, 'marshadow_cooldown', 0) - 1)
         self.attack_cooldown = max(0, getattr(self, 'attack_cooldown', 0) - 1)
 
         self.teleport_cooldown = max(0, getattr(self, 'teleport_cooldown', 0) - 1)
@@ -2932,6 +3167,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.hooh_cooldown = max(0, getattr(self, 'hooh_cooldown', 0) - 1) 
         self.kyogre_cooldown = max(0, getattr(self, 'kyogre_cooldown', 0) - 1)
         self.groudon_cooldown = max(0, getattr(self, 'groudon_cooldown', 0) - 1)
+        self.melmetal_cooldown = max(0, getattr(self, 'melmetal_cooldown', 0) - 1)
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
         self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1)
         self.palkia_cooldown = max(0, getattr(self, 'palkia_cooldown', 0) - 1)
@@ -2966,10 +3202,17 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         self.genie_cooldown = max(0, getattr(self, 'genie_cooldown', 0) - 1)
         self.hoopa_cooldown = max(0, getattr(self, 'hoopa_cooldown', 0) - 1)
         self.volcanion_cooldown = max(0, getattr(self, 'volcanion_cooldown', 0) - 1)
-        self.volcanion_cooldown = max(0, getattr(self, 'volcanion_cooldown', 0) - 1)
+        self.ub_cooldown = max(0, getattr(self, 'ub_cooldown', 0) - 1)
 
         # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+
+        # --- EXCLUSIVE MECHANIC: ULTRA BEASTS ---
+        ub_names = ["nihilego", "buzzwole", "pheromosa", "xurkitree", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "poipole", "naganadel", "stakataka", "blacephalon"]
+        if normalized_name in ub_names and getattr(self, 'ub_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_ub_mechanic()
+                return
 
         # --- EXCLUSIVE MECHANIC: CRESSELIA ---
         if normalized_name == "cresselia" and getattr(self, 'cresselia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
@@ -2982,6 +3225,18 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         if normalized_name in ["hoopa", "hoopa1"] and getattr(self, 'hoopa_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.start_hoopa_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: DIANCIE ---
+        if normalized_name in ["diancie", "diancie1"] and getattr(self, 'diancie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_diancie_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: MARSHADOW ---
+        if normalized_name in ["marshadow", "marshadow1"] and getattr(self, 'marshadow_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_marshadow_mechanic()
                 return
 
         # --- EXCLUSIVE MECHANIC: VOLCANION ---
@@ -3140,6 +3395,27 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                     self.start_genesect_mechanic()
                 return
 
+        # --- EXCLUSIVE MECHANIC: MAGEARNA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "magearna" and getattr(self, 'magearna_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_magearna_mechanic'):
+                    self.start_magearna_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: ZERAORA ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "zeraora" and getattr(self, 'zeraora_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_zeraora_mechanic'):
+                    self.start_zeraora_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: ZARUDE ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "zarude" and getattr(self, 'zarude_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                if hasattr(self, 'start_zarude_mechanic'):
+                    self.start_zarude_mechanic()
+                return
+
         # --- EXCLUSIVE MECHANIC: MELOETTA ---
         if self.pet_name.lower().replace("_", "").replace("-", "") in ["meloetta", "meloetta1"] and getattr(self, 'meloetta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and getattr(self, 'climbing_surface', 'floor') == 'floor' and not self.is_global_mechanic_active(ignore_meloetta=True):
             if random.randint(1, 1000) <= 8:
@@ -3288,6 +3564,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                                         t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                         t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                         target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                    if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                     t_targ.current_state = 'falling'
                                     if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
                                 target.tk_target = None
@@ -3339,6 +3616,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                             try: target.window.attributes('-alpha', 1.0)
                             except: pass
                                 
+                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                             target.current_state = 'giratina_victim_pulled'
                             target.giratina_master = self
                             target.anchored_hwnd = None
@@ -3382,6 +3660,23 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                 self.lugia_cooldown = 108000 # 1.5 hours
                 self.current_state = 'lugia_channeling'
                 self.is_facing_right = random.choice([True, False]) # Decide where it's going to sweep the screen
+                self.schedule_loop(50, self.physics_loop)
+                return
+
+        # --- EXCLUSIVE MECHANIC: MELMETAL'S MOLTEN ABSORB ---
+        if self.pet_name.lower().replace("_", "").replace("-", "") == "melmetal" and self.melmetal_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.melmetal_cooldown = 72000 # 1 hour
+                self.current_state = 'melmetal_channeling'
+                if self.y < self.default_floor_y - 10:
+                    self.mel_phase = 'jumping_down'
+                    self.v_y_velocity = -10.0
+                else:
+                    self.mel_phase = 'absorbing'
+                    self.mel_timer = 150
+                self.mel_original_scale = getattr(self, 'scale_mod', 1.0)
+                if hasattr(self, 'animator'):
+                    self.animator.current_frame_index = 0
                 self.schedule_loop(50, self.physics_loop)
                 return
 
@@ -3474,6 +3769,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                                         t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
                                         target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
                                         
+                                        if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                         t_targ.current_state = 'falling'
                                         if hasattr(t_targ, 'tk_master'):
                                             t_targ.tk_master = None
@@ -3505,6 +3801,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                             except: pass
                             
                             # Finally, the orbital abduction
+                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                             target.current_state = 'mewtwo_victim'
                             target.mewtwo_master = self
                             target.mewtwo_orbit_offset = (i * (2 * math.pi / len(valid_targets))) 
@@ -3524,6 +3821,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                         # Remotely pacify its opponent and apply gravity
                         opponent = getattr(other, 'attack_target', None)
                         if opponent:
+                            if hasattr(opponent, 'interrupt_current_state'): opponent.interrupt_current_state()
                             opponent.current_state = 'thrown' if getattr(opponent, 'is_flying', False) else 'falling'
                             opponent.v_y_velocity = 0.0
                             opponent.v_x_velocity = 0.0
@@ -3532,6 +3830,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                             opponent.show_fairy_sparkles_vfx()
                             
                         # Pacify primary target and apply gravity
+                        if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
                         other.current_state = 'thrown' if getattr(other, 'is_flying', False) else 'falling'
                         other.v_y_velocity = 0.0
                         other.v_x_velocity = 0.0
@@ -3563,6 +3862,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                         try: self.window.attributes('-alpha', 0.7)
                         except: pass
                         
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'dark_victim_frozen'
                         target.dark_master = self
                         
@@ -3601,6 +3901,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                             elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']:
                                 hit_target.cancel_lugia_arts()
                                 
+                            if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
                             hit_target.current_state = 'bubbled'
                             hit_target.bubble_max_time = random.randint(130, 200) 
                             hit_target.bubble_timer = hit_target.bubble_max_time
@@ -3650,6 +3951,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                     self.tk_orbit_started = False # FIX: Forces orbital phase reset
                     
                     target.tk_master = self
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'tk_controlled' if target.__class__.__name__ != 'DesktopPet' else 'tk_lifted'
                     if target.__class__.__name__ == 'DesktopPet':
                         target.anchored_hwnd = None
@@ -3968,6 +4270,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                             
                             if roll <= atk_chance and self.attack_cooldown == 0 and other.attack_cooldown == 0:
                                 self.current_state = 'attacking'
+                                if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
                                 other.current_state = 'attacking'
                                 self.attack_phase = 0
                                 other.attack_phase = 0
@@ -3982,6 +4285,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
                                 break
                             elif roll <= 3 and self.social_cooldown == 0 and other.social_cooldown == 0:
                                 self.current_state = 'socializing'
+                                if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
                                 other.current_state = 'socializing'
                                 self.social_timer = 90
                                 other.social_timer = 90
@@ -4068,6 +4372,11 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
     def swap_form_generic(self, target_species, vfx_colors=None):
         self.pet_name = target_species
         self.pet_data["species"] = target_species
+        
+        if hasattr(self, 'game_controller') and self.game_controller:
+            self.game_controller.save_mgr.save_data()
+            self.game_controller.update_pc_ui()
+            
         from entities.animator import DesktopPetAnimator
         anim_dir = os.path.join(self.base_dir, "game_env", "pets", target_species)
         if self.is_shiny and os.path.exists(os.path.join(anim_dir, "shiny")):
@@ -4255,6 +4564,7 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             'heatran_positioning',
             'heatran_storm',
             'heatran_falling',
+            'melmetal_channeling',
             'kyurem_channeling',
             'xerneas_channeling',
             'yveltal_channeling',
@@ -4335,6 +4645,18 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
             'genesect_walk',
             'genesect_channeling',
             'genesect_laser',
+            'magearna_walk',
+            'magearna_channeling',
+            'magearna_laser',
+            'zeraora_jump_floor',
+            'zeraora_channeling',
+            'zeraora_dash_to_target',
+            'zeraora_dash_intercept',
+            'zeraora_intercept_wait',
+            'zarude_channeling',
+            'zarude_jump_to_ceiling',
+            'zarude_air',
+            'zarude_swinging',
             'meloetta_aria_charge',
             'meloetta_aria_teleport',
             'meloetta_aria_float',
@@ -4376,11 +4698,6 @@ class DesktopPet(HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, Ge
         valid = [p for p in self.get_all_pets() if p != self and p.current_state not in ['exiting', 'despawning_wild', 'spawning_wild', 'falling_pokeball', 'falling_egg', 'celebi_frozen']]
         return random.choice(valid) if valid else None
 
-    def start_hoopa_mechanic(self):
-        self.hoopa_cooldown = 108000
-        import mechanics.hoopa
-        mechanics.hoopa.init_hoopa_arts(self)
-        self.cancel_hoopa_arts = lambda: mechanics.hoopa.cancel_hoopa_arts(self)
 
     def start_volcanion_mechanic(self):
         self.volcanion_cooldown = 108000

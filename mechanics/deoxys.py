@@ -345,9 +345,15 @@ class DeoxysRock:
 
 class DeoxysMechanics:
     def cancel_deoxys_arts(self):
-        if hasattr(self, 'deoxys_vfx_win') and self.deoxys_vfx_win and self.deoxys_vfx_win.winfo_exists():
-            self.deoxys_vfx_win.destroy()
+        if hasattr(self, 'deoxys_vfx_win') and self.deoxys_vfx_win:
+            try:
+                if hasattr(self, 'deoxys_canvas') and self.deoxys_canvas:
+                    self.deoxys_canvas.delete("all")
+                    self.deoxys_canvas.destroy()
+                self.deoxys_vfx_win.destroy()
+            except: pass
             self.deoxys_vfx_win = None
+            self.deoxys_canvas = None
             
         for attr in ['deoxys_timer', 'deoxys_vfx_win', 'deoxys_canvas', 'deoxys_particles', 'deoxys_phase', 'deoxys_dna_angle']:
             if hasattr(self, attr): delattr(self, attr)
@@ -509,6 +515,7 @@ class DeoxysMechanics:
                         pcy = p.y + p.size_h/2
                         dist = math.hypot(global_cx - pcx, global_cy - pcy)
                         if dist < 400: # Big AOE
+                            if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                             p.current_state = 'thrown'
                             dir_x = 1 if pcx > global_cx else -1
                             p.v_x_velocity = dir_x * random.uniform(30.0, 50.0)

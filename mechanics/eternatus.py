@@ -329,6 +329,7 @@ class EternatusMechanics:
             target.fsm['idle'] = target._fsm_wait
             target.fsm['walking'] = target._fsm_wait
         if target.current_state in ['idle', 'walking']:
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'idle'
             target.v_x_velocity = 0.0
 

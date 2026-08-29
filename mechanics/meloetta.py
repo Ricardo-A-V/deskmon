@@ -499,11 +499,13 @@ class MeloettaMechanics:
             target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
             
         if not getattr(target, 'current_state', '') == 'dancing':
+            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'dancing'
             target.surface_angle = 0
             if hasattr(target, 'is_climbing'): target.is_climbing = False
             if hasattr(target, 'climbing_surface'): target.climbing_surface = 'floor'
             if hasattr(target, 'gravity_inverted'): target.gravity_inverted = False
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'dancing'
         target.dance_timer = int(15000 / 33) # 15 sec at 33ms
         target.dance_step_timer = 0

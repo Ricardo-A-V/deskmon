@@ -137,6 +137,7 @@ class MiraidonMechanics:
             if getattr(target, 'tk_target', None):
                 t_targ = target.tk_target
                 target.manage_tk_aura(t_targ.canvas, t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                 t_targ.current_state = 'falling'
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             target.tk_target = None
@@ -165,6 +166,7 @@ class MiraidonMechanics:
         try: target.window.attributes('-alpha', 1.0)
         except: pass
 
+        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'miraidon_paralyzed'
         target.mrd_para_timer = 300 
         target.v_x_velocity = 0.0
@@ -476,6 +478,7 @@ class MiraidonMechanics:
                     p.canvas.itemconfig(p.canvas_image_id, state='normal')
                     p.canvas.coords(p.canvas_image_id, p.size_w//2, p.size_h//2)
 
+                if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                 p.current_state = 'thrown'
                 p.v_x_velocity = (dx / dist) * base_knockback * force_mult
                 p.v_y_velocity = -25.0 * force_mult 

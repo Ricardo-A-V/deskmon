@@ -167,6 +167,7 @@ class PalkiaMechanics:
                 t_w = target.size_w if target.__class__.__name__ == 'DesktopPet' else target.size
                 t_h = target.size_h if target.__class__.__name__ == 'DesktopPet' else target.size
                 if hasattr(self, 'manage_tk_aura'): self.manage_tk_aura(target.canvas, t_w, t_h, False)
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'falling'
                 if hasattr(target, 'tk_master'): target.tk_master = None
             self.tk_target = None
@@ -176,6 +177,7 @@ class PalkiaMechanics:
             if master:
                 master.tk_target = None
                 if hasattr(master, 'manage_tk_aura'): master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
+                if hasattr(master, 'interrupt_current_state'): master.interrupt_current_state()
                 master.current_state = 'falling'
             self.tk_master = None
 

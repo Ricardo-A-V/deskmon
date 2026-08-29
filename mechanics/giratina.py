@@ -31,6 +31,7 @@ class GiratinaMechanics:
                 try: target.window.attributes('-alpha', 1.0)
                 except: pass
                 if target.current_state in ['giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     target.canvas.itemconfig(target.canvas_image_id, state='normal')
 
@@ -73,6 +74,7 @@ class GiratinaMechanics:
                 for target in getattr(self, 'giratina_targets', []):
                     if target and target.window.winfo_exists() and target.current_state != 'giratina_victim_absorbed':
                         if target.current_state in ['giratina_victim_pulled', 'giratina_victim_fade']:
+                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                             target.current_state = 'falling'
                             target.giratina_master = None
                             try: target.window.attributes('-alpha', 1.0)
@@ -322,6 +324,7 @@ class GiratinaMechanics:
                 state['ejected'] = True
                 target.canvas.itemconfig(target.canvas_image_id, state='normal')
                 target.giratina_master = None
+                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                 target.current_state = 'thrown'
 
                 angle = random.uniform(math.pi + 0.2, 2 * math.pi - 0.2)

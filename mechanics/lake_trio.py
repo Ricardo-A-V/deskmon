@@ -180,6 +180,7 @@ class LakeTrioMechanics:
                         p_cy = p.y + p.size_h/2
                         dist = math.hypot(mx - p_cx, my - p_cy)
                         if dist < 200: # Repel radius from mouse
+                            if hasattr(p, 'interrupt_current_state'): p.interrupt_current_state()
                             p.current_state = 'thrown'
                             push_force = (200 - dist) * 0.3
                             p.v_x_velocity = -push_force if p_cx < mx else push_force

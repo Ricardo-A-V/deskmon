@@ -52,6 +52,7 @@ class LegendaryGeniesMechanics:
             if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, getattr(target, 'size_w', 50), getattr(target, 'size_h', 50), False)
             master = getattr(target, 'tk_master', None)
             if master and master.current_state == 'tk_channeling':
+                if hasattr(master, 'interrupt_current_state'): master.interrupt_current_state()
                 master.current_state = 'idle'
                 if hasattr(master, 'manage_tk_aura'): master.manage_tk_aura(master.canvas, getattr(master, 'size_w', 50), getattr(master, 'size_h', 50), False)
                 master.tk_target = None
@@ -138,6 +139,7 @@ class LegendaryGeniesMechanics:
         if getattr(self, 'genie_type', '') == 'tornadus':
             for target in self.get_all_pets():
                 if getattr(target, 'current_state', '') == 'tornadus_victim' and getattr(target, 'tornadus_master', None) == self:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     target.surface_angle = 0
                     target.tornadus_master = None
@@ -473,6 +475,7 @@ class LegendaryGeniesMechanics:
                     
                     if dist < 200:
                         self._clear_victim_state(target)
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'tornadus_victim'
                         target.tornadus_master = self
                         
@@ -612,6 +615,7 @@ class LegendaryGeniesMechanics:
                 if math.hypot(tx - ix, ty - iy) <= 220:
                     self._clear_victim_state(target)
                     if hasattr(target, 'zekrom_para_vfx_loop'):
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'zekrom_paralyzed'
                         target.zekrom_para_timer = 400
                         target.zekrom_para_vfx_loop()
@@ -623,6 +627,7 @@ class LegendaryGeniesMechanics:
                 ty = target.y - target.v_y + target.size_h / 2
                 if math.hypot(tx - ix, ty - iy) <= 200:
                     self._clear_victim_state(target)
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'landorus_thrown'
                     target.v_x_velocity = random.uniform(15, 30) * (1 if tx > ix else -1)
                     target.v_y_velocity = random.uniform(-30, -20)
@@ -635,6 +640,7 @@ class LegendaryGeniesMechanics:
                 ty = target.y - target.v_y + target.size_h / 2
                 if math.hypot(tx - ix, ty - iy) <= 200:
                     self._clear_victim_state(target)
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'enamorus_joy'
                     target.enamorus_joy_timer = 200
                     target.v_y_velocity = -20.0

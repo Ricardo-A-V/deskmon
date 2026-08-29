@@ -19,6 +19,7 @@ class MewtwoMechanics:
                 # FIX: Emergency visual cleanup if ability is canceled
                 target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                 if target.current_state not in ['dragged', 'exiting']:
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'falling'
                     
         master = getattr(self, 'mewtwo_master', None)
@@ -58,6 +59,7 @@ class MewtwoMechanics:
                     # FIX: Visual cleanup upon being ejected
                     target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
                     target.mewtwo_master = None
+                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'thrown'
                     
                     t_cx = target.x + target.size_w / 2
