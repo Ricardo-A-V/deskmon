@@ -77,8 +77,10 @@ from mechanics.magearna import MagearnaMechanics
 from mechanics.zeraora import ZeraoraMechanics
 from mechanics.zarude import ZarudeMechanics
 from mechanics.melmetal import MelmetalMechanics
+from mechanics.urshifu import UrshifuMechanics
+from mechanics.terapagos import TerapagosMechanics
 
-class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -119,8 +121,8 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "tornadus1", "thundurus", "thundurus1", "reshiram", "zekrom", "landorus", "landorus1", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "hoopa1", "volcanion",
             "tapukoko", "tapulele", "tapubulu", "tapufini", "cosmog", "cosmoem", "solgaleo", "lunala", "nihilego", "buzzwole", "pheromosa", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "magearna", "marshadow", "poipole", "naganadel", "stakataka", "blacephalon", "zeraora", "melmetal",
-            "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus", "enamorus1",
-            "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "pecharunt", "ragingbolt", "gougingfire", "ironboulder", "ironcrown"
+            "zacian", "zacian1", "zamazenta", "zamazenta1", "eternatus", "kubfu", "urshifu", "urshifu1", "zarude", "regieleki", "regidrago", "glastrier", "spectrier", "calyrex", "enamorus", "enamorus1",
+            "tinglu", "chienpao", "wochien", "chiyu", "koraidon", "miraidon", "walkingwake", "ironleaves", "okidogi", "munkidori", "fezandipiti", "ogerpon", "terapagos", "terapagos1", "pecharunt", "ragingbolt", "gougingfire", "ironboulder", "ironcrown"
         }
         
         rpg_data = self.config.get("rpg_data", {})
@@ -470,6 +472,16 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
             self.current_state = 'falling'
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
 
+        elif self.current_state.startswith('urshifu_') and hasattr(self, 'cancel_urshifu_arts'):
+            self.cancel_urshifu_arts()
+        elif self.current_state.startswith('urshifu_victim_'):
+            self.current_state = 'falling'
+            self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            
+        elif (self.current_state.startswith('terapagos_') or self.current_state.startswith('tera_')) and hasattr(self, 'cancel_terapagos_arts'):
+            self.cancel_terapagos_arts()
+            self.cancel_tera_victim_arts()
+
         elif self.current_state == 'rayquaza_channeling':
             self.cancel_rayquaza_arts()
 
@@ -653,8 +665,15 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
                 elif hasattr(self, 'cancel_ub_arts') and self.current_state.startswith('ub_'): self.cancel_ub_arts()
                 elif hasattr(self, 'cancel_diancie_arts') and self.current_state in ['diancie_charging', 'diancie_flying_up', 'diancie_crystallizing', 'diancie_shooting']: self.cancel_diancie_arts()
                 elif hasattr(self, 'cancel_marshadow_arts') and self.current_state.startswith('marshadow_'): self.cancel_marshadow_arts()
+                elif hasattr(self, 'cancel_urshifu_arts') and self.current_state.startswith('urshifu_'): self.cancel_urshifu_arts()
+                elif hasattr(self, 'cancel_terapagos_arts') and (self.current_state.startswith('terapagos_') or self.current_state.startswith('tera_')):
+                    self.cancel_terapagos_arts()
+                    self.cancel_tera_victim_arts()
                 
                 if self.current_state.startswith('marshadow_victim_'):
+                    self.current_state = 'falling'
+                    self.canvas.itemconfig(self.canvas_image_id, state='normal')
+                elif self.current_state.startswith('urshifu_victim_'):
                     self.current_state = 'falling'
                     self.canvas.itemconfig(self.canvas_image_id, state='normal')
                 
@@ -1728,6 +1747,14 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
                 self.cancel_victini_arts()
             elif self.current_state.startswith('genesect_') and hasattr(self, 'cancel_genesect_arts'):
                 self.cancel_genesect_arts()
+            elif self.current_state.startswith('urshifu_') and hasattr(self, 'cancel_urshifu_arts'):
+                self.cancel_urshifu_arts()
+            elif (self.current_state.startswith('terapagos_') or self.current_state.startswith('tera_')) and hasattr(self, 'cancel_terapagos_arts'):
+                self.cancel_terapagos_arts()
+                self.cancel_tera_victim_arts()
+            elif (self.current_state.startswith('terapagos_') or self.current_state.startswith('tera_')) and hasattr(self, 'cancel_terapagos_arts'):
+                self.cancel_terapagos_arts()
+                self.cancel_tera_victim_arts()
             elif self.current_state.startswith('magearna_') and hasattr(self, 'cancel_magearna_arts'):
                 self.cancel_magearna_arts()
             elif self.current_state.startswith('zeraora_') and hasattr(self, 'cancel_zeraora_arts'):
@@ -2023,6 +2050,10 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
                 anim_state = 'idle'
             elif anim_state in ['ub_channeling', 'ub_shooting']:
                 anim_state = 'idle'
+            elif anim_state in ['urshifu_charging', 'urshifu_victim_vibrating']:
+                anim_state = 'idle'
+            elif anim_state in ['urshifu_dashing', 'urshifu_punching_single', 'urshifu_punching_rapid']:
+                anim_state = 'walking'
 
             elif anim_state in ['beast_channeling', 'beast_roar', 'beast_wait_clear']:
                 anim_state = 'idle'
@@ -2201,7 +2232,8 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
                 bright_mod=getattr(self, 'necrozma_bright_mod', 1.0),
                 darkness_mod=getattr(self, 'darkness_mod', 0.0),
                 nightmare_filter=getattr(self, 'nightmare_filter', False),
-                red_mod=getattr(self, 'volcanion_burn', 0) / 450.0
+                red_mod=getattr(self, 'volcanion_burn', 0) / 450.0,
+                color_overlay=getattr(self, 'tera_color', None)
             )
         self.schedule_loop(16, self.animate_loop)
 
@@ -3167,6 +3199,7 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
         self.hooh_cooldown = max(0, getattr(self, 'hooh_cooldown', 0) - 1) 
         self.kyogre_cooldown = max(0, getattr(self, 'kyogre_cooldown', 0) - 1)
         self.groudon_cooldown = max(0, getattr(self, 'groudon_cooldown', 0) - 1)
+        self.terapagos_cooldown = max(0, getattr(self, 'terapagos_cooldown', 0) - 1)
         self.melmetal_cooldown = max(0, getattr(self, 'melmetal_cooldown', 0) - 1)
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
         self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1)
@@ -3201,6 +3234,7 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
         self.shaymin_cooldown = max(0, getattr(self, 'shaymin_cooldown', 0) - 1)
         self.genie_cooldown = max(0, getattr(self, 'genie_cooldown', 0) - 1)
         self.hoopa_cooldown = max(0, getattr(self, 'hoopa_cooldown', 0) - 1)
+        self.urshifu_cooldown = max(0, getattr(self, 'urshifu_cooldown', 0) - 1)
         self.volcanion_cooldown = max(0, getattr(self, 'volcanion_cooldown', 0) - 1)
         self.ub_cooldown = max(0, getattr(self, 'ub_cooldown', 0) - 1)
 
@@ -3225,6 +3259,18 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
         if normalized_name in ["hoopa", "hoopa1"] and getattr(self, 'hoopa_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 self.start_hoopa_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: URSHIFU ---
+        if normalized_name in ["urshifu", "urshifu1"] and getattr(self, 'urshifu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_urshifu_mechanic()
+                return
+
+        # --- EXCLUSIVE MECHANIC: TERAPAGOS ---
+        if normalized_name in ["terapagos", "terapagos1"] and getattr(self, 'terapagos_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+            if random.randint(1, 1000) <= 8:
+                self.start_terapagos_mechanic()
                 return
 
         # --- EXCLUSIVE MECHANIC: DIANCIE ---
@@ -4452,8 +4498,9 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
             "keldeo1": ("keldeo", ["#FFFDD0", "#FFA500", "#87CEEB"]),
             "hoopa": ("hoopa_1", ["#800080", "#FFD700", "#FF1493"]),
             "hoopa1": ("hoopa", ["#800080", "#FFD700", "#FF1493"]),
-            "urshifu": ("urshifu_1", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
-            "urshifu1": ("urshifu", ["#2F4F4F", "#F8F8FF", "#DC143C"]),
+            "urshifu": ("urshifu_1", ["#0000CD", "#00BFFF", "#E0FFFF"]),
+            "urshifu1": ("urshifu", ["#8B4513", "#FF4500", "#FFD700"]),
+            "terapagos": ("terapagos_1", ["#0000FF", "#00FFFF", "#FFFFFF"]),
             "terapagos1": ("terapagos", ["#0000FF", "#00FFFF", "#FFFFFF"]),
             "deoxys": ("deoxys_1", ["#FF4500", "#00FFFF", "#FFA500"]),
             "deoxys1": ("deoxys_2", ["#FF4500", "#00FFFF", "#FFA500"]),
@@ -4664,7 +4711,14 @@ class DesktopPet(MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaM
             'meloetta_aria_fire',
             'meloetta_pirouette_walk',
             'meloetta_pirouette_dance',
-            'meloetta_pirouette_fire'
+            'meloetta_pirouette_fire',
+            'urshifu_charging',
+            'urshifu_dashing',
+            'urshifu_punching_single',
+            'urshifu_punching_rapid',
+            'terapagos_channeling',
+            'terapagos_shooting',
+            'terapagos_area'
         ]
         
         if ignore_meloetta:
