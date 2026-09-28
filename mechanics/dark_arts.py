@@ -54,7 +54,6 @@ class DarkArtsMechanics:
             self.x = target.x 
             self.y = target.y 
             self.current_state = 'dark_sink'
-            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'dark_victim_sink'
             self.dark_step = 0
             target.dark_step = 0
@@ -149,7 +148,6 @@ class DarkArtsMechanics:
                 target.is_facing_right = True
             
             self.current_state = 'dark_emerge'
-            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
             target.current_state = 'dark_victim_emerge'
             self.dark_step = (self.size_h // 2 + 10) // 4
             target.dark_step = (target.size_h // 2 + 10) // 4

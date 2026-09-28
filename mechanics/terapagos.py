@@ -40,7 +40,7 @@ class TerapagosMechanics:
             self.terapagos_vfx_win.destroy()
             self.terapagos_vfx_win = None
             
-        for attr in ['terapagos_timer', 'terapagos_canvas', 'terapagos_particles', 'terapagos_area_x', 'terapagos_area_y', 'terapagos_area_r', 'tera_proj_x', 'tera_proj_y', 'tera_proj_vx', 'tera_proj_vy', 'tera_proj_g']:
+        for attr in ['terapagos_timer', 'terapagos_canvas', 'terapagos_particles', 'terapagos_area_x', 'terapagos_area_y', 'terapagos_area_r', 'tera_proj_x', 'tera_proj_y', 'tera_proj_vx', 'tera_proj_vy', 'tera_proj_g', 'tera_proj_timer']:
             if hasattr(self, attr): delattr(self, attr)
 
         if self.current_state not in ['dragged', 'exiting']:
@@ -89,11 +89,14 @@ class TerapagosMechanics:
             
             self.tera_proj_x = my_cx
             self.tera_proj_y = my_cy
-            dx = self.terapagos_area_x - self.tera_proj_x
-            dy = self.terapagos_area_y - self.tera_proj_y
-            ticks = 30.0
+            target_local_x = self.terapagos_area_x - self.v_x
+            target_local_y = self.terapagos_area_y - self.v_y
+            dx = target_local_x - self.tera_proj_x
+            dy = target_local_y - self.tera_proj_y
+            ticks = 90.0
+            self.tera_proj_timer = int(ticks)
             self.tera_proj_vx = dx / ticks
-            self.tera_proj_g = 1.0
+            self.tera_proj_g = 0.2
             self.tera_proj_vy = (dy - 0.5 * self.tera_proj_g * ticks**2) / ticks
             
         self.schedule_loop(30, self.physics_loop)
@@ -103,12 +106,19 @@ class TerapagosMechanics:
         self.tera_proj_y += self.tera_proj_vy
         self.tera_proj_vy += self.tera_proj_g
         
+        for _ in range(2):
+            color = random.choice(["#0000FF", "#00FFFF", "#FFFFFF", "#FF00FF"])
+            ox = random.uniform(-4, 4)
+            oy = random.uniform(-4, 4)
+            self.spawn_terapagos_particle(self.tera_proj_x + ox, self.tera_proj_y + oy, random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), 20, color)
+        
         color = random.choice(["#0000FF", "#00FFFF", "#FFFFFF", "#FF00FF"])
         self.spawn_terapagos_particle(self.tera_proj_x, self.tera_proj_y, -self.tera_proj_vx*0.2, -self.tera_proj_vy*0.2, 15, color)
         
         self._update_terapagos_vfx()
         
-        if self.tera_proj_y >= self.terapagos_area_y:
+        self.tera_proj_timer -= 1
+        if self.tera_proj_timer <= 0:
             self.current_state = 'terapagos_area'
             self.terapagos_timer = 300 # 10 seconds
             
@@ -198,15 +208,41 @@ class TerapagosMechanics:
         self.tera_particles = []
         self.tera_crystal_id = None
 
+        self.tera_fill_win = tk.Toplevel(self.window.master)
+        self.tera_fill_win.overrideredirect(True)
+        self.tera_fill_win.attributes('-topmost', True)
+        self.tera_fill_win.config(bg=TRANS_COLOR)
+        try: 
+            self.tera_fill_win.wm_attributes('-transparentcolor', TRANS_COLOR)
+            self.tera_fill_win.wm_attributes('-alpha', 0.4)
+        except: pass
+        self.tera_fill_win.geometry(f"{self.v_width}x{self.v_height}+{self.v_x}+{self.v_y}")
+        self.tera_fill_canvas = tk.Canvas(self.tera_fill_win, width=self.v_width, height=self.v_height, bg=TRANS_COLOR, highlightthickness=0)
+        self.tera_fill_canvas.pack()
+        self.tera_fill_id = None
+
     def cancel_tera_victim_arts(self):
         if hasattr(self, 'tera_vfx_win') and self.tera_vfx_win and self.tera_vfx_win.winfo_exists():
             self.tera_vfx_win.destroy()
             self.tera_vfx_win = None
+        if hasattr(self, 'tera_fill_win') and self.tera_fill_win and self.tera_fill_win.winfo_exists():
+            self.tera_fill_win.destroy()
+            self.tera_fill_win = None
             
-        for attr in ['tera_timer', 'tera_canvas', 'tera_particles', 'tera_crystal_id', 'is_terastallized', 'tera_color', 'tera_active_timer']:
+        for attr in ['tera_timer', 'tera_canvas', 'tera_fill_canvas', 'tera_particles', 'tera_crystal_id', 'tera_fill_id', 'is_terastallized', 'tera_color', 'tera_active_timer']:
             if hasattr(self, attr): delattr(self, attr)
 
     def _fsm_tera_absorbing(self):
+        disallowed_states = ['dark_sink', 'dark_hidden', 'dark_victim_sink', 'dark_victim_hidden', 'digging', 'underground', 'teleporting_out', 'teleporting_in', 'exiting', 'despawning_wild', 'falling_pokeball']
+        is_hidden = False
+        try:
+            is_hidden = (self.canvas.itemcget(self.canvas_image_id, 'state') == 'hidden')
+        except: pass
+        
+        if getattr(self, 'current_state', '') in disallowed_states or is_hidden or getattr(self, 'is_being_caught', False):
+            self.cancel_tera_victim_arts()
+            return
+            
         self.tera_timer -= 1
         
         my_cx = self.x - self.v_x + self.size_w/2
@@ -228,7 +264,14 @@ class TerapagosMechanics:
                     my_cx - w/2, my_cy - h/6
                 ]
                 hex_color = '#%02x%02x%02x' % self.tera_color
+                r, g, b = self.tera_color
+                fill_color = '#%02x%02x%02x' % (min(255, int(r + (255 - r) * 0.7)), min(255, int(g + (255 - g) * 0.7)), min(255, int(b + (255 - b) * 0.7)))
                 self.tera_crystal_id = self.tera_canvas.create_polygon(pts, outline=hex_color, fill="", width=4, tags="tera_c", joinstyle=tk.MITER)
+                
+                if hasattr(self, 'tera_fill_canvas'):
+                    if getattr(self, 'tera_fill_id', None):
+                        self.tera_fill_canvas.delete(self.tera_fill_id)
+                    self.tera_fill_id = self.tera_fill_canvas.create_polygon(pts, outline="", fill=fill_color, tags="tera_f")
                 
                 angle = random.uniform(0, 2*math.pi)
                 dist = 80
@@ -253,6 +296,17 @@ class TerapagosMechanics:
     def tera_active_loop(self):
         if not hasattr(self, 'tera_active_timer'): return
         
+        if getattr(self, 'is_terastallized', False):
+            disallowed_states = ['dark_sink', 'dark_hidden', 'dark_victim_sink', 'dark_victim_hidden', 'digging', 'underground', 'teleporting_out', 'teleporting_in', 'exiting', 'despawning_wild', 'falling_pokeball']
+            is_hidden = False
+            try:
+                is_hidden = (self.canvas.itemcget(self.canvas_image_id, 'state') == 'hidden')
+            except: pass
+            
+            if getattr(self, 'current_state', '') in disallowed_states or is_hidden or getattr(self, 'is_being_caught', False):
+                self.cancel_tera_victim_arts()
+                return
+        
         self.tera_active_timer -= 1
         
         if getattr(self, 'is_terastallized', False):
@@ -269,6 +323,8 @@ class TerapagosMechanics:
                     my_cx - w/2, my_cy - h/6
                 ]
                 self.tera_canvas.coords(self.tera_crystal_id, *pts)
+                if hasattr(self, 'tera_fill_canvas') and getattr(self, 'tera_fill_id', None):
+                    self.tera_fill_canvas.coords(self.tera_fill_id, *pts)
                 
             if self.tera_active_timer <= 0:
                 if hasattr(self, 'tera_canvas'):
@@ -284,6 +340,9 @@ class TerapagosMechanics:
                     if getattr(self, 'tera_crystal_id', None):
                         self.tera_canvas.delete(self.tera_crystal_id)
                         self.tera_crystal_id = None
+                    if getattr(self, 'tera_fill_id', None):
+                        self.tera_fill_canvas.delete(self.tera_fill_id)
+                        self.tera_fill_id = None
                         
                 self.is_terastallized = False
                 if hasattr(self, 'tera_color'): delattr(self, 'tera_color')
