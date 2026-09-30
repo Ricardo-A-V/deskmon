@@ -5,10 +5,10 @@
         "movement_speed": 1,
         "is_flying": true,
         "offset_y": 40,
-        "can_screen_wrap": false,
-        "can_teleport": false,
-        "heavy_fall": false,
-        "aggressive": false
+        "ghost_type": false,
+        "psychic_type": false,
+        "fighting_type": false,
+        "electric_type": true
     },
     "images": {
         "idle_is_animated": true,

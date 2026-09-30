@@ -24,63 +24,80 @@ except ImportError:
     HAS_WIN32 = False
 
 # --- PHYSICAL ENTITY (REFACTORED TO STATE MACHINE) ---
-from mechanics.rayquaza import RayquazaMechanics
-from mechanics.lugia import LugiaMechanics
-from mechanics.mewtwo import MewtwoMechanics
-from mechanics.hooh import HoOhMechanics
-from mechanics.kyogre import KyogreMechanics
-from mechanics.groudon import GroudonMechanics
-from mechanics.telekinesis import TelekinesisMechanics
-from mechanics.dark_arts import DarkArtsMechanics
+from mechanics.legendaries.rayquaza import RayquazaMechanics
+from mechanics.legendaries.lugia import LugiaMechanics
+from mechanics.legendaries.mewtwo import MewtwoMechanics
+from mechanics.legendaries.hooh import HoOhMechanics
+from mechanics.legendaries.kyogre import KyogreMechanics
+from mechanics.legendaries.groudon import GroudonMechanics
+from mechanics.types.psychic import TelekinesisMechanics
+from mechanics.types.dark import DarkArtsMechanics
 from mechanics.shared_vfx import SharedVFX
-from mechanics.dialga import DialgaMechanics
-from mechanics.palkia import PalkiaMechanics
-from mechanics.giratina import GiratinaMechanics
-from mechanics.zekrom import ZekromMechanics
-from mechanics.reshiram import ReshiramMechanics
-from mechanics.heatran import HeatranMechanics
-from mechanics.kyurem import KyuremMechanics
-from mechanics.xerneas import XerneasMechanics
-from mechanics.yveltal import YveltalMechanics
-from mechanics.zygarde import ZygardeMechanics
-from mechanics.lunala import LunalaMechanics
-from mechanics.solgaleo import SolgaleoMechanics
-from mechanics.necrozma import NecrozmaMechanics
-from mechanics.zacian import ZacianMechanics
-from mechanics.zamazenta import ZamazentaMechanics
-from mechanics.eternatus import EternatusMechanics
-from mechanics.koraidon import KoraidonMechanics
-from mechanics.miraidon import MiraidonMechanics
-from mechanics.legendary_birds import LegendaryBirdsMechanics
-from mechanics.mew import MewMechanics
-from mechanics.legendary_beasts import LegendaryBeastsMechanics
-from mechanics.celebi import CelebiMechanics
-from mechanics.legendary_regis import LegendaryRegisMechanics
-from mechanics.jirachi import JirachiMechanics
-from mechanics.darkrai import DarkraiMechanics
-from mechanics.marshadow import MarshadowMechanics
-from mechanics.cresselia import CresseliaMechanics
-from mechanics.lati_twins import LatiTwinsMechanics
-from mechanics.deoxys import DeoxysMechanics
-from mechanics.lake_trio import LakeTrioMechanics
-from mechanics.shaymin import ShayminMechanics
-from mechanics.tapus import TapusMechanics
-from mechanics.sea_guardians import SeaGuardiansMechanics
-from mechanics.victini import VictiniMechanics
-from mechanics.genesect import GenesectMechanics
-from mechanics.meloetta import MeloettaMechanics
-from mechanics.legendary_genies import LegendaryGeniesMechanics
-from mechanics.hoopa import HoopaMechanics
-from mechanics.diancie import DiancieMechanics
-from mechanics.ultra_beasts import UltraBeastsMechanics
-from mechanics.magearna import MagearnaMechanics
-from mechanics.zeraora import ZeraoraMechanics
-from mechanics.zarude import ZarudeMechanics
-from mechanics.melmetal import MelmetalMechanics
-from mechanics.urshifu import UrshifuMechanics
-from mechanics.terapagos import TerapagosMechanics
+from mechanics.types.ground import ExcavationMechanics
+from mechanics.types.water import BubbleMechanics
+from mechanics.types.rock import RockMechanics
+from mechanics.types.steel import SteelMechanics
+from mechanics.types.normal import NormalMechanics
+from mechanics.types.fairy import FairyMechanics
+from mechanics.types.fighting import FightingMechanics
+from mechanics.types.ghost import GhostMechanics
+from mechanics.types.fire import FireMechanics
+from mechanics.types.electric import ElectricMechanics
+from mechanics.types.ice import IceMechanics
+from mechanics.types.flying import FlyingMechanics
+from mechanics.types.dragon import DragonMechanics
+from mechanics.types.bug import BugMechanics
+from mechanics.types.grass import GrassMechanics
+from mechanics.types.poison import PoisonMechanics
 
-class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX):
+from mechanics.legendaries.dialga import DialgaMechanics
+from mechanics.legendaries.palkia import PalkiaMechanics
+from mechanics.legendaries.giratina import GiratinaMechanics
+from mechanics.legendaries.zekrom import ZekromMechanics
+from mechanics.legendaries.reshiram import ReshiramMechanics
+from mechanics.legendaries.heatran import HeatranMechanics
+from mechanics.legendaries.kyurem import KyuremMechanics
+from mechanics.legendaries.xerneas import XerneasMechanics
+from mechanics.legendaries.yveltal import YveltalMechanics
+from mechanics.legendaries.zygarde import ZygardeMechanics
+from mechanics.legendaries.lunala import LunalaMechanics
+from mechanics.legendaries.solgaleo import SolgaleoMechanics
+from mechanics.legendaries.necrozma import NecrozmaMechanics
+from mechanics.legendaries.zacian import ZacianMechanics
+from mechanics.legendaries.zamazenta import ZamazentaMechanics
+from mechanics.legendaries.eternatus import EternatusMechanics
+from mechanics.legendaries.koraidon import KoraidonMechanics
+from mechanics.legendaries.miraidon import MiraidonMechanics
+from mechanics.legendaries.legendary_birds import LegendaryBirdsMechanics
+from mechanics.legendaries.mew import MewMechanics
+from mechanics.legendaries.legendary_beasts import LegendaryBeastsMechanics
+from mechanics.legendaries.celebi import CelebiMechanics
+from mechanics.legendaries.legendary_regis import LegendaryRegisMechanics
+from mechanics.legendaries.jirachi import JirachiMechanics
+from mechanics.legendaries.darkrai import DarkraiMechanics
+from mechanics.legendaries.marshadow import MarshadowMechanics
+from mechanics.legendaries.cresselia import CresseliaMechanics
+from mechanics.legendaries.lati_twins import LatiTwinsMechanics
+from mechanics.legendaries.deoxys import DeoxysMechanics
+from mechanics.legendaries.lake_trio import LakeTrioMechanics
+from mechanics.legendaries.shaymin import ShayminMechanics
+from mechanics.legendaries.tapus import TapusMechanics
+from mechanics.legendaries.sea_guardians import SeaGuardiansMechanics
+from mechanics.legendaries.victini import VictiniMechanics
+from mechanics.legendaries.genesect import GenesectMechanics
+from mechanics.legendaries.meloetta import MeloettaMechanics
+from mechanics.legendaries.legendary_genies import LegendaryGeniesMechanics
+from mechanics.legendaries.hoopa import HoopaMechanics
+from mechanics.legendaries.diancie import DiancieMechanics
+from mechanics.legendaries.ultra_beasts import UltraBeastsMechanics
+from mechanics.legendaries.magearna import MagearnaMechanics
+from mechanics.legendaries.zeraora import ZeraoraMechanics
+from mechanics.legendaries.zarude import ZarudeMechanics
+from mechanics.legendaries.melmetal import MelmetalMechanics
+from mechanics.legendaries.urshifu import UrshifuMechanics
+from mechanics.legendaries.terapagos import TerapagosMechanics
+
+class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -100,6 +117,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.attack_timer = 0
         self.eating_timer = 0
         self.jump_cooldown = 0 
+        for t in ['electric', 'flying', 'dragon', 'bug', 'grass', 'poison', 'normal', 'rock', 'steel', 'ghost', 'fire', 'ice', 'fairy', 'fighting', 'dark', 'ground', 'water', 'psychic']: setattr(self, f'{t}_cooldown', 300)
         self.interaction_target = None
         
         self.on_remove = on_remove_callback
@@ -168,15 +186,19 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.is_climbing = physics.get("is_climbing", False) and not self.is_flying 
         
         # --- HARDCODED BEHAVIOR MECHANICS ---
-        self.can_screen_wrap = physics.get("can_screen_wrap", False)
-        self.can_teleport = physics.get("can_teleport", False)
-        self.heavy_fall = physics.get("heavy_fall", False)
-        self.telekinetic = physics.get("telekinetic", False)
-        self.bubble_blower = physics.get("bubble_blower", False) 
-        self.can_dig = physics.get("can_dig", False)
-        self.fairy_aura = physics.get("fairy_aura", False)
-        self.dark_arts = physics.get("dark_arts", False)
-        self.aggressive = physics.get("aggressive", False)
+        self.ghost_type = physics.get("ghost_type", False)
+        self.psychic_type = physics.get("psychic_type", False)
+        self.rock_type = physics.get("rock_type", False)
+        self.steel_type = physics.get("steel_type", False)
+        self.normal_type = physics.get("normal_type", False)
+        self.psychic_type = physics.get("psychic_type", False)
+        self.water_type = physics.get("water_type", False) 
+        self.ground_type = physics.get("ground_type", False)
+        self.fairy_type = physics.get("fairy_type", False)
+        self.dark_type = physics.get("dark_type", False)
+        self.fighting_type = physics.get("fighting_type", False)
+        for aura in ["fire_type", "ice_type", "electric_type", "flying_type", "dragon_type", "bug_type", "grass_type", "poison_type"]:
+            setattr(self, aura, physics.get(aura, False))
         self.teleport_cooldown = 0
         self.sg_cooldown = 0
         self.victini_cooldown = 0
@@ -202,15 +224,15 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.offset_y = 0      
             
             # FIX: Nullify advanced mechanics so the egg doesn't inherit adult behaviors
-            self.heavy_fall = False
-            self.can_screen_wrap = False
-            self.can_teleport = False
-            self.telekinetic = False
-            self.bubble_blower = False
-            self.can_dig = False
-            self.fairy_aura = False
-            self.dark_arts = False
-            self.aggressive = False
+            self.rock_type = False
+            self.steel_type = False
+            self.ghost_type = False
+            self.psychic_type = False
+            self.water_type = False
+            self.ground_type = False
+            self.fairy_type = False
+            self.dark_type = False
+            self.fighting_type = False
             
         elif self.is_flying: 
             if self.is_wild and getattr(self, 'is_legendary', False):
@@ -450,7 +472,17 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.cancel_meloetta_arts()
 
         # Interrupt Ho-Oh's Sacred Fire
-        elif self.current_state in ['hooh_channeling', 'panic_run']:
+        elif self.current_state == 'poisoned':
+            if hasattr(self, 'poison_bubbles'):
+                for b in self.poison_bubbles:
+                    try: 
+                        self.canvas.delete(b['id1'])
+                        self.canvas.delete(b['id2'])
+                    except: pass
+                self.poison_bubbles = []
+        elif self.current_state == 'burning':
+            self.interrupt_current_state()
+        elif self.current_state == 'hooh_channeling':
             self.cancel_hooh_arts()
 
         elif self.current_state in ['lugia_channeling', 'lugia_dash']:
@@ -550,10 +582,10 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
             self.cancel_koraidon_arts()
 
-        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
             self.cancel_miraidon_arts()
             
-        elif self.current_state == 'miraidon_paralyzed':
+        elif self.current_state == 'paralyzed':
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             self.current_state = 'falling'
 
@@ -761,7 +793,17 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.cancel_meloetta_arts()
 
         # Interrupt Ho-Oh's Sacred Fire
-        elif self.current_state in ['hooh_channeling', 'panic_run']:
+        elif self.current_state == 'poisoned':
+            if hasattr(self, 'poison_bubbles'):
+                for b in self.poison_bubbles:
+                    try: 
+                        self.canvas.delete(b['id1'])
+                        self.canvas.delete(b['id2'])
+                    except: pass
+                self.poison_bubbles = []
+        elif self.current_state == 'burning':
+            self.interrupt_current_state()
+        elif self.current_state == 'hooh_channeling':
             self.cancel_hooh_arts()
 
         elif self.current_state in ['lugia_channeling', 'lugia_dash']:
@@ -850,10 +892,10 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
             self.cancel_koraidon_arts()
 
-        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
             self.cancel_miraidon_arts()
             
-        elif self.current_state == 'miraidon_paralyzed':
+        elif self.current_state == 'paralyzed':
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             self.current_state = 'falling'
 
@@ -933,14 +975,14 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             # --- STRUCTURAL FIX: STATE ROUTING WITH ABSOLUTE PRIORITY ---
             # Evaluates persisting debuffs to prevent clearing them when the user drops the entity
             if self.current_state in ['celebi_frozen']: return
-            if getattr(self, 'kyurem_frozen_timer', 0) > 0:
-                self.current_state = 'kyurem_frozen'
-            elif getattr(self, 'zekrom_para_timer', 0) > 0:
-                self.current_state = 'zekrom_paralyzed'
-            elif getattr(self, 'mrd_para_timer', 0) > 0:
-                self.current_state = 'miraidon_paralyzed'
-            elif getattr(self, 'reshiram_burn_timer', 0) > 0:
-                self.current_state = 'reshiram_burn'
+            if getattr(self, 'frozen_timer', 0) > 0:
+                self.current_state = 'frozen'
+            elif getattr(self, 'para_timer', 0) > 0:
+                self.current_state = 'paralyzed'
+            elif getattr(self, 'para_timer', 0) > 0:
+                self.current_state = 'paralyzed'
+            elif getattr(self, 'burning_timer', 0) > 0:
+                self.current_state = 'burning'
             elif getattr(self, 'kyogre_master', None) and getattr(self.kyogre_master, 'current_state', '') == 'kyogre_channeling':
                 self.current_state = 'deluge_float'
             else:
@@ -960,7 +1002,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         fall_tolerance = 15
         if self.current_state in ['falling', 'falling_pokeball', 'falling_egg', 'falling_legendary']:
             f_speed = 12
-            if self.current_state == 'falling' and getattr(self, 'heavy_fall', False):
+            if self.current_state == 'falling' and (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)):
                 f_speed = 25
             elif self.current_state == 'falling_legendary': 
                 f_speed = 20
@@ -1485,13 +1527,51 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 if hasattr(master, 'manage_tk_aura'): master.manage_tk_aura(master.canvas, master.size_w, master.size_h, False)
                 master.tk_target = None
             self.tk_master = None
+        
+        elif self.current_state == 'tk_channeling':
+            if hasattr(self, 'manage_tk_aura'): self.manage_tk_aura(self.canvas, self.size_w, self.size_h, False)
+            t_targ = getattr(self, 'tk_target', None)
+            if t_targ:
+                if hasattr(self, 'manage_tk_aura'):
+                    t_w = getattr(t_targ, 'size_w', getattr(t_targ, 'size', 0))
+                    t_h = getattr(t_targ, 'size_h', getattr(t_targ, 'size', 0))
+                    if t_w and t_h: self.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
+                t_targ.current_state = 'falling'
+                if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+            self.tk_target = None
+
         elif self.current_state == 'digging':
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
         elif self.current_state.startswith('dark_'):
             if hasattr(self, 'cancel_dark_arts'): self.cancel_dark_arts()
         elif self.current_state.startswith('mewtwo_'):
             if hasattr(self, 'cancel_mewtwo_arts'): self.cancel_mewtwo_arts()
-        elif self.current_state in ['hooh_channeling', 'panic_run']:
+        elif self.current_state == 'webbed':
+            self.canvas.delete('vfx')
+            self.web_stuck_timer = 0
+            if hasattr(self, 'web_bind_drawn'): delattr(self, 'web_bind_drawn')
+        elif self.current_state == 'poisoned':
+            if hasattr(self, 'poison_bubbles'):
+                for b in self.poison_bubbles:
+                    try: 
+                        self.canvas.delete(b['id1'])
+                        self.canvas.delete(b['id2'])
+                    except: pass
+                self.poison_bubbles = []
+        elif self.current_state == 'burning':
+            if hasattr(self, 'burn_particles'):
+                for p in self.burn_particles:
+                    try: self.canvas.delete(p['id'])
+                    except: pass
+                self.burn_particles = []
+            if getattr(self, 'hooh_master', None):
+                master = self.hooh_master
+                if hasattr(master, 'hooh_targets') and self in master.hooh_targets:
+                    master.hooh_targets.remove(self)
+                self.hooh_master = None
+                
+        elif self.current_state == 'hooh_channeling':
             if hasattr(self, 'cancel_hooh_arts'): self.cancel_hooh_arts()
         elif self.current_state in ['lugia_channeling', 'lugia_dash']:
             if hasattr(self, 'cancel_lugia_arts'): self.cancel_lugia_arts()
@@ -1549,9 +1629,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             if hasattr(self, 'cancel_eternatus_arts'): self.cancel_eternatus_arts()
         elif self.current_state.startswith('koraidon_'):
             if hasattr(self, 'cancel_koraidon_arts'): self.cancel_koraidon_arts()
-        elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed':
+        elif self.current_state.startswith('miraidon_') and self.current_state != 'paralyzed':
             if hasattr(self, 'cancel_miraidon_arts'): self.cancel_miraidon_arts()
-        elif self.current_state == 'miraidon_paralyzed':
+        elif self.current_state == 'paralyzed':
             self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             self.current_state = 'falling'
         elif self.current_state.startswith('bird_'):
@@ -1605,7 +1685,17 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.cancel_dark_arts()
         elif self.current_state.startswith('mewtwo_'):
             self.cancel_mewtwo_arts()
-        elif self.current_state in ['hooh_channeling', 'panic_run']:
+        elif self.current_state == 'poisoned':
+            if hasattr(self, 'poison_bubbles'):
+                for b in self.poison_bubbles:
+                    try: 
+                        self.canvas.delete(b['id1'])
+                        self.canvas.delete(b['id2'])
+                    except: pass
+                self.poison_bubbles = []
+        elif self.current_state == 'burning':
+            self.interrupt_current_state()
+        elif self.current_state == 'hooh_channeling':
             self.cancel_hooh_arts()
         elif self.current_state in ['lugia_channeling', 'lugia_dash']:
             self.cancel_lugia_arts()
@@ -1721,7 +1811,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.cancel_dark_arts()
             elif self.current_state.startswith('mewtwo_'):
                 self.cancel_mewtwo_arts()
-            elif self.current_state in ['hooh_channeling', 'panic_run']:
+            elif self.current_state == 'burning':
+                self.interrupt_current_state()
+            elif self.current_state == 'hooh_channeling':
                 self.cancel_hooh_arts()
             elif self.current_state in ['lugia_channeling', 'lugia_dash']:
                 self.cancel_lugia_arts()
@@ -1787,9 +1879,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.cancel_eternatus_arts()
             elif self.current_state.startswith('koraidon_') and hasattr(self, 'cancel_koraidon_arts'):
                 self.cancel_koraidon_arts()
-            elif self.current_state.startswith('miraidon_') and self.current_state != 'miraidon_paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
+            elif self.current_state.startswith('miraidon_') and self.current_state != 'paralyzed' and hasattr(self, 'cancel_miraidon_arts'):
                 self.cancel_miraidon_arts()            
-            elif self.current_state == 'miraidon_paralyzed':
+            elif self.current_state == 'paralyzed':
                 self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
                 self.current_state = 'falling'
             elif self.current_state.startswith('bird_') and hasattr(self, 'cancel_bird_arts'):
@@ -1944,7 +2036,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
             # --- FRAME RATE EVALUATION ---
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling', 'lati_channeling', 'deoxys_channeling', 'lake_rotating', 'shaymin_sky_jump', 'joy_jump'] else self.frame_rate_idle
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'burning', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling', 'lati_channeling', 'deoxys_channeling', 'lake_rotating', 'shaymin_sky_jump', 'joy_jump'] else self.frame_rate_idle
             if getattr(self, 'time_distorted', False):
                 target_ms = int(target_ms * 4.0)
             
@@ -1954,7 +2046,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             
             # 1. Absolute Priority: Freezing, Paralysis, and Petrification
             # Enforces sprite freezing across all paralysis types, overriding native FSM requests
-            if getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or getattr(self, 'mrd_para_timer', 0) > 0 or anim_state in ['zekrom_paralyzed', 'miraidon_paralyzed', 'kyurem_frozen', 'yveltal_petrified']:
+            if getattr(self, 'frozen_timer', 0) > 0 or getattr(self, 'para_timer', 0) > 0 or getattr(self, 'para_timer', 0) > 0 or anim_state in ['paralyzed', 'paralyzed', 'frozen', 'yveltal_petrified']:
                 anim_state = 'idle'
                 freeze_animation = True
                 if hasattr(self, 'animator'):
@@ -1963,10 +2055,10 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 
             elif anim_state == 'dragged':
                 # Overrides the dragged sprite if the entity is currently burning or frozen
-                if getattr(self, 'reshiram_burn_timer', 0) > 0:
+                if getattr(self, 'burning_timer', 0) > 0:
                     anim_state = 'walking' 
                     target_ms = max(10, self.frame_rate_active // 2)
-                elif getattr(self, 'kyurem_frozen_timer', 0) > 0 or getattr(self, 'zekrom_para_timer', 0) > 0 or getattr(self, 'mrd_para_timer', 0) > 0:
+                elif getattr(self, 'frozen_timer', 0) > 0 or getattr(self, 'para_timer', 0) > 0 or getattr(self, 'para_timer', 0) > 0:
                     anim_state = 'idle'
                     freeze_animation = True
                     target_ms = 999999
@@ -1984,7 +2076,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 anim_state = 'walking'
             elif anim_state in ['zekrom_channeling', 'reshiram_channeling', 'kyurem_channeling', 'xerneas_channeling', 'heatran_channeling', 'heatran_jump_down', 'heatran_storm', 'heatran_falling', 'lati_channeling', 'zarude_channeling', 'zarude_victim_grabbed']:
                 anim_state = 'idle'
-            elif anim_state in ['reshiram_burn', 'xerneas_pacified', 'yveltal_channeling', 'heatran_positioning', 'lati_spiral', 'lati_dash', 'lati_return', 'zarude_jump_to_ceiling', 'zarude_air', 'zarude_swinging']:
+            elif anim_state in ['burning', 'xerneas_pacified', 'yveltal_channeling', 'heatran_positioning', 'lati_spiral', 'lati_dash', 'lati_return', 'zarude_jump_to_ceiling', 'zarude_air', 'zarude_swinging']:
                 anim_state = 'walking' 
             elif anim_state in ['zygarde_grounded']:
                 anim_state = 'idle'
@@ -2036,7 +2128,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             elif anim_state in ['miraidon_descent', 'miraidon_dash']:
                 anim_state = 'walking' 
                 target_ms = max(10, self.frame_rate_active // 2)
-            elif anim_state == 'miraidon_paralyzed':
+            elif anim_state == 'paralyzed':
                 anim_state = 'idle'
                 freeze_animation = True
                 target_ms = 999999
@@ -2237,7 +2329,25 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             )
         self.schedule_loop(16, self.animate_loop)
 
+    
+    def spawn_static_vfx(self, x, y, width, height, draw_callback, life_ms):
+        import tkinter as tk
+        win = tk.Toplevel(self.window)
+        win.title("Deskmon_VFX")
+        win.overrideredirect(True)
+        win.attributes("-transparentcolor", "white")
+        win.attributes("-topmost", True)
+        canvas = tk.Canvas(win, bg='white', highlightthickness=0)
+        canvas.pack(fill='both', expand=True)
+        win.geometry(f"{width}x{height}+{int(x)}+{int(y)}")
+        self.window.after(50, lambda: draw_callback(canvas))
+        self.window.after(life_ms, win.destroy)
+        return win
+
     def physics_loop(self):
+        if not getattr(self, 'is_egg', False) and hasattr(self, 'canvas'):
+            self.canvas.delete('effect')
+            self.canvas.delete('vfx')
         if getattr(self, 'is_glitching', False) and getattr(self, 'has_genesect_glitch', False) and hasattr(self, 'spawn_genesect_particle'):
             if random.random() < 0.4:
                 cx = self.x - self.v_x + self.size_w/2 + random.uniform(-self.size_w*0.4, self.size_w*0.4)
@@ -2297,13 +2407,13 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.schedule_loop(50, self.physics_loop)
 
     def _fsm_volcanion_channeling(self):
-        import mechanics.volcanion
-        mechanics.volcanion._fsm_volcanion_channeling(self)
+        import mechanics.legendaries.volcanion
+        mechanics.legendaries.volcanion._fsm_volcanion_channeling(self)
         self.update_position()
 
     def _fsm_volcanion_shooting(self):
-        import mechanics.volcanion
-        mechanics.volcanion._fsm_volcanion_shooting(self)
+        import mechanics.legendaries.volcanion
+        mechanics.legendaries.volcanion._fsm_volcanion_shooting(self)
         self.update_position()
 
     def _fsm_volcanion_victim(self):
@@ -2336,7 +2446,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.y += self.v_y_velocity
             self.x += self.v_x_velocity
 
-            if getattr(self, 'can_screen_wrap', False):
+            if getattr(self, 'ghost_type', False):
                 if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
                 elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
             else:
@@ -2435,14 +2545,14 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             # --- STRUCTURAL PATCH: NEGATIVE GRAVITY (UPWARDS) IN THROWS ---
             if getattr(self, 'gravity_inverted', False):
                 if not getattr(self, 'hoopa_thrown', False):
-                    gravity = -4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity <= 0.5 else -1.5
+                    gravity = self.get_gravity(True, -1.5) if hasattr(self, "get_gravity") else (-4.0 if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and self.v_y_velocity <= 0.5 else -1.5)
                     self.v_y_velocity += gravity
                     self.v_x_velocity *= 0.95
                 self.y += self.v_y_velocity
                 self.x += self.v_x_velocity
 
                 # Lateral limits
-                if getattr(self, 'can_screen_wrap', False):
+                if getattr(self, 'ghost_type', False):
                     if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
                     elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
                 else:
@@ -2474,7 +2584,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     else:
                         self.anchored_hwnd = None
                         
-                    if getattr(self, 'heavy_fall', False) and self.v_y_velocity < -15:
+                    if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and self.v_y_velocity < -15:
                         self.trigger_landing_shake()
                     else:
                         if getattr(self, 'is_overflow', False):
@@ -2489,17 +2599,17 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             # -------------------------------------------------------------
             
             if not getattr(self, 'hoopa_thrown', False):
-                gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
+                gravity = self.get_gravity(True, 1.5) if hasattr(self, "get_gravity") else (4.0 if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and self.v_y_velocity >= -0.5 else 1.5)
                 self.v_y_velocity += gravity
                 
-                gravity = 4.0 if getattr(self, 'heavy_fall', False) and self.v_y_velocity >= -0.5 else 1.5
+                gravity = self.get_gravity(True, 1.5) if hasattr(self, "get_gravity") else (4.0 if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and self.v_y_velocity >= -0.5 else 1.5)
                 self.v_y_velocity += gravity
             if not getattr(self, 'hoopa_thrown', False):
                 self.v_x_velocity *= 0.95
             self.y += self.v_y_velocity
             self.x += self.v_x_velocity
 
-            if getattr(self, 'can_screen_wrap', False):
+            if getattr(self, 'ghost_type', False):
                 if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
                 elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
             else:
@@ -2528,7 +2638,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.hoopa_thrown = False
                 
                 # INTERNAL VIBRATION TRIGGER OF THE POKEMON (Adjusted to 0.75s)
-                if getattr(self, 'heavy_fall', False) and self.v_y_velocity > 15:
+                if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and self.v_y_velocity > 15:
                     self.trigger_landing_shake()
                 else:
                     if getattr(self, 'is_overflow', False):
@@ -2544,7 +2654,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         is_inverted = getattr(self, 'gravity_inverted', False)
         gravity = -1.5 if is_inverted else 1.5
         
-        if getattr(self, 'heavy_fall', False):
+        if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)):
             if is_inverted and self.v_y_velocity <= 0.5: gravity = -4.0
             elif not is_inverted and self.v_y_velocity >= -0.5: gravity = 4.0
 
@@ -2552,7 +2662,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.y += self.v_y_velocity
         self.x += (self.speed * 1.5) if self.is_facing_right else -(self.speed * 1.5)
         
-        if getattr(self, 'can_screen_wrap', False):
+        if getattr(self, 'ghost_type', False):
             if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
             elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
         else:
@@ -2566,7 +2676,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.y = target_y
             self.floor_y = target_y
             
-            if getattr(self, 'heavy_fall', False) and abs(self.v_y_velocity) > 15:
+            if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and abs(self.v_y_velocity) > 15:
                 self.trigger_landing_shake()
             else:
                 if getattr(self, 'is_overflow', False):
@@ -2618,58 +2728,6 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
 
-    def _fsm_teleporting_out(self):
-        self.teleport_step -= 0.15
-        if self.teleport_step <= 0:
-            self.window.attributes('-alpha', 0.0)
-            
-            # 1. We choose the new X coordinate at random
-            self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
-            
-            # 2. Y relocation logic
-            if getattr(self, 'is_flying', False):
-                self.y = getattr(self, 'target_floor_y', self.default_floor_y)
-                self.floor_y = self.y
-                self.anchored_hwnd = None
-                self.anchored_rect = None
-            else:
-                # RADAR TRICK: We temporarily move the Pokemon to the upper limit of the monitor 
-                # so that the scanner sweeps the entire screen downwards looking for windows.
-                self.y = self.v_y 
-                current_env, _ = self.get_window_environment()
-                
-                if current_env['hwnd']:
-                    # It found a window at this X. It anchors and appears on top.
-                    self.anchored_hwnd = current_env['hwnd']
-                    self.anchored_rect = current_env['rect']
-                    self.floor_y = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
-                    self.y = self.floor_y
-                else:
-                    # There is no window. It goes to the base floor.
-                    self.anchored_hwnd = None
-                    self.anchored_rect = None
-                    self.floor_y = self.default_floor_y
-                    self.y = self.default_floor_y
-                    
-            self.current_state = 'teleporting_in'
-        else:
-            self.window.attributes('-alpha', self.teleport_step)
-            
-        self.update_position()
-        self.schedule_loop(30, self.physics_loop)
-
-    def _fsm_teleporting_in(self):
-        self.teleport_step += 0.15
-        if self.teleport_step >= 1.0:
-            self.teleport_step = 1.0
-            self.window.attributes('-alpha', 1.0)
-            self.current_state = 'idle'
-        else:
-            self.window.attributes('-alpha', self.teleport_step)
-            
-        self.update_position()
-        self.schedule_loop(30, self.physics_loop)
-
     def _fsm_walking_away(self):
         self.x += self.speed
         if self.x > self.v_x + self.v_width:
@@ -2694,7 +2752,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
 
     def _fsm_falling(self):
         fall_speed = 12
-        if self.current_state == 'falling' and getattr(self, 'heavy_fall', False):
+        if self.current_state == 'falling' and (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)):
             fall_speed = 25
         elif self.current_state == 'falling_legendary': 
             fall_speed = 20
@@ -2704,7 +2762,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.y -= fall_speed
             self.x += getattr(self, 'v_x_velocity', 0.0)
             
-            if getattr(self, 'can_screen_wrap', False):
+            if getattr(self, 'ghost_type', False):
                 if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
                 elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
             else:
@@ -2728,7 +2786,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 else:
                     self.anchored_hwnd = None
 
-                if getattr(self, 'heavy_fall', False):
+                if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)):
                     self.trigger_landing_shake()
                 else:
                     self.current_state = 'idle'
@@ -2741,7 +2799,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.y += fall_speed
         self.x += getattr(self, 'v_x_velocity', 0.0)
         
-        if getattr(self, 'can_screen_wrap', False):
+        if getattr(self, 'ghost_type', False):
             if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
             elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
         else:
@@ -2798,7 +2856,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 else:
                     # FIX: In direct fall state, velocity is mathematically locked, 
                     # so it is not necessary to evaluate self.v_y_velocity.
-                    if getattr(self, 'heavy_fall', False):
+                    if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)):
                         self.trigger_landing_shake()
                     else:
                         if getattr(self, 'is_overflow', False):
@@ -2943,8 +3001,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 my_knockback_ratio = max(0.4, min(4.0, target_power / max(1, my_power)))
                 target_knockback_ratio = max(0.4, min(4.0, my_power / max(1, target_power)))
                 
-                target_is_soft = not getattr(target, 'heavy_fall', False) or not getattr(target, 'aggressive', False)
-                self_is_soft = not getattr(self, 'heavy_fall', False) or not getattr(self, 'aggressive', False)
+                target_is_soft = not (getattr(target, "rock_type", False) or getattr(target, "steel_type", False)) or not getattr(target, 'fighting_type', False)
+                self_is_soft = not (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) or not getattr(self, 'fighting_type', False)
                 
                 mult = 1 if not is_inv else -1
                 
@@ -2952,7 +3010,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 my_force = getattr(self, 'push_force_mult', 1.0)
                 target_force = getattr(target, 'push_force_mult', 1.0)
                 
-                if getattr(self, 'heavy_fall', False) and target_is_soft:
+                if (getattr(self, "rock_type", False) or getattr(self, "steel_type", False)) and target_is_soft:
                     self.current_state = 'landing_shake'
                     self.shake_timer = 25 
                     self.v_x_velocity = 0.0
@@ -2964,7 +3022,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     self.v_y_velocity = -(15.0 * min(1.5, my_knockback_ratio) * target_force) * mult            
                 
                 if target and getattr(target, 'current_state', '') == 'attacking':
-                    if getattr(target, 'heavy_fall', False) and self_is_soft:
+                    if (getattr(target, "rock_type", False) or getattr(target, "steel_type", False)) and self_is_soft:
                         if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                         target.current_state = 'landing_shake'
                         target.shake_timer = 25 
@@ -3019,161 +3077,13 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
 
-    def schedule_glitch_teleport(self):
-        if not getattr(self, 'is_glitching', False) or self.current_state == 'exiting':
-            return
-            
-        # If the user grabs it or it is involved in telekinesis, we pause the jumps
-        if self.current_state in ['dragged', 'tk_controlled', 'tk_lifted']:
-            self.schedule_loop(500, self.schedule_glitch_teleport)
-            return
-            
-        if getattr(self, 'glitch_teleports_left', 0) > 0:
-            self.glitch_teleports_left -= 1
-            
-            # Chaotic teleportation: New X coordinate
-            self.x = random.randint(self.v_x, self.v_x + self.v_width - self.size_w)
-            
-            if getattr(self, 'is_flying', False):
-                self.y = random.randint(self.v_y, self.default_floor_y)
-                self.floor_y = self.y
-            else:
-                self.y = self.default_floor_y if getattr(self, 'gravity_inverted', False) else self.v_y 
-                current_env, _ = self.get_window_environment()
-                
-                if current_env['hwnd']:
-                    self.anchored_hwnd = current_env['hwnd']
-                    self.anchored_rect = current_env['rect']
-                    self.floor_y = current_env['y']
-                    self.y = self.floor_y
-                else:
-                    self.anchored_hwnd = None
-                    self.anchored_rect = None
-                    self.floor_y = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
-                    self.y = self.floor_y
-                
-            self.update_position()
-            
-            # Schedule the next interference between 1.5 and 3 seconds
-            self.schedule_loop(random.randint(1500, 3000), self.schedule_glitch_teleport)
-        else:
-            # End of phase
-            self.is_glitching = False
-            self.has_genesect_glitch = False
-            self.glitch_cooldown = 12000
-            try: self.window.attributes('-alpha', 1.0)
-            except: pass
-
-    def _fsm_digging_in(self):
-        self.dig_step += 1
-        desplazamiento = self.dig_step * 3
-        if getattr(self, 'gravity_inverted', False):
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
-        else:
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
-        
-        if self.dig_step % 2 == 0:
-            self.show_dirt_vfx()
-            
-        if desplazamiento >= self.size_h // 2 + 10: 
-            # Totally hidden under the Canvas limit
-            self.current_state = 'digging'
-            self.canvas.itemconfig(self.canvas_image_id, state='hidden')
-            
-        self.update_position()
-        self.schedule_loop(30, self.physics_loop)
-
-    def _fsm_digging(self):
-        self.dig_timer -= 1
-        
-        # --- ORGANIC NAVIGATION ---
-        if random.randint(1, 1000) <= 20:
-            self.is_facing_right = not self.is_facing_right
-        
-        dig_speed = self.speed * 2
-
-        # FIX: Strict and predictive clamping against sudden window resizing
-        if getattr(self, 'anchored_rect', None):
-            rect = self.anchored_rect
-            
-            # 1. Emergency clamping: If the window left it out, we force it inside
-            if self.x > rect[2] - self.size_w:
-                self.x = rect[2] - self.size_w
-                self.is_facing_right = False
-            elif self.x < rect[0]:
-                self.x = rect[0]
-                self.is_facing_right = True
-            # 2. Standard predictive check: Bounce before exiting
-            else:
-                if self.is_facing_right and self.x + dig_speed > rect[2] - self.size_w:
-                    self.is_facing_right = False
-                elif not self.is_facing_right and self.x - dig_speed < rect[0]:
-                    self.is_facing_right = True
-
-        self.x += dig_speed if self.is_facing_right else -dig_speed
-        
-        if getattr(self, 'can_screen_wrap', False):
-            if self.x <= self.v_x - self.size_w: self.x = self.v_x + self.v_width
-            elif self.x >= self.v_x + self.v_width: self.x = self.v_x - self.size_w
-        else:
-            if self.x <= self.v_x:
-                self.x = self.v_x
-                self.is_facing_right = True
-            elif self.x >= (self.v_x + self.v_width) - self.size_w:
-                self.x = (self.v_x + self.v_width) - self.size_w
-                self.is_facing_right = False
-        
-        current_env, _ = self.get_window_environment()
-        if getattr(self, 'anchored_hwnd', None):
-            if not current_env['hwnd'] or current_env['hwnd'] != self.anchored_hwnd:
-                self.anchored_hwnd = None
-                self.canvas.itemconfig(self.canvas_image_id, state='normal')
-                self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
-                self.current_state = 'falling'
-                self.v_y_velocity = 0.0
-                self.update_position()
-                self.schedule_loop(30, self.physics_loop)
-                return
-        
-        if getattr(self, 'anchored_hwnd', None):
-            self.y = getattr(self, 'anchored_rect', [0, 0, 0, 0])[3] + getattr(self, 'offset_y', 0) if getattr(self, 'gravity_inverted', False) else getattr(self, 'anchored_rect', [0, 0, 0, 0])[1] - self.size_h - getattr(self, 'offset_y', 0)
-        else:
-            self.y = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
-        self.floor_y = self.y
-        
-        if self.dig_timer % 4 == 0:
-            self.show_dirt_vfx()
-            
-        if self.dig_timer <= 0:
-            self.current_state = 'digging_out'
-            self.canvas.itemconfig(self.canvas_image_id, state='normal')
-            
-        self.update_position()
-        self.schedule_loop(50, self.physics_loop)
-
-    def _fsm_digging_out(self):
-        self.dig_step -= 1
-        desplazamiento = self.dig_step * 3
-        if getattr(self, 'gravity_inverted', False):
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) - desplazamiento)
-        else:
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, (self.size_h//2) + desplazamiento)
-        
-        if self.dig_step % 2 == 0:
-            self.show_dirt_vfx()
-            
-        if self.dig_step <= 0:
-            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
-            self.current_state = 'idle'
-            
-        self.update_position()
-        self.schedule_loop(30, self.physics_loop)
-
-
-
     def _fsm_active(self):
         self.jump_cooldown = max(0, getattr(self, 'jump_cooldown', 0) - 1)
         self.sg_cooldown = max(0, getattr(self, 'sg_cooldown', 0) - 1)
+        for t in ['electric', 'flying', 'dragon', 'bug', 'grass', 'poison', 'normal', 'rock', 'steel', 'ghost', 'fire', 'ice', 'fairy', 'fighting', 'dark', 'ground', 'water', 'psychic']:
+            cd_name = f"{t}_cooldown"
+            if hasattr(self, cd_name):
+                setattr(self, cd_name, max(0, getattr(self, cd_name) - 1))
         self.victini_cooldown = max(0, getattr(self, 'victini_cooldown', 0) - 1)
         self.genesect_cooldown = max(0, getattr(self, 'genesect_cooldown', 0) - 1)
         self.celebi_cooldown = max(0, getattr(self, 'celebi_cooldown', 0) - 1)
@@ -3588,7 +3498,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8:
                 if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
@@ -3642,7 +3552,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                             # 6. Disconnection of ongoing Legendary Channelers
                             if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'):
                                 target.cancel_mewtwo_arts()
-                            elif target.current_state in ['hooh_channeling', 'panic_run'] and hasattr(target, 'cancel_hooh_arts'):
+                            elif target.current_state == 'burning':
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                            elif target.current_state == 'hooh_channeling' and hasattr(target, 'cancel_hooh_arts'):
                                 target.cancel_hooh_arts()
                             elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'):
                                 target.cancel_lugia_arts()
@@ -3683,7 +3595,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
@@ -3742,7 +3654,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
@@ -3766,7 +3678,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
             if random.randint(1, 1000) <= 8: 
                 if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'panic_run', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                     if valid_targets:
@@ -3858,50 +3770,32 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         return
                     
         # --- MECHANIC: FAIRY TYPE PACIFICATION ---
-        if getattr(self, 'fairy_aura', False) and self.current_state in ['idle', 'walking']:
-            if getattr(self, 'get_all_pets', None):
-                for other in self.get_all_pets():
-                    # If it detects a fighting Pokemon and enters its Hitbox (distance less than the sprite width)
-                    if other != self and other.current_state == 'attacking' and abs(self.x - other.x) < self.size_w and abs(self.y - other.y) < self.size_h:
-                        
-                        # Remotely pacify its opponent and apply gravity
-                        opponent = getattr(other, 'attack_target', None)
-                        if opponent:
-                            if hasattr(opponent, 'interrupt_current_state'): opponent.interrupt_current_state()
-                            opponent.current_state = 'thrown' if getattr(opponent, 'is_flying', False) else 'falling'
-                            opponent.v_y_velocity = 0.0
-                            opponent.v_x_velocity = 0.0
-                            opponent.attack_cooldown = 12000
-                            opponent.attack_target = None
-                            opponent.show_fairy_sparkles_vfx()
-                            
-                        # Pacify primary target and apply gravity
-                        if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
-                        other.current_state = 'thrown' if getattr(other, 'is_flying', False) else 'falling'
-                        other.v_y_velocity = 0.0
-                        other.v_x_velocity = 0.0
-                        other.attack_cooldown = 12000
-                        other.attack_target = None
-                        other.show_fairy_sparkles_vfx()
-                        
-                        self.show_fairy_sparkles_vfx()
-                        
-                        # The fairy does a small happy jump upon stopping the fight
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 3.0 if getattr(self, 'gravity_inverted', False) else -3.0
-                        self.schedule_loop(50, self.physics_loop)
-                        return
+        if hasattr(self, 'check_fairy_mechanic'):
+            if self.check_fairy_mechanic(): return
+            
         
+        if getattr(self, 'fire_type', False) and hasattr(self, 'check_fire_mechanic'): self.check_fire_mechanic()
+        if getattr(self, 'ice_type', False) and hasattr(self, 'check_ice_mechanic'): self.check_ice_mechanic()
+        if getattr(self, 'electric_type', False) and hasattr(self, 'check_electric_mechanic'): self.check_electric_mechanic()
+        if getattr(self, 'flying_type', False) and hasattr(self, 'check_flying_mechanic'): self.check_flying_mechanic()
+        if getattr(self, 'dragon_type', False) and hasattr(self, 'check_dragon_mechanic'): self.check_dragon_mechanic()
+        if getattr(self, 'bug_type', False) and hasattr(self, 'check_bug_mechanic'): self.check_bug_mechanic()
+        if getattr(self, 'grass_type', False) and hasattr(self, 'check_grass_mechanic'): self.check_grass_mechanic()
+        if getattr(self, 'poison_type', False) and hasattr(self, 'check_poison_mechanic'): self.check_poison_mechanic()
+        if getattr(self, 'normal_type', False) and hasattr(self, 'check_normal_mechanic'): self.check_normal_mechanic()
+        if getattr(self, 'rock_type', False) and hasattr(self, 'check_rock_mechanic'): self.check_rock_mechanic()
+        if getattr(self, 'steel_type', False) and hasattr(self, 'check_steel_mechanic'): self.check_steel_mechanic()
+
         # --- MECHANIC: DARK TYPE AMBUSH ---
-        if getattr(self, 'dark_arts', False) and self.dark_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
-            if random.randint(1, 1000) <= 10: 
+        if getattr(self, 'dark_type', False) and getattr(self, 'dark_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+              if random.randint(1, 100) <= 10: 
                 if getattr(self, 'get_all_pets', None):
                     # FIX: Inject strict height restriction "abs(p.y - self.y) < 80"
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and getattr(p, 'climbing_surface', 'floor') == 'floor' and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500 and abs(p.y - self.y) < 80]
                     if valid_targets:
                         target = random.choice(valid_targets)
-                        self.dark_cooldown = 12000 
+ 
+                        self.dark_cooldown = 18000
                         self.current_state = 'dark_dash'
                         self.dark_target = target
                         self.dark_mode = True
@@ -3916,33 +3810,37 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         return
 
         # --- MECHANIC: GROUND TYPE DIG ---
-        if getattr(self, 'can_dig', False) and self.dig_cooldown == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
-            if random.randint(1, 1000) <= 10: 
+        if getattr(self, 'ground_type', False) and getattr(self, 'ground_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+              if random.randint(1, 100) <= 10: 
+                self.ground_cooldown = 18000
                 self.current_state = 'digging_in'
                 self.dig_step = 0
                 self.dig_timer = random.randint(200, 400) # Time underground
-                self.dig_cooldown = 12000 # 10 real minutes
+
                 self.schedule_loop(50, self.physics_loop)
                 return
         
         # --- MECHANIC: WATER BUBBLE ---
-        if getattr(self, 'bubble_blower', False) and self.bubble_cooldown == 0 and self.current_state in ['idle', 'walking']:
-            if random.randint(1, 1000) <= 8: 
+        if getattr(self, 'water_type', False) and getattr(self, 'water_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+              if random.randint(1, 100) <= 10: 
                 if getattr(self, 'get_all_pets', None):
                     # FIX: Greatly reduced range (150px horizontal, 60px vertical)
                     valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 150 and abs(p.y - self.y) < 60]
                     if valid_targets:
                         target = random.choice(valid_targets)
-                        self.bubble_cooldown = 12000 
+ 
                         
                         # We fire the animated projectile from our geometric center
+                        self.water_cooldown = 18000
                         def on_bubble_hit(hit_target):
                             # STRUCTURAL FIX: Prevent FSM corruption if the bubble hits a Dark type
                             if getattr(hit_target, 'current_state', '').startswith('dark_'):
                                 hit_target.cancel_dark_arts()
                             elif getattr(hit_target, 'current_state', '').startswith('mewtwo_'):
                                 hit_target.cancel_mewtwo_arts()
-                            elif getattr(hit_target, 'current_state', '') in ['hooh_channeling', 'panic_run']:
+                            elif getattr(hit_target, 'current_state', '') == 'burning':
+                                if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
+                            elif getattr(hit_target, 'current_state', '') == 'hooh_channeling':
                                 hit_target.cancel_hooh_arts()
                             elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']:
                                 hit_target.cancel_lugia_arts()
@@ -3963,16 +3861,17 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         return
 
         # --- INTERFERENCE PHASE FOR GHOSTS (SCREEN WRAP) ---
-        if getattr(self, 'can_screen_wrap', False) and self.glitch_cooldown == 0 and not getattr(self, 'is_glitching', False):
-            if random.randint(1, 1000) <= 10: # Approx 1% probability
+        if getattr(self, 'ghost_type', False) and getattr(self, 'ghost_cooldown', 0) == 0 and not getattr(self, 'is_glitching', False):
+              if random.randint(1, 100) <= 10: # Approx 1% probability
+                self.ghost_cooldown = 18000
                 self.is_glitching = True
                 self.glitch_teleports_left = random.randint(4, 10) # Number of chaotic teleports
                 try: self.window.attributes('-alpha', 0.5) # Lowers opacity to 50%
                 except: pass
                 self.schedule_glitch_teleport()
         
-        if getattr(self, 'telekinetic', False) and self.tk_cooldown == 0 and self.current_state in ['idle', 'walking']:
-            if random.randint(1, 1000) <= 10: # Probability of activating powers
+        if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+              if random.randint(1, 100) <= 10: # Probability of activating powers
                 target = None
                 if self.game_controller:
                     # 1. Prioritize attracting Berries (Range of 400 -> 800)
@@ -4005,11 +3904,12 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     self.schedule_loop(50, self.physics_loop) 
                     return
         
-        if self.can_teleport and self.teleport_cooldown == 0 and self.current_state in ['idle', 'walking']:
-            if random.randint(1, 100) <= 1:
+        if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+              if random.randint(1, 100) <= 10:
+                self.psychic_cooldown = 18000
                 self.current_state = 'teleporting_out'
                 self.teleport_step = 1.0
-                self.teleport_cooldown = 3000
+
                 self.schedule_loop(50, self.physics_loop)
                 return
 
@@ -4048,7 +3948,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     if self.current_state in ['idle', 'walking'] and self.y > self.floor_y + 15:
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 0.0 if self.heavy_fall else 3.0  
+                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0  
                         
                     elif self.current_state == 'walking' and ahead_physical_floor is not None:
                         h = ahead_physical_floor - self.y
@@ -4063,7 +3963,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         if random.randint(1, 1000) <= 5: 
                             self.current_state = 'jumping_arc'
                             self.jump_target_y = self.v_y
-                            self.v_y_velocity = 0.0 if self.heavy_fall else 3.0 
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0 
                             self.jump_cooldown = 400
                             self.anchored_hwnd = None
                             self.anchored_rect = None
@@ -4071,7 +3971,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
                         self.current_state = 'jumping_arc'
                         self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 0.0 if self.heavy_fall else -3.0  
+                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0  
                         
                     elif self.current_state == 'walking' and ahead_physical_floor is not None:
                         h = self.y - ahead_physical_floor
@@ -4086,7 +3986,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         if random.randint(1, 1000) <= 5: 
                             self.current_state = 'jumping_arc'
                             self.jump_target_y = self.default_floor_y
-                            self.v_y_velocity = 0.0 if self.heavy_fall else -3.0 
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0 
                             self.jump_cooldown = 400
                             self.anchored_hwnd = None
                             self.anchored_rect = None
@@ -4285,7 +4185,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     self.x += self.speed if self.is_facing_right else -self.speed
                     
                     if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                        if getattr(self, 'can_screen_wrap', False):
+                        if getattr(self, 'ghost_type', False):
                             # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
                             if self.x <= self.v_x - self.size_w:
                                 self.x = self.v_x + self.v_width
@@ -4311,8 +4211,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                         if abs(my_true_floor - other_true_floor) < 15 and 80 < abs(self.x - other.x) < 150:
                             roll = random.randint(1, 100)
                             
-                            atk_chance = 5 if getattr(self, 'aggressive', False) else 1
-                            atk_cd = 3600 if getattr(self, 'aggressive', False) else 12000
+                            atk_chance = self.get_attack_chance(1) if hasattr(self, "get_attack_chance") else (5 if getattr(self, "fighting_type", False) else 1)
+                            atk_cd = self.get_attack_cooldown(12000) if hasattr(self, "get_attack_cooldown") else (3600 if getattr(self, "fighting_type", False) else 12000)
                             
                             if roll <= atk_chance and self.attack_cooldown == 0 and other.attack_cooldown == 0:
                                 self.current_state = 'attacking'
@@ -4435,15 +4335,19 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.config = new_config
                 physics = new_config.get("physics", {})
                 self.is_flying = physics.get("is_flying", False)
-                self.can_screen_wrap = physics.get("can_screen_wrap", False)
-                self.can_teleport = physics.get("can_teleport", False)
-                self.heavy_fall = physics.get("heavy_fall", False)
-                self.telekinetic = physics.get("telekinetic", False)
-                self.bubble_blower = physics.get("bubble_blower", False) 
-                self.can_dig = physics.get("can_dig", False)
-                self.fairy_aura = physics.get("fairy_aura", False)
-                self.dark_arts = physics.get("dark_arts", False)
-                self.aggressive = physics.get("aggressive", False)
+                self.ghost_type = physics.get("ghost_type", False)
+                self.psychic_type = physics.get("psychic_type", False)
+                self.rock_type = physics.get("rock_type", False)
+                self.steel_type = physics.get("steel_type", False)
+                self.normal_type = physics.get("normal_type", False)
+                self.psychic_type = physics.get("psychic_type", False)
+                self.water_type = physics.get("water_type", False) 
+                self.ground_type = physics.get("ground_type", False)
+                self.fairy_type = physics.get("fairy_type", False)
+                self.dark_type = physics.get("dark_type", False)
+                self.fighting_type = physics.get("fighting_type", False)
+                for aura in ["fire_type", "ice_type", "electric_type", "flying_type", "dragon_type", "bug_type", "grass_type", "poison_type"]:
+                    setattr(self, aura, physics.get(aura, False))
         except Exception:
             pass
 
@@ -4755,7 +4659,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
 
     def start_volcanion_mechanic(self):
         self.volcanion_cooldown = 108000
-        import mechanics.volcanion
-        mechanics.volcanion.init_volcanion_arts(self)
-        self.cancel_volcanion_arts = lambda: mechanics.volcanion.cancel_volcanion_arts(self)
+        import mechanics.legendaries.volcanion
+        mechanics.legendaries.volcanion.init_volcanion_arts(self)
+        self.cancel_volcanion_arts = lambda: mechanics.legendaries.volcanion.cancel_volcanion_arts(self)
         self.schedule_loop(50, self.physics_loop)

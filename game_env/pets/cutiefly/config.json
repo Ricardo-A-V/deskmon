@@ -5,11 +5,11 @@
         "movement_speed": 3,
         "is_flying": true,
         "offset_y": 40,
-        "can_screen_wrap": false,
-        "can_teleport": false,
-        "heavy_fall": false,
-        "aggressive": false,
-        "fairy_aura": true
+        "ghost_type": false,
+        "psychic_type": false,
+        "fighting_type": false,
+        "fairy_type": true,
+        "bug_type": true
     },
     "images": {
         "idle_is_animated": true,

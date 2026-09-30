@@ -5,11 +5,11 @@
         "movement_speed": 3,
         "is_flying": false,
         "offset_y": 5,
-        "can_screen_wrap": false,
-        "can_teleport": false,
-        "heavy_fall": false,
-        "aggressive": false,
-        "can_dig": true
+        "ghost_type": false,
+        "psychic_type": false,
+        "fighting_type": false,
+        "ground_type": true,
+        "electric_type": true
     },
     "images": {
         "idle_is_animated": true,

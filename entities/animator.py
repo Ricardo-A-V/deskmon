@@ -72,10 +72,10 @@ class DesktopPetAnimator:
         raw_image = None  
 
         render_state = state
-        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling', 'necrozma_channeling', 'hoopa_channeling', 'volcanion_channeling', 'volcanion_shooting', 'volcanion_victim', 'terapagos_channeling', 'terapagos_shooting', 'terapagos_area', 'tera_absorbing']:
+        if render_state in ['falling', 'evolving_start', 'evolving_finish', 'ascending', 'falling_pokeball', 'falling_egg', 'dragged', 'thrown', 'falling_legendary', 'legendary_bounce', 'climbing', 'eating', 'tk_channeling', 'tk_lifted', 'tk_controlled', 'bubbled', 'deluge_float', 'groudon_channeling', 'necrozma_channeling', 'hoopa_channeling', 'volcanion_channeling', 'volcanion_shooting', 'volcanion_victim', 'terapagos_channeling', 'terapagos_shooting', 'terapagos_area', 'tera_absorbing', 'frozen', 'deep_frozen', 'paralyzed', 'webbed', 'asleep', 'dragon_fear']:
             render_state = 'idle'
             
-        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'panic_run', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'hoopa_flying', 'hoopa_grab_target', 'hoopa_throw']:
+        elif render_state in ['walking_away', 'jumping_arc', 'socializing', 'attacking', 'hooh_channeling', 'burning', 'kyogre_channeling', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'hoopa_flying', 'hoopa_grab_target', 'hoopa_throw', 'poisoned', 'dragon_flee']:
             render_state = 'walking'
 
         if render_state == 'walking':
