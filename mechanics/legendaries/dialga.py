@@ -95,7 +95,7 @@ class DialgaMechanics:
             self.dialga_timer += 1
             if self.dialga_timer > 60:
                 self.current_state = 'idle'
-                self.dialga_cooldown = 108000 # 1.5 hours
+                self.dialga_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
                 delattr(self, 'dialga_phase')
                 delattr(self, 'dialga_timer')
 

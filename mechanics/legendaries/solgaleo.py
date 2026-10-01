@@ -145,7 +145,7 @@ class SolgaleoMechanics:
         elif self.solgaleo_phase == 5:
             self.solgaleo_timer -= 1
             if self.solgaleo_timer <= 0:
-                self.solgaleo_cooldown = 72000 
+                self.solgaleo_cooldown = self.get_legendary_cooldown(72000) 
                 self.cancel_solgaleo_arts() 
                 
         self.update_position()

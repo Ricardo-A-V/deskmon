@@ -77,7 +77,7 @@ class ElectricMechanics:
                         targets.append(other)
                         
                 if targets:
-                    self.electric_cooldown = 18000
+                    self.electric_cooldown = self.get_type_cooldown(18000)
                     target = random.choice(targets)
                     self.electric_charge = 0
                     

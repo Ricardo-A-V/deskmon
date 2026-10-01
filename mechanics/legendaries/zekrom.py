@@ -166,7 +166,7 @@ class ZekromMechanics:
                 self.zekrom_explode()
                 
                 self.current_state = 'idle'
-                self.zekrom_cooldown = 72000 
+                self.zekrom_cooldown = self.get_legendary_cooldown(72000) 
                 for attr in ['zekrom_phase', 'zekrom_timer', 'zekrom_vfx_active', 'zekrom_vx', 'zekrom_vy', 'zekrom_pulse']:
                     if hasattr(self, attr): delattr(self, attr)
 

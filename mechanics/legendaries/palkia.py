@@ -96,7 +96,7 @@ class PalkiaMechanics:
             self.palkia_timer += 1
             if self.palkia_timer > 60:
                 self.current_state = 'idle'
-                self.palkia_cooldown = 108000 # 1.5 hours
+                self.palkia_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
                 delattr(self, 'palkia_phase')
                 delattr(self, 'palkia_timer')
 

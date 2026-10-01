@@ -98,6 +98,16 @@ from mechanics.legendaries.urshifu import UrshifuMechanics
 from mechanics.legendaries.terapagos import TerapagosMechanics
 
 class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
+    def get_legendary_cooldown(self, default_ticks):
+        if not getattr(self, 'game_controller', None): return default_ticks
+        base_min = self.game_controller.save_mgr.data.get('settings', {}).get('legendary_cooldown', 60)
+        return int(base_min * 1200)
+
+    def get_type_cooldown(self, default_ticks):
+        if not getattr(self, 'game_controller', None): return default_ticks
+        base_min = self.game_controller.save_mgr.data.get('settings', {}).get('type_cooldown', 10)
+        return int(base_min * 1200)
+
     def __init__(self, parent_root, pet_data, is_wild, on_remove_callback, on_catch_callback, on_open_pc_callback, on_evolve_callback, spawn_coords=None, is_mid_evo=False, evo_channel=None, is_overflow=False, get_all_pets_callback=None, game_controller_ref=None):
         self.pet_data = pet_data
         self.pet_name = pet_data["species"]
@@ -3151,1056 +3161,1058 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         # CENTRALIZED ALLOCATION: Extracted and evaluated once per tick for all legendary mechanics.
         normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
 
-        # --- EXCLUSIVE MECHANIC: ULTRA BEASTS ---
-        ub_names = ["nihilego", "buzzwole", "pheromosa", "xurkitree", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "poipole", "naganadel", "stakataka", "blacephalon"]
-        if normalized_name in ub_names and getattr(self, 'ub_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_ub_mechanic()
-                return
+        allow_moves = self.game_controller.save_mgr.data.get('settings', {}).get('allow_moves', True) if getattr(self, 'game_controller', None) else True
+        if allow_moves:
+            # --- EXCLUSIVE MECHANIC: ULTRA BEASTS ---
+            ub_names = ["nihilego", "buzzwole", "pheromosa", "xurkitree", "xurkillree", "celesteela", "kartana", "guzzlord", "necrozma", "necrozma1", "necrozma2", "poipole", "naganadel", "stakataka", "blacephalon"]
+            if normalized_name in ub_names and getattr(self, 'ub_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_ub_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: CRESSELIA ---
-        if normalized_name == "cresselia" and getattr(self, 'cresselia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.cresselia_cooldown = 72000 
-                self.trigger_cresselia_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: CRESSELIA ---
+            if normalized_name == "cresselia" and getattr(self, 'cresselia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.cresselia_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_cresselia_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: HOOPA ---
-        if normalized_name in ["hoopa", "hoopa1"] and getattr(self, 'hoopa_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_hoopa_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: HOOPA ---
+            if normalized_name in ["hoopa", "hoopa1"] and getattr(self, 'hoopa_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_hoopa_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: URSHIFU ---
-        if normalized_name in ["urshifu", "urshifu1"] and getattr(self, 'urshifu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_urshifu_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: URSHIFU ---
+            if normalized_name in ["urshifu", "urshifu1"] and getattr(self, 'urshifu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_urshifu_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: TERAPAGOS ---
-        if normalized_name in ["terapagos", "terapagos1"] and getattr(self, 'terapagos_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_terapagos_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: TERAPAGOS ---
+            if normalized_name in ["terapagos", "terapagos1"] and getattr(self, 'terapagos_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_terapagos_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: DIANCIE ---
-        if normalized_name in ["diancie", "diancie1"] and getattr(self, 'diancie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_diancie_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: DIANCIE ---
+            if normalized_name in ["diancie", "diancie1"] and getattr(self, 'diancie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_diancie_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: MARSHADOW ---
-        if normalized_name in ["marshadow", "marshadow1"] and getattr(self, 'marshadow_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_marshadow_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: MARSHADOW ---
+            if normalized_name in ["marshadow", "marshadow1"] and getattr(self, 'marshadow_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_marshadow_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: VOLCANION ---
-        if normalized_name == "volcanion" and getattr(self, 'volcanion_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.start_volcanion_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: VOLCANION ---
+            if normalized_name == "volcanion" and getattr(self, 'volcanion_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.start_volcanion_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: DARKRAI ---
-        if normalized_name == "darkrai" and getattr(self, 'darkrai_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.darkrai_cooldown = 72000 
-                self.trigger_darkrai_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: DARKRAI ---
+            if normalized_name == "darkrai" and getattr(self, 'darkrai_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.darkrai_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_darkrai_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: JIRACHI ---
-        if normalized_name == "jirachi" and getattr(self, 'jirachi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.jirachi_cooldown = 72000 
-                self.trigger_jirachi_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: JIRACHI ---
+            if normalized_name == "jirachi" and getattr(self, 'jirachi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.jirachi_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_jirachi_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: LEGENDARY REGIS ---
-        normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
-        # The string "regigigas" must be explicitly present to grant FSM entry
-        if normalized_name in ["regirock", "regice", "registeel", "regieleki", "regidrago", "regigigas"] and getattr(self, 'regi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.regi_cooldown = 72000 
-                self.trigger_regi_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: LEGENDARY REGIS ---
+            normalized_name = self.pet_name.lower().replace("_", "").replace("-", "")
+            # The string "regigigas" must be explicitly present to grant FSM entry
+            if normalized_name in ["regirock", "regice", "registeel", "regieleki", "regidrago", "regigigas"] and getattr(self, 'regi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.regi_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_regi_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: TEMPORAL CHECKPOINT (CELEBI) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "celebi" and getattr(self, 'celebi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.celebi_cooldown = 72000 
-                self.trigger_celebi_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: TEMPORAL CHECKPOINT (CELEBI) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "celebi" and getattr(self, 'celebi_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.celebi_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_celebi_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: LEGENDARY BEASTS (RAIKOU, ENTEI, SUICUNE) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["raikou", "entei", "suicune", "ragingbolt", "gougingfire", "walkingwake"] and getattr(self, 'beast_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.beast_cooldown = 72000 
-                self.trigger_beast_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: LEGENDARY BEASTS (RAIKOU, ENTEI, SUICUNE) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["raikou", "entei", "suicune", "ragingbolt", "gougingfire", "walkingwake"] and getattr(self, 'beast_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.beast_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_beast_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: LEGENDARY GENIES (TORNADUS, THUNDURUS, LANDORUS, ENAMORUS) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["tornadus", "tornadus1", "thundurus", "thundurus1", "landorus", "landorus1", "enamorus", "enamorus1"] and getattr(self, 'genie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.genie_cooldown = 72000
-                self.trigger_genie_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: LEGENDARY GENIES (TORNADUS, THUNDURUS, LANDORUS, ENAMORUS) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["tornadus", "tornadus1", "thundurus", "thundurus1", "landorus", "landorus1", "enamorus", "enamorus1"] and getattr(self, 'genie_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.genie_cooldown = self.get_legendary_cooldown(72000)
+                    self.trigger_genie_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: GENESIS BUBBLE (MEW) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "mew" and getattr(self, 'mew_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.mew_cooldown = 72000 
-                self.trigger_mew_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: GENESIS BUBBLE (MEW) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "mew" and getattr(self, 'mew_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.mew_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_mew_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: LEGENDARY BIRDS ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["articuno", "articuno1", "zapdos", "zapdos1", "moltres", "moltres1"] and getattr(self, 'bird_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.bird_cooldown = 72000 
-                self.trigger_bird_arts()
-                return
+            # --- EXCLUSIVE MECHANIC: LEGENDARY BIRDS ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["articuno", "articuno1", "zapdos", "zapdos1", "moltres", "moltres1"] and getattr(self, 'bird_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.bird_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_bird_arts()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: ELECTRO DRIFT (MIRAIDON) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "miraidon" and getattr(self, 'miraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.miraidon_cooldown = 72000 
-                self.trigger_electro_drift()
-                return
+            # --- EXCLUSIVE MECHANIC: ELECTRO DRIFT (MIRAIDON) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "miraidon" and getattr(self, 'miraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.miraidon_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_electro_drift()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: APEX CRASH (KORAIDON) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "koraidon" and getattr(self, 'koraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.koraidon_cooldown = 72000 
-                self.trigger_apex_crash()
-                return
+            # --- EXCLUSIVE MECHANIC: APEX CRASH (KORAIDON) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "koraidon" and getattr(self, 'koraidon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.koraidon_cooldown = self.get_legendary_cooldown(72000) 
+                    self.trigger_apex_crash()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: ETERNABEAM (ETERNATUS) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["eternatus", "eternatus1"] and getattr(self, 'eternatus_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.eternatus_cooldown = 72000 
-                self.current_state = 'eternatus_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: ETERNABEAM (ETERNATUS) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["eternatus", "eternatus1"] and getattr(self, 'eternatus_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.eternatus_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'eternatus_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: DAUNTLESS SHIELD (ZAMAZENTA) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zamazenta", "zamazenta1"] and getattr(self, 'zamazenta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.zamazenta_cooldown = 72000 
-                self.current_state = 'zamazenta_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: DAUNTLESS SHIELD (ZAMAZENTA) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["zamazenta", "zamazenta1"] and getattr(self, 'zamazenta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.zamazenta_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'zamazenta_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: CROSS SCREEN DASH (LATIOS/LATIAS) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["latios", "latias"] and getattr(self, 'lati_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lati=True):
-            if random.randint(1, 1000) <= 8:
-                self.lati_cooldown = 72000 
-                self.current_state = 'lati_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: CROSS SCREEN DASH (LATIOS/LATIAS) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["latios", "latias"] and getattr(self, 'lati_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lati=True):
+                if random.randint(1, 1000) <= 8:
+                    self.lati_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'lati_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: METEOR STRIKE (DEOXYS) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["deoxys", "deoxys1", "deoxys2", "deoxys3"] and getattr(self, 'deoxys_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.deoxys_cooldown = 72000
-                self.current_state = 'deoxys_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: METEOR STRIKE (DEOXYS) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["deoxys", "deoxys1", "deoxys2", "deoxys3"] and getattr(self, 'deoxys_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.deoxys_cooldown = self.get_legendary_cooldown(72000)
+                    self.current_state = 'deoxys_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: LAKE TRIO ROTATION (AZELF, MESPRIT, UXIE) ---
-        if self.pet_name.lower().replace("_", "") in ["azelf", "mesprit", "uxie"] and getattr(self, 'lake_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lake=True):
-            if random.randint(1, 1000) <= 8:
-                self.lake_cooldown = 72000
-                self.current_state = 'lake_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: LAKE TRIO ROTATION (AZELF, MESPRIT, UXIE) ---
+            if self.pet_name.lower().replace("_", "") in ["azelf", "mesprit", "uxie"] and getattr(self, 'lake_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_lake=True):
+                if random.randint(1, 1000) <= 8:
+                    self.lake_cooldown = self.get_legendary_cooldown(72000)
+                    self.current_state = 'lake_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
                 
-        # --- EXCLUSIVE MECHANIC: SHAYMIN (LAND / SKY) ---
-        if self.pet_name.lower().replace("_", "") == "shaymin" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.shaymin_cooldown = 108000
-                self.current_state = 'shaymin_summon'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: SHAYMIN (LAND / SKY) ---
+            if self.pet_name.lower().replace("_", "") == "shaymin" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.shaymin_cooldown = self.get_legendary_cooldown(108000)
+                    self.current_state = 'shaymin_summon'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
                 
-        if self.pet_name.lower().replace("_", "") == "shaymin1" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.shaymin_cooldown = 108000
-                if hasattr(self, 'start_shaymin_sky_jump'):
-                    self.start_shaymin_sky_jump()
-                self.schedule_loop(50, self.physics_loop)
-                return
+            if self.pet_name.lower().replace("_", "") == "shaymin1" and getattr(self, 'shaymin_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.shaymin_cooldown = self.get_legendary_cooldown(108000)
+                    if hasattr(self, 'start_shaymin_sky_jump'):
+                        self.start_shaymin_sky_jump()
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: BEHEMOTH BLADE (ZACIAN) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zacian", "zacian1"] and getattr(self, 'zacian_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.zacian_cooldown = 72000 
-                self.current_state = 'zacian_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: BEHEMOTH BLADE (ZACIAN) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["zacian", "zacian1"] and getattr(self, 'zacian_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.zacian_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'zacian_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: VICTINI ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "victini" and getattr(self, 'victini_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_victini=True):
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_victini_mechanic'):
-                    self.start_victini_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: VICTINI ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "victini" and getattr(self, 'victini_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_victini=True):
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_victini_mechanic'):
+                        self.start_victini_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: GENESECT ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "genesect" and getattr(self, 'genesect_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_genesect=True):
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_genesect_mechanic'):
-                    self.start_genesect_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: GENESECT ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "genesect" and getattr(self, 'genesect_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_genesect=True):
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_genesect_mechanic'):
+                        self.start_genesect_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: MAGEARNA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "magearna" and getattr(self, 'magearna_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_magearna_mechanic'):
-                    self.start_magearna_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: MAGEARNA ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "magearna" and getattr(self, 'magearna_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_magearna_mechanic'):
+                        self.start_magearna_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: ZERAORA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "zeraora" and getattr(self, 'zeraora_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_zeraora_mechanic'):
-                    self.start_zeraora_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: ZERAORA ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "zeraora" and getattr(self, 'zeraora_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_zeraora_mechanic'):
+                        self.start_zeraora_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: ZARUDE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "zarude" and getattr(self, 'zarude_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_zarude_mechanic'):
-                    self.start_zarude_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: ZARUDE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "zarude" and getattr(self, 'zarude_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_zarude_mechanic'):
+                        self.start_zarude_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: MELOETTA ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["meloetta", "meloetta1"] and getattr(self, 'meloetta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and getattr(self, 'climbing_surface', 'floor') == 'floor' and not self.is_global_mechanic_active(ignore_meloetta=True):
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_meloetta_mechanic'):
-                    self.start_meloetta_mechanic()
-                return
+            # --- EXCLUSIVE MECHANIC: MELOETTA ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["meloetta", "meloetta1"] and getattr(self, 'meloetta_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and getattr(self, 'climbing_surface', 'floor') == 'floor' and not self.is_global_mechanic_active(ignore_meloetta=True):
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_meloetta_mechanic'):
+                        self.start_meloetta_mechanic()
+                    return
 
-        # --- EXCLUSIVE MECHANIC: SEA GUARDIANS (MANAPHY, PHIONE) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["manaphy", "phione"] and getattr(self, 'sg_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_sea_guardians=True):
-            if random.randint(1, 1000) <= 8:
-                if hasattr(self, 'start_sea_guardian_mechanic'):
-                    self.start_sea_guardian_mechanic()
-                self.schedule_loop(33, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: SEA GUARDIANS (MANAPHY, PHIONE) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["manaphy", "phione"] and getattr(self, 'sg_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active(ignore_sea_guardians=True):
+                if random.randint(1, 1000) <= 8:
+                    if hasattr(self, 'start_sea_guardian_mechanic'):
+                        self.start_sea_guardian_mechanic()
+                    self.schedule_loop(33, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: TAPUS (KOKO, LELE, BULU, FINI) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["tapukoko", "tapukoko1", "tapulele", "tapulele1", "tapubulu", "tapubulu1", "tapufini", "tapufini1"] and getattr(self, 'tapu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.tapu_cooldown = 108000
-                if hasattr(self, 'start_tapu_mechanic'):
-                    self.start_tapu_mechanic()
-                self.schedule_loop(33, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: TAPUS (KOKO, LELE, BULU, FINI) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["tapukoko", "tapukoko1", "tapulele", "tapulele1", "tapubulu", "tapubulu1", "tapufini", "tapufini1"] and getattr(self, 'tapu_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.tapu_cooldown = self.get_legendary_cooldown(108000)
+                    if hasattr(self, 'start_tapu_mechanic'):
+                        self.start_tapu_mechanic()
+                    self.schedule_loop(33, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: PRISMATIC LASER (NECROZMA) ---
-        # Base Necrozma, Dusk Mane (necrozma1) and Dawn Wings (necrozma2) share this core ability
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["necrozma", "necrozma1", "necrozma2"] and getattr(self, 'necrozma_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.necrozma_cooldown = 72000 
-                self.current_state = 'necrozma_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: PRISMATIC LASER (NECROZMA) ---
+            # Base Necrozma, Dusk Mane (necrozma1) and Dawn Wings (necrozma2) share this core ability
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["necrozma", "necrozma1", "necrozma2"] and getattr(self, 'necrozma_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.necrozma_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'necrozma_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: SUNSTEEL STRIKE (SOLGALEO) ---
-        # Shared with Dusk Mane Necrozma (necrozma1) due to assimilation
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["solgaleo", "necrozma1"] and getattr(self, 'solgaleo_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.solgaleo_cooldown = 72000 
-                self.current_state = 'solgaleo_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: SUNSTEEL STRIKE (SOLGALEO) ---
+            # Shared with Dusk Mane Necrozma (necrozma1) due to assimilation
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["solgaleo", "necrozma1"] and getattr(self, 'solgaleo_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.solgaleo_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'solgaleo_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: MOONGEIST BEAM (LUNALA) ---
-        # Shared with Dawn Wings Necrozma (necrozma2) due to assimilation
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["lunala", "necrozma2"] and getattr(self, 'lunala_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.lunala_cooldown = 72000 
-                self.current_state = 'lunala_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: MOONGEIST BEAM (LUNALA) ---
+            # Shared with Dawn Wings Necrozma (necrozma2) due to assimilation
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["lunala", "necrozma2"] and getattr(self, 'lunala_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.lunala_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'lunala_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
                 
-        # --- EXCLUSIVE MECHANIC: LAND'S WRATH / THOUSAND ARROWS (ZYGARDE 50%) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.zygarde_cooldown = 72000 # 1 hour
-                self.current_state = 'zygarde50_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: LAND'S WRATH / THOUSAND ARROWS (ZYGARDE 50%) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.zygarde_cooldown = self.get_legendary_cooldown(72000) # 1 hour
+                    self.current_state = 'zygarde50_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: THOUSAND ARROWS (ZYGARDE 10%) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde1" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.zygarde_cooldown = 72000 # 1 hour
-                self.current_state = 'zygarde_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: THOUSAND ARROWS (ZYGARDE 10%) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "zygarde1" and getattr(self, 'zygarde_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.zygarde_cooldown = self.get_legendary_cooldown(72000) # 1 hour
+                    self.current_state = 'zygarde_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: OBLIVION WING (YVELTAL) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "yveltal" and getattr(self, 'yveltal_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.yveltal_cooldown = 72000 # 1 hour
-                self.current_state = 'yveltal_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: OBLIVION WING (YVELTAL) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "yveltal" and getattr(self, 'yveltal_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.yveltal_cooldown = self.get_legendary_cooldown(72000) # 1 hour
+                    self.current_state = 'yveltal_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: XERNEAS' GEOMANCY ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "xerneas" and getattr(self, 'xerneas_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.xerneas_cooldown = 72000 # 1 hour
-                self.current_state = 'xerneas_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: XERNEAS' GEOMANCY ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "xerneas" and getattr(self, 'xerneas_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.xerneas_cooldown = self.get_legendary_cooldown(72000) # 1 hour
+                    self.current_state = 'xerneas_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: GLACIATE (KYUREM) ---
-        # Base Kyurem, White Kyurem (kyurem1) and Black Kyurem (kyurem2) share this core ability
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["kyurem", "kyurem1", "kyurem2"] and getattr(self, 'kyurem_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.kyurem_cooldown = 108000 
-                self.current_state = 'kyurem_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: GLACIATE (KYUREM) ---
+            # Base Kyurem, White Kyurem (kyurem1) and Black Kyurem (kyurem2) share this core ability
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["kyurem", "kyurem1", "kyurem2"] and getattr(self, 'kyurem_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.kyurem_cooldown = self.get_legendary_cooldown(108000) 
+                    self.current_state = 'kyurem_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: MAGMA STORM (HEATRAN) ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "heatran" and getattr(self, 'heatran_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.heatran_cooldown = 72000 
-                if self.y < self.default_floor_y - 15:
-                    self.current_state = 'heatran_jump_down'
-                    self.v_y_velocity = -10.0
-                else:
-                    self.current_state = 'heatran_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: MAGMA STORM (HEATRAN) ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "heatran" and getattr(self, 'heatran_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor' and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.heatran_cooldown = self.get_legendary_cooldown(72000) 
+                    if self.y < self.default_floor_y - 15:
+                        self.current_state = 'heatran_jump_down'
+                        self.v_y_velocity = -10.0
+                    else:
+                        self.current_state = 'heatran_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: BLUE FLARE (RESHIRAM) ---
-        # Shared with White Kyurem (kyurem1) due to assimilation
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["reshiram", "kyurem1"] and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.reshiram_cooldown = 72000 
-                self.current_state = 'reshiram_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: BLUE FLARE (RESHIRAM) ---
+            # Shared with White Kyurem (kyurem1) due to assimilation
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["reshiram", "kyurem1"] and getattr(self, 'reshiram_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.reshiram_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'reshiram_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: BOLT STRIKE (ZEKROM) ---
-        # Shared with Black Kyurem (kyurem2) due to assimilation
-        if self.pet_name.lower().replace("_", "").replace("-", "") in ["zekrom", "kyurem2"] and getattr(self, 'zekrom_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.zekrom_cooldown = 72000 
-                self.current_state = 'zekrom_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
+            # --- EXCLUSIVE MECHANIC: BOLT STRIKE (ZEKROM) ---
+            # Shared with Black Kyurem (kyurem2) due to assimilation
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ["zekrom", "kyurem2"] and getattr(self, 'zekrom_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.zekrom_cooldown = self.get_legendary_cooldown(72000) 
+                    self.current_state = 'zekrom_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
 
-        # --- EXCLUSIVE MECHANIC: GIRATINA'S DISTORTION VORTEX ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+            # --- EXCLUSIVE MECHANIC: GIRATINA'S DISTORTION VORTEX ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "giratina" and getattr(self, 'giratina_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not getattr(self, 'is_glitching', False) and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    if getattr(self, 'get_all_pets', None):
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'giratina_victim_pulled', 'giratina_victim_fade', 'giratina_victim_absorbed']
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
-                    if valid_targets:
-                        self.giratina_cooldown = 108000 # 1.5 hours
-                        self.current_state = 'giratina_channeling'
+                        if valid_targets:
+                            self.giratina_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                            self.current_state = 'giratina_channeling'
                         
-                        # --- ABSOLUTE CLEANUP OF PREVIOUS MECHANICS ---
-                        for target in valid_targets:
-                            # 1. Dark Arts
-                            if target.current_state.startswith('dark_'): 
-                                target.cancel_dark_arts()
+                            # --- ABSOLUTE CLEANUP OF PREVIOUS MECHANICS ---
+                            for target in valid_targets:
+                                # 1. Dark Arts
+                                if target.current_state.startswith('dark_'): 
+                                    target.cancel_dark_arts()
                                 
-                            # 2. Telekinesis (Auras and Master/Victim Links)
-                            elif target.current_state == 'tk_channeling':
-                                if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                                if getattr(target, 'tk_target', None):
-                                    t_targ = target.tk_target
-                                    if hasattr(target, 'manage_tk_aura'):
-                                        t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
-                                        t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
-                                        target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
-                                    if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
-                                    t_targ.current_state = 'falling'
-                                    if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
-                                target.tk_target = None
-                            elif target.current_state == 'tk_lifted':
-                                if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                                if getattr(target, 'tk_master', None):
-                                    target.tk_master.tk_target = None
-                                    if hasattr(target.tk_master, 'manage_tk_aura'): target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
-                                    target.tk_master.current_state = 'falling'
-                                target.tk_master = None
-                                
-                            # 3. Water Bubbles
-                            elif target.current_state == 'bubbled':
-                                if hasattr(target, 'manage_bubble_vfx'): target.manage_bubble_vfx(False)
-                                if hasattr(target, 'show_bubble_burst_vfx'): target.show_bubble_burst_vfx()
-                            
-                            # 4. FIX: Restore Canvas Base Coordinates for Digging
-                            elif target.current_state in ['digging_in', 'digging', 'digging_out']:
-                                target.canvas.itemconfig(target.canvas_image_id, state='normal')
-                                target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
-
-                            # 5. FIX: Stop Asynchronous Ghost Interference Thread (Glitch)
-                            if getattr(target, 'is_glitching', False):
-                                target.is_glitching = False
-                                target.has_genesect_glitch = False
-                                target.glitch_teleports_left = 0
-                                target.glitch_cooldown = 12000
-
-                            # 6. Disconnection of ongoing Legendary Channelers
-                            if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'):
-                                target.cancel_mewtwo_arts()
-                            elif target.current_state == 'burning':
-                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
-                            elif target.current_state == 'hooh_channeling' and hasattr(target, 'cancel_hooh_arts'):
-                                target.cancel_hooh_arts()
-                            elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'):
-                                target.cancel_lugia_arts()
-                            elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'):
-                                target.cancel_kyogre_arts()
-                            elif target.current_state == 'groudon_channeling' and hasattr(target, 'cancel_groudon_arts'):
-                                target.cancel_groudon_arts()
-                            elif target.current_state == 'rayquaza_channeling' and hasattr(target, 'cancel_rayquaza_arts'):
-                                target.cancel_rayquaza_arts()
-                            elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'):
-                                target.cancel_dialga_arts()
-                            elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'):
-                                target.cancel_palkia_arts()
-
-                            # 7. Final Visual Reset and Assignment
-                            target.canvas.itemconfig(target.canvas_image_id, state='normal')
-                            try: target.window.attributes('-alpha', 1.0)
-                            except: pass
-                                
-                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
-                            target.current_state = 'giratina_victim_pulled'
-                            target.giratina_master = self
-                            target.anchored_hwnd = None
-                        # ------------------------------------------------
-                            
-                        self.giratina_targets = valid_targets
-                        self.schedule_loop(50, self.physics_loop)
-                        return
-
-       # --- EXCLUSIVE MECHANIC: PALKIA'S GRAVITY INVERSION ---
-        if self.pet_name.lower() == "palkia" and getattr(self, 'palkia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.current_state = 'palkia_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
-
-       # --- EXCLUSIVE MECHANIC: RAYQUAZA'S EMERALD CYCLONE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
-                    
-                    if valid_targets:
-                        self.rayquaza_cooldown = 108000 # 1.5 hours
-                        self.current_state = 'rayquaza_channeling'
-                        self.rayquaza_phase = 0
-                        
-                        # FIX: Define number of back and forths and the initial sweep duration
-                        self.rayquaza_sweeps_total = random.randint(8, 10)
-                        self.rayquaza_sweeps_done = 0
-                        self.rayquaza_sweep_duration = 120 # Starts slow (~3.6s the first crossing)
-                        
-                        self.rayquaza_targets = valid_targets 
-                        self.schedule_loop(50, self.physics_loop)
-                        return
-
-        # --- EXCLUSIVE MECHANIC: LUGIA'S AEROBLAST GALE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                self.lugia_cooldown = 108000 # 1.5 hours
-                self.current_state = 'lugia_channeling'
-                self.is_facing_right = random.choice([True, False]) # Decide where it's going to sweep the screen
-                self.schedule_loop(50, self.physics_loop)
-                return
-
-        # --- EXCLUSIVE MECHANIC: MELMETAL'S MOLTEN ABSORB ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "melmetal" and self.melmetal_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.melmetal_cooldown = 72000 # 1 hour
-                self.current_state = 'melmetal_channeling'
-                if self.y < self.default_floor_y - 10:
-                    self.mel_phase = 'jumping_down'
-                    self.v_y_velocity = -10.0
-                else:
-                    self.mel_phase = 'absorbing'
-                    self.mel_timer = 150
-                self.mel_original_scale = getattr(self, 'scale_mod', 1.0)
-                if hasattr(self, 'animator'):
-                    self.animator.current_frame_index = 0
-                self.schedule_loop(50, self.physics_loop)
-                return
-
-        # --- EXCLUSIVE MECHANIC: GROUDON'S EARTHQUAKE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                self.groudon_cooldown = 108000 # 1.5 hours
-                self.current_state = 'groudon_channeling'
-                # LOGICAL FIX: Define randomness of repetitions (5 to 10) and the first propulsion
-                self.groudon_jumps_left = random.randint(5, 10) 
-                self.groudon_phase = 'jumping'
-                self.v_y_velocity = -28.0 
-                self.schedule_loop(50, self.physics_loop)
-                return
-
-        # --- EXCLUSIVE MECHANIC: KYOGRE'S DELUGE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
-                    
-                    if valid_targets:
-                        self.kyogre_cooldown = 108000 # 1.5 hours
-                        self.current_state = 'kyogre_channeling'
-                        self.kyogre_phase = 0
-                        self.kyogre_timer = 666 # exactly 20 seconds
-                        self.kyogre_targets = valid_targets 
-                        self.schedule_loop(50, self.physics_loop)
-                        return
-
-
-        # --- EXCLUSIVE MECHANIC: DIALGA'S TIME DISTORTION ---
-        if self.pet_name.lower() == "dialga" and getattr(self, 'dialga_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8:
-                self.current_state = 'dialga_channeling'
-                self.schedule_loop(50, self.physics_loop)
-                return
-            
-        # --- EXCLUSIVE MECHANIC: HO-OH'S SACRED FIRE ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                if getattr(self, 'get_all_pets', None):
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
-                    
-                    if valid_targets:
-                        self.hooh_cooldown = 108000 
-                        self.current_state = 'hooh_channeling'
-                        self.hooh_phase = 0
-                        self.hooh_timer = 666 
-                        
-                        # FIX: We only keep the targets in memory, but DO NOT interrupt them yet.
-                        # They will continue their normal life during the preparation flight.
-                        self.hooh_targets = valid_targets 
-                        
-                        self.schedule_loop(50, self.physics_loop)
-                        return
-
-        # --- EXCLUSIVE MECHANIC: MEWTWO'S PSYCHIC VORTEX ---
-        if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
-            if random.randint(1, 1000) <= 8: 
-                if getattr(self, 'get_all_pets', None):
-                    
-                    # FIX: Exclude critical transition states (spawns and evolutions) to avoid parallel loops
-                    excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
-                    
-                    if valid_targets:
-                        self.mewtwo_cooldown = 108000 # 1.5 hours
-                        self.current_state = 'mewtwo_channeling'
-                        self.mewtwo_timer = 0
-                        self.mewtwo_targets = valid_targets
-                        self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
-                        
-                        for i, target in enumerate(valid_targets):
-                            
-                            # STRUCTURAL FIX: Exhaustive cleanup of links from other mechanics to prevent victims from escaping
-                            if target.current_state.startswith('dark_'):
-                                target.cancel_dark_arts()
-                                
-                            elif target.current_state == 'tk_channeling':
-                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                                if getattr(target, 'tk_target', None):
-                                    if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
-                                        
-                                        # FIX: Force particle cleanup of the floating object/victim
+                                # 2. Telekinesis (Auras and Master/Victim Links)
+                                elif target.current_state == 'tk_channeling':
+                                    if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_target', None):
                                         t_targ = target.tk_target
-                                        t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
-                                        t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
-                                        target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
-                                        
+                                        if hasattr(target, 'manage_tk_aura'):
+                                            t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
                                         if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
                                         t_targ.current_state = 'falling'
-                                        if hasattr(t_targ, 'tk_master'):
-                                            t_targ.tk_master = None
-                                target.tk_target = None
+                                        if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
+                                    target.tk_target = None
+                                elif target.current_state == 'tk_lifted':
+                                    if hasattr(target, 'manage_tk_aura'): target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_master', None):
+                                        target.tk_master.tk_target = None
+                                        if hasattr(target.tk_master, 'manage_tk_aura'): target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                        target.tk_master.current_state = 'falling'
+                                    target.tk_master = None
                                 
-                            elif target.current_state == 'tk_lifted':
-                                target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
-                                if getattr(target, 'tk_master', None):
-                                    target.tk_master.tk_target = None
-                                    target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
-                                    target.tk_master.current_state = 'falling'
-                                target.tk_master = None
-                                
-                            elif target.current_state == 'bubbled':
-                                target.manage_bubble_vfx(False)
-                                target.show_bubble_burst_vfx()
-                                
-                            # FIX: Cancel Ghosts' Glitch
-                            if getattr(target, 'is_glitching', False):
-                                target.is_glitching = False
-                                target.has_genesect_glitch = False
-                                target.glitch_teleports_left = 0
-                                target.glitch_cooldown = 12000
-                                
-                            # Visual render cleanup
-                            target.canvas.itemconfig(target.canvas_image_id, state='normal')
-                            target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
-                            try: target.window.attributes('-alpha', 1.0)
-                            except: pass
+                                # 3. Water Bubbles
+                                elif target.current_state == 'bubbled':
+                                    if hasattr(target, 'manage_bubble_vfx'): target.manage_bubble_vfx(False)
+                                    if hasattr(target, 'show_bubble_burst_vfx'): target.show_bubble_burst_vfx()
                             
-                            # Finally, the orbital abduction
-                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
-                            target.current_state = 'mewtwo_victim'
-                            target.mewtwo_master = self
-                            target.mewtwo_orbit_offset = (i * (2 * math.pi / len(valid_targets))) 
-                            target.mewtwo_activation_tick = i * 33 
-                            target.anchored_hwnd = None 
+                                # 4. FIX: Restore Canvas Base Coordinates for Digging
+                                elif target.current_state in ['digging_in', 'digging', 'digging_out']:
+                                    target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                                    target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+
+                                # 5. FIX: Stop Asynchronous Ghost Interference Thread (Glitch)
+                                if getattr(target, 'is_glitching', False):
+                                    target.is_glitching = False
+                                    target.has_genesect_glitch = False
+                                    target.glitch_teleports_left = 0
+                                    target.glitch_cooldown = 12000
+
+                                # 6. Disconnection of ongoing Legendary Channelers
+                                if target.current_state.startswith('mewtwo_') and hasattr(target, 'cancel_mewtwo_arts'):
+                                    target.cancel_mewtwo_arts()
+                                elif target.current_state == 'burning':
+                                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                                elif target.current_state == 'hooh_channeling' and hasattr(target, 'cancel_hooh_arts'):
+                                    target.cancel_hooh_arts()
+                                elif target.current_state in ['lugia_channeling', 'lugia_dash'] and hasattr(target, 'cancel_lugia_arts'):
+                                    target.cancel_lugia_arts()
+                                elif target.current_state == 'kyogre_channeling' and hasattr(target, 'cancel_kyogre_arts'):
+                                    target.cancel_kyogre_arts()
+                                elif target.current_state == 'groudon_channeling' and hasattr(target, 'cancel_groudon_arts'):
+                                    target.cancel_groudon_arts()
+                                elif target.current_state == 'rayquaza_channeling' and hasattr(target, 'cancel_rayquaza_arts'):
+                                    target.cancel_rayquaza_arts()
+                                elif target.current_state == 'dialga_channeling' and hasattr(target, 'cancel_dialga_arts'):
+                                    target.cancel_dialga_arts()
+                                elif target.current_state == 'palkia_channeling' and hasattr(target, 'cancel_palkia_arts'):
+                                    target.cancel_palkia_arts()
+
+                                # 7. Final Visual Reset and Assignment
+                                target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                                try: target.window.attributes('-alpha', 1.0)
+                                except: pass
+                                
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                                target.current_state = 'giratina_victim_pulled'
+                                target.giratina_master = self
+                                target.anchored_hwnd = None
+                            # ------------------------------------------------
                             
-                        self.schedule_loop(50, self.physics_loop)
-                        return
+                            self.giratina_targets = valid_targets
+                            self.schedule_loop(50, self.physics_loop)
+                            return
+
+           # --- EXCLUSIVE MECHANIC: PALKIA'S GRAVITY INVERSION ---
+            if self.pet_name.lower() == "palkia" and getattr(self, 'palkia_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.current_state = 'palkia_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+
+           # --- EXCLUSIVE MECHANIC: RAYQUAZA'S EMERALD CYCLONE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    if getattr(self, 'get_all_pets', None):
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
-        # --- MECHANIC: FAIRY TYPE PACIFICATION ---
-        if hasattr(self, 'check_fairy_mechanic'):
-            if self.check_fairy_mechanic(): return
+                        if valid_targets:
+                            self.rayquaza_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                            self.current_state = 'rayquaza_channeling'
+                            self.rayquaza_phase = 0
+                        
+                            # FIX: Define number of back and forths and the initial sweep duration
+                            self.rayquaza_sweeps_total = random.randint(8, 10)
+                            self.rayquaza_sweeps_done = 0
+                            self.rayquaza_sweep_duration = 120 # Starts slow (~3.6s the first crossing)
+                        
+                            self.rayquaza_targets = valid_targets 
+                            self.schedule_loop(50, self.physics_loop)
+                            return
+
+            # --- EXCLUSIVE MECHANIC: LUGIA'S AEROBLAST GALE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "lugia" and self.lugia_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    self.lugia_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                    self.current_state = 'lugia_channeling'
+                    self.is_facing_right = random.choice([True, False]) # Decide where it's going to sweep the screen
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+
+            # --- EXCLUSIVE MECHANIC: MELMETAL'S MOLTEN ABSORB ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "melmetal" and self.melmetal_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.melmetal_cooldown = self.get_legendary_cooldown(72000) # 1 hour
+                    self.current_state = 'melmetal_channeling'
+                    if self.y < self.default_floor_y - 10:
+                        self.mel_phase = 'jumping_down'
+                        self.v_y_velocity = -10.0
+                    else:
+                        self.mel_phase = 'absorbing'
+                        self.mel_timer = 150
+                    self.mel_original_scale = getattr(self, 'scale_mod', 1.0)
+                    if hasattr(self, 'animator'):
+                        self.animator.current_frame_index = 0
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+
+            # --- EXCLUSIVE MECHANIC: GROUDON'S EARTHQUAKE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "groudon" and self.groudon_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    self.groudon_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                    self.current_state = 'groudon_channeling'
+                    # LOGICAL FIX: Define randomness of repetitions (5 to 10) and the first propulsion
+                    self.groudon_jumps_left = random.randint(5, 10) 
+                    self.groudon_phase = 'jumping'
+                    self.v_y_velocity = -28.0 
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+
+            # --- EXCLUSIVE MECHANIC: KYOGRE'S DELUGE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "kyogre" and self.kyogre_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    if getattr(self, 'get_all_pets', None):
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                        if valid_targets:
+                            self.kyogre_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                            self.current_state = 'kyogre_channeling'
+                            self.kyogre_phase = 0
+                            self.kyogre_timer = 666 # exactly 20 seconds
+                            self.kyogre_targets = valid_targets 
+                            self.schedule_loop(50, self.physics_loop)
+                            return
+
+
+            # --- EXCLUSIVE MECHANIC: DIALGA'S TIME DISTORTION ---
+            if self.pet_name.lower() == "dialga" and getattr(self, 'dialga_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8:
+                    self.current_state = 'dialga_channeling'
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+            
+            # --- EXCLUSIVE MECHANIC: HO-OH'S SACRED FIRE ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    if getattr(self, 'get_all_pets', None):
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                        if valid_targets:
+                            self.hooh_cooldown = self.get_legendary_cooldown(108000) 
+                            self.current_state = 'hooh_channeling'
+                            self.hooh_phase = 0
+                            self.hooh_timer = 666 
+                        
+                            # FIX: We only keep the targets in memory, but DO NOT interrupt them yet.
+                            # They will continue their normal life during the preparation flight.
+                            self.hooh_targets = valid_targets 
+                        
+                            self.schedule_loop(50, self.physics_loop)
+                            return
+
+            # --- EXCLUSIVE MECHANIC: MEWTWO'S PSYCHIC VORTEX ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") == "mewtwo" and self.mewtwo_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8: 
+                    if getattr(self, 'get_all_pets', None):
+                    
+                        # FIX: Exclude critical transition states (spawns and evolutions) to avoid parallel loops
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
+                    
+                        if valid_targets:
+                            self.mewtwo_cooldown = self.get_legendary_cooldown(108000) # 1.5 hours
+                            self.current_state = 'mewtwo_channeling'
+                            self.mewtwo_timer = 0
+                            self.mewtwo_targets = valid_targets
+                            self.manage_tk_aura(self.canvas, self.size_w, self.size_h, True)
+                        
+                            for i, target in enumerate(valid_targets):
+                            
+                                # STRUCTURAL FIX: Exhaustive cleanup of links from other mechanics to prevent victims from escaping
+                                if target.current_state.startswith('dark_'):
+                                    target.cancel_dark_arts()
+                                
+                                elif target.current_state == 'tk_channeling':
+                                    target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_target', None):
+                                        if getattr(target.tk_target, 'current_state', '') in ['tk_controlled', 'tk_lifted']:
+                                        
+                                            # FIX: Force particle cleanup of the floating object/victim
+                                            t_targ = target.tk_target
+                                            t_w = t_targ.size_w if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            t_h = t_targ.size_h if t_targ.__class__.__name__ == 'DesktopPet' else t_targ.size
+                                            target.manage_tk_aura(t_targ.canvas, t_w, t_h, False)
+                                        
+                                            if hasattr(t_targ, 'interrupt_current_state'): t_targ.interrupt_current_state()
+                                            t_targ.current_state = 'falling'
+                                            if hasattr(t_targ, 'tk_master'):
+                                                t_targ.tk_master = None
+                                    target.tk_target = None
+                                
+                                elif target.current_state == 'tk_lifted':
+                                    target.manage_tk_aura(target.canvas, target.size_w, target.size_h, False)
+                                    if getattr(target, 'tk_master', None):
+                                        target.tk_master.tk_target = None
+                                        target.tk_master.manage_tk_aura(target.tk_master.canvas, target.tk_master.size_w, target.tk_master.size_h, False)
+                                        target.tk_master.current_state = 'falling'
+                                    target.tk_master = None
+                                
+                                elif target.current_state == 'bubbled':
+                                    target.manage_bubble_vfx(False)
+                                    target.show_bubble_burst_vfx()
+                                
+                                # FIX: Cancel Ghosts' Glitch
+                                if getattr(target, 'is_glitching', False):
+                                    target.is_glitching = False
+                                    target.has_genesect_glitch = False
+                                    target.glitch_teleports_left = 0
+                                    target.glitch_cooldown = 12000
+                                
+                                # Visual render cleanup
+                                target.canvas.itemconfig(target.canvas_image_id, state='normal')
+                                target.canvas.coords(target.canvas_image_id, target.size_w//2, target.size_h//2)
+                                try: target.window.attributes('-alpha', 1.0)
+                                except: pass
+                            
+                                # Finally, the orbital abduction
+                                if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                                target.current_state = 'mewtwo_victim'
+                                target.mewtwo_master = self
+                                target.mewtwo_orbit_offset = (i * (2 * math.pi / len(valid_targets))) 
+                                target.mewtwo_activation_tick = i * 33 
+                                target.anchored_hwnd = None 
+                            
+                            self.schedule_loop(50, self.physics_loop)
+                            return
+                    
+            # --- MECHANIC: FAIRY TYPE PACIFICATION ---
+            if hasattr(self, 'check_fairy_mechanic'):
+                if self.check_fairy_mechanic(): return
             
         
-        if getattr(self, 'fire_type', False) and hasattr(self, 'check_fire_mechanic'): self.check_fire_mechanic()
-        if getattr(self, 'ice_type', False) and hasattr(self, 'check_ice_mechanic'): self.check_ice_mechanic()
-        if getattr(self, 'electric_type', False) and hasattr(self, 'check_electric_mechanic'): self.check_electric_mechanic()
-        if getattr(self, 'flying_type', False) and hasattr(self, 'check_flying_mechanic'): self.check_flying_mechanic()
-        if getattr(self, 'dragon_type', False) and hasattr(self, 'check_dragon_mechanic'): self.check_dragon_mechanic()
-        if getattr(self, 'bug_type', False) and hasattr(self, 'check_bug_mechanic'): self.check_bug_mechanic()
-        if getattr(self, 'grass_type', False) and hasattr(self, 'check_grass_mechanic'): self.check_grass_mechanic()
-        if getattr(self, 'poison_type', False) and hasattr(self, 'check_poison_mechanic'): self.check_poison_mechanic()
-        if getattr(self, 'normal_type', False) and hasattr(self, 'check_normal_mechanic'): self.check_normal_mechanic()
-        if getattr(self, 'rock_type', False) and hasattr(self, 'check_rock_mechanic'): self.check_rock_mechanic()
-        if getattr(self, 'steel_type', False) and hasattr(self, 'check_steel_mechanic'): self.check_steel_mechanic()
+            if getattr(self, 'fire_type', False) and hasattr(self, 'check_fire_mechanic'): self.check_fire_mechanic()
+            if getattr(self, 'ice_type', False) and hasattr(self, 'check_ice_mechanic'): self.check_ice_mechanic()
+            if getattr(self, 'electric_type', False) and hasattr(self, 'check_electric_mechanic'): self.check_electric_mechanic()
+            if getattr(self, 'flying_type', False) and hasattr(self, 'check_flying_mechanic'): self.check_flying_mechanic()
+            if getattr(self, 'dragon_type', False) and hasattr(self, 'check_dragon_mechanic'): self.check_dragon_mechanic()
+            if getattr(self, 'bug_type', False) and hasattr(self, 'check_bug_mechanic'): self.check_bug_mechanic()
+            if getattr(self, 'grass_type', False) and hasattr(self, 'check_grass_mechanic'): self.check_grass_mechanic()
+            if getattr(self, 'poison_type', False) and hasattr(self, 'check_poison_mechanic'): self.check_poison_mechanic()
+            if getattr(self, 'normal_type', False) and hasattr(self, 'check_normal_mechanic'): self.check_normal_mechanic()
+            if getattr(self, 'rock_type', False) and hasattr(self, 'check_rock_mechanic'): self.check_rock_mechanic()
+            if getattr(self, 'steel_type', False) and hasattr(self, 'check_steel_mechanic'): self.check_steel_mechanic()
 
-        # --- MECHANIC: DARK TYPE AMBUSH ---
-        if getattr(self, 'dark_type', False) and getattr(self, 'dark_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
-              if random.randint(1, 100) <= 10: 
-                if getattr(self, 'get_all_pets', None):
-                    # FIX: Inject strict height restriction "abs(p.y - self.y) < 80"
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and getattr(p, 'climbing_surface', 'floor') == 'floor' and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500 and abs(p.y - self.y) < 80]
-                    if valid_targets:
-                        target = random.choice(valid_targets)
+            # --- MECHANIC: DARK TYPE AMBUSH ---
+            if getattr(self, 'dark_type', False) and getattr(self, 'dark_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                  if random.randint(1, 100) <= 10: 
+                    if getattr(self, 'get_all_pets', None):
+                        # FIX: Inject strict height restriction "abs(p.y - self.y) < 80"
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and getattr(p, 'climbing_surface', 'floor') == 'floor' and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500 and abs(p.y - self.y) < 80]
+                        if valid_targets:
+                            target = random.choice(valid_targets)
  
-                        self.dark_cooldown = 18000
-                        self.current_state = 'dark_dash'
-                        self.dark_target = target
-                        self.dark_mode = True
-                        try: self.window.attributes('-alpha', 0.7)
-                        except: pass
+                            self.dark_cooldown = self.get_type_cooldown(18000)
+                            self.current_state = 'dark_dash'
+                            self.dark_target = target
+                            self.dark_mode = True
+                            try: self.window.attributes('-alpha', 0.7)
+                            except: pass
                         
-                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
-                        target.current_state = 'dark_victim_frozen'
-                        target.dark_master = self
+                            if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                            target.current_state = 'dark_victim_frozen'
+                            target.dark_master = self
                         
-                        self.schedule_loop(50, self.physics_loop)
-                        return
+                            self.schedule_loop(50, self.physics_loop)
+                            return
 
-        # --- MECHANIC: GROUND TYPE DIG ---
-        if getattr(self, 'ground_type', False) and getattr(self, 'ground_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
-              if random.randint(1, 100) <= 10: 
-                self.ground_cooldown = 18000
-                self.current_state = 'digging_in'
-                self.dig_step = 0
-                self.dig_timer = random.randint(200, 400) # Time underground
+            # --- MECHANIC: GROUND TYPE DIG ---
+            if getattr(self, 'ground_type', False) and getattr(self, 'ground_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                  if random.randint(1, 100) <= 10: 
+                    self.ground_cooldown = self.get_type_cooldown(18000)
+                    self.current_state = 'digging_in'
+                    self.dig_step = 0
+                    self.dig_timer = random.randint(200, 400) # Time underground
 
-                self.schedule_loop(50, self.physics_loop)
-                return
-        
-        # --- MECHANIC: WATER BUBBLE ---
-        if getattr(self, 'water_type', False) and getattr(self, 'water_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
-              if random.randint(1, 100) <= 10: 
-                if getattr(self, 'get_all_pets', None):
-                    # FIX: Greatly reduced range (150px horizontal, 60px vertical)
-                    valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 150 and abs(p.y - self.y) < 60]
-                    if valid_targets:
-                        target = random.choice(valid_targets)
- 
-                        
-                        # We fire the animated projectile from our geometric center
-                        self.water_cooldown = 18000
-                        def on_bubble_hit(hit_target):
-                            # STRUCTURAL FIX: Prevent FSM corruption if the bubble hits a Dark type
-                            if getattr(hit_target, 'current_state', '').startswith('dark_'):
-                                hit_target.cancel_dark_arts()
-                            elif getattr(hit_target, 'current_state', '').startswith('mewtwo_'):
-                                hit_target.cancel_mewtwo_arts()
-                            elif getattr(hit_target, 'current_state', '') == 'burning':
-                                if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
-                            elif getattr(hit_target, 'current_state', '') == 'hooh_channeling':
-                                hit_target.cancel_hooh_arts()
-                            elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']:
-                                hit_target.cancel_lugia_arts()
-                                
-                            if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
-                            hit_target.current_state = 'bubbled'
-                            hit_target.bubble_max_time = random.randint(130, 200) 
-                            hit_target.bubble_timer = hit_target.bubble_max_time
-                            hit_target.anchored_hwnd = None
-                        
-                        BubbleProjectile(self.window.master, self.base_dir, self.x + self.size_w/2, self.y + self.size_h/2, target, on_bubble_hit)
-                        
-                        # The Pokemon throwing the bubble makes a small summoning jump
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 4.0 if getattr(self, 'gravity_inverted', False) else -4.0
-                        self.schedule_loop(50, self.physics_loop)
-                        return
-
-        # --- INTERFERENCE PHASE FOR GHOSTS (SCREEN WRAP) ---
-        if getattr(self, 'ghost_type', False) and getattr(self, 'ghost_cooldown', 0) == 0 and not getattr(self, 'is_glitching', False):
-              if random.randint(1, 100) <= 10: # Approx 1% probability
-                self.ghost_cooldown = 18000
-                self.is_glitching = True
-                self.glitch_teleports_left = random.randint(4, 10) # Number of chaotic teleports
-                try: self.window.attributes('-alpha', 0.5) # Lowers opacity to 50%
-                except: pass
-                self.schedule_glitch_teleport()
-        
-        if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
-              if random.randint(1, 100) <= 10: # Probability of activating powers
-                target = None
-                if self.game_controller:
-                    # 1. Prioritize attracting Berries (Range of 400 -> 800)
-                    for b in getattr(self.game_controller, 'active_berries', []):
-                        if b.current_state not in ['exiting', 'tk_controlled'] and abs(b.x - self.x) < 800:
-                            target = b; break
-                    # 2. If there are no berries, look for the Toy (Range of 400 -> 800)
-                    if not target and getattr(self.game_controller, 'active_toy', None):
-                        t = self.game_controller.active_toy
-                        if t.current_state not in ['exiting', 'tk_controlled'] and abs(t.x - self.x) < 800:
-                            target = t
-                # 3. If there are no objects, lift another nearby Pokemon (Range of 250 -> 500)
-                if not target and getattr(self, 'get_all_pets', None):
-                    valid_pets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500]
-                    if valid_pets: target = random.choice(valid_pets)
-                    
-                if target:
-                    self.current_state = 'tk_channeling'
-                    self.tk_target = target
-                    self.tk_timer = random.randint(100, 166) # Levitate for 3-5 seconds
-                    
-                    self.tk_orbit_started = False # FIX: Forces orbital phase reset
-                    
-                    target.tk_master = self
-                    if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
-                    target.current_state = 'tk_controlled' if target.__class__.__name__ != 'DesktopPet' else 'tk_lifted'
-                    if target.__class__.__name__ == 'DesktopPet':
-                        target.anchored_hwnd = None
-                        
-                    self.schedule_loop(50, self.physics_loop) 
+                    self.schedule_loop(50, self.physics_loop)
                     return
         
-        if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
-              if random.randint(1, 100) <= 10:
-                self.psychic_cooldown = 18000
-                self.current_state = 'teleporting_out'
-                self.teleport_step = 1.0
-
-                self.schedule_loop(50, self.physics_loop)
-                return
-
-        current_env, ahead_env = self.get_window_environment()
-        ahead_physical_floor = ahead_env['y'] if type(ahead_env) is dict else ahead_env
-        
-        is_climber = getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False)
-        if is_climber:
-            self.is_climbing = True
-
-        if not getattr(self, 'is_flying', False):
-            if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
-                if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                    if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
-                        self.anchored_hwnd = current_env['hwnd']
-                        self.anchored_rect = current_env['rect']
-            else:
-                if not is_climber:
-                    self.anchored_hwnd = None
-
-            if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
-                if getattr(self, 'gravity_inverted', False):
-                    # Inverted floor = Bottom edge of the window
-                    current_physical_floor = self.anchored_rect[3] + getattr(self, 'offset_y', 0)
-                else:
-                    current_physical_floor = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
-            elif (self.y >= current_env['y'] - 15) if getattr(self, 'gravity_inverted', False) else (self.y <= current_env['y'] + 15):
-                current_physical_floor = current_env['y']
-            else:
-                current_physical_floor = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
-
-            self.floor_y = current_physical_floor
-
-            if not is_climber:
-                if getattr(self, 'gravity_inverted', False):
-                    if self.current_state in ['idle', 'walking'] and self.y > self.floor_y + 15:
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0  
+            # --- MECHANIC: WATER BUBBLE ---
+            if getattr(self, 'water_type', False) and getattr(self, 'water_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+                  if random.randint(1, 100) <= 10: 
+                    if getattr(self, 'get_all_pets', None):
+                        # FIX: Greatly reduced range (150px horizontal, 60px vertical)
+                        valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 150 and abs(p.y - self.y) < 60]
+                        if valid_targets:
+                            target = random.choice(valid_targets)
+ 
                         
-                    elif self.current_state == 'walking' and ahead_physical_floor is not None:
-                        h = ahead_physical_floor - self.y
-                        if 30 < h < 750 and self.jump_cooldown == 0: 
-                            if random.randint(1, 1000) <= 30: 
-                                self.current_state = 'jumping_arc'
-                                self.jump_target_y = ahead_physical_floor
-                                self.v_y_velocity = math.sqrt(2 * 1.5 * (h + 30))
-                                self.jump_cooldown = 400
-
-                    elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
-                        if random.randint(1, 1000) <= 5: 
+                            # We fire the animated projectile from our geometric center
+                            self.water_cooldown = self.get_type_cooldown(18000)
+                            def on_bubble_hit(hit_target):
+                                # STRUCTURAL FIX: Prevent FSM corruption if the bubble hits a Dark type
+                                if getattr(hit_target, 'current_state', '').startswith('dark_'):
+                                    hit_target.cancel_dark_arts()
+                                elif getattr(hit_target, 'current_state', '').startswith('mewtwo_'):
+                                    hit_target.cancel_mewtwo_arts()
+                                elif getattr(hit_target, 'current_state', '') == 'burning':
+                                    if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
+                                elif getattr(hit_target, 'current_state', '') == 'hooh_channeling':
+                                    hit_target.cancel_hooh_arts()
+                                elif getattr(hit_target, 'current_state', '') in ['lugia_channeling', 'lugia_dash']:
+                                    hit_target.cancel_lugia_arts()
+                                
+                                if hasattr(hit_target, 'interrupt_current_state'): hit_target.interrupt_current_state()
+                                hit_target.current_state = 'bubbled'
+                                hit_target.bubble_max_time = random.randint(130, 200) 
+                                hit_target.bubble_timer = hit_target.bubble_max_time
+                                hit_target.anchored_hwnd = None
+                        
+                            BubbleProjectile(self.window.master, self.base_dir, self.x + self.size_w/2, self.y + self.size_h/2, target, on_bubble_hit)
+                        
+                            # The Pokemon throwing the bubble makes a small summoning jump
                             self.current_state = 'jumping_arc'
-                            self.jump_target_y = self.v_y
-                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0 
-                            self.jump_cooldown = 400
-                            self.anchored_hwnd = None
-                            self.anchored_rect = None
-                else:
-                    if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0  
-                        
-                    elif self.current_state == 'walking' and ahead_physical_floor is not None:
-                        h = self.y - ahead_physical_floor
-                        if 30 < h < 750 and self.jump_cooldown == 0: 
-                            if random.randint(1, 1000) <= 30: 
-                                self.current_state = 'jumping_arc'
-                                self.jump_target_y = ahead_physical_floor
-                                self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
-                                self.jump_cooldown = 400
+                            self.jump_target_y = self.floor_y
+                            self.v_y_velocity = 4.0 if getattr(self, 'gravity_inverted', False) else -4.0
+                            self.schedule_loop(50, self.physics_loop)
+                            return
 
-                    elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
-                        if random.randint(1, 1000) <= 5: 
+            # --- INTERFERENCE PHASE FOR GHOSTS (SCREEN WRAP) ---
+            if getattr(self, 'ghost_type', False) and getattr(self, 'ghost_cooldown', 0) == 0 and not getattr(self, 'is_glitching', False):
+                  if random.randint(1, 100) <= 10: # Approx 1% probability
+                    self.ghost_cooldown = self.get_type_cooldown(18000)
+                    self.is_glitching = True
+                    self.glitch_teleports_left = random.randint(4, 10) # Number of chaotic teleports
+                    try: self.window.attributes('-alpha', 0.5) # Lowers opacity to 50%
+                    except: pass
+                    self.schedule_glitch_teleport()
+        
+            if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+                  if random.randint(1, 100) <= 10: # Probability of activating powers
+                    target = None
+                    if self.game_controller:
+                        # 1. Prioritize attracting Berries (Range of 400 -> 800)
+                        for b in getattr(self.game_controller, 'active_berries', []):
+                            if b.current_state not in ['exiting', 'tk_controlled'] and abs(b.x - self.x) < 800:
+                                target = b; break
+                        # 2. If there are no berries, look for the Toy (Range of 400 -> 800)
+                        if not target and getattr(self.game_controller, 'active_toy', None):
+                            t = self.game_controller.active_toy
+                            if t.current_state not in ['exiting', 'tk_controlled'] and abs(t.x - self.x) < 800:
+                                target = t
+                    # 3. If there are no objects, lift another nearby Pokemon (Range of 250 -> 500)
+                    if not target and getattr(self, 'get_all_pets', None):
+                        valid_pets = [p for p in self.get_all_pets() if p != self and p.current_state in ['idle', 'walking'] and not getattr(p, 'is_egg', False) and abs(p.x - self.x) < 500]
+                        if valid_pets: target = random.choice(valid_pets)
+                    
+                    if target:
+                        self.current_state = 'tk_channeling'
+                        self.tk_target = target
+                        self.tk_timer = random.randint(100, 166) # Levitate for 3-5 seconds
+                    
+                        self.tk_orbit_started = False # FIX: Forces orbital phase reset
+                    
+                        target.tk_master = self
+                        if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
+                        target.current_state = 'tk_controlled' if target.__class__.__name__ != 'DesktopPet' else 'tk_lifted'
+                        if target.__class__.__name__ == 'DesktopPet':
+                            target.anchored_hwnd = None
+                        
+                        self.schedule_loop(50, self.physics_loop) 
+                        return
+        
+            if getattr(self, 'psychic_type', False) and getattr(self, 'psychic_cooldown', 0) == 0 and self.current_state in ['idle', 'walking']:
+                  if random.randint(1, 100) <= 10:
+                    self.psychic_cooldown = self.get_type_cooldown(18000)
+                    self.current_state = 'teleporting_out'
+                    self.teleport_step = 1.0
+
+                    self.schedule_loop(50, self.physics_loop)
+                    return
+
+            current_env, ahead_env = self.get_window_environment()
+            ahead_physical_floor = ahead_env['y'] if type(ahead_env) is dict else ahead_env
+        
+            is_climber = getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False)
+            if is_climber:
+                self.is_climbing = True
+
+            if not getattr(self, 'is_flying', False):
+                if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
+                    if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                        if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
+                            self.anchored_hwnd = current_env['hwnd']
+                            self.anchored_rect = current_env['rect']
+                else:
+                    if not is_climber:
+                        self.anchored_hwnd = None
+
+                if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    if getattr(self, 'gravity_inverted', False):
+                        # Inverted floor = Bottom edge of the window
+                        current_physical_floor = self.anchored_rect[3] + getattr(self, 'offset_y', 0)
+                    else:
+                        current_physical_floor = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
+                elif (self.y >= current_env['y'] - 15) if getattr(self, 'gravity_inverted', False) else (self.y <= current_env['y'] + 15):
+                    current_physical_floor = current_env['y']
+                else:
+                    current_physical_floor = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
+
+                self.floor_y = current_physical_floor
+
+                if not is_climber:
+                    if getattr(self, 'gravity_inverted', False):
+                        if self.current_state in ['idle', 'walking'] and self.y > self.floor_y + 15:
+                            self.current_state = 'jumping_arc'
+                            self.jump_target_y = self.floor_y
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0  
+                        
+                        elif self.current_state == 'walking' and ahead_physical_floor is not None:
+                            h = ahead_physical_floor - self.y
+                            if 30 < h < 750 and self.jump_cooldown == 0: 
+                                if random.randint(1, 1000) <= 30: 
+                                    self.current_state = 'jumping_arc'
+                                    self.jump_target_y = ahead_physical_floor
+                                    self.v_y_velocity = math.sqrt(2 * 1.5 * (h + 30))
+                                    self.jump_cooldown = 400
+
+                        elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
+                            if random.randint(1, 1000) <= 5: 
+                                self.current_state = 'jumping_arc'
+                                self.jump_target_y = self.v_y
+                                self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0 
+                                self.jump_cooldown = 400
+                                self.anchored_hwnd = None
+                                self.anchored_rect = None
+                    else:
+                        if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
+                            self.current_state = 'jumping_arc'
+                            self.jump_target_y = self.floor_y
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0  
+                        
+                        elif self.current_state == 'walking' and ahead_physical_floor is not None:
+                            h = self.y - ahead_physical_floor
+                            if 30 < h < 750 and self.jump_cooldown == 0: 
+                                if random.randint(1, 1000) <= 30: 
+                                    self.current_state = 'jumping_arc'
+                                    self.jump_target_y = ahead_physical_floor
+                                    self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
+                                    self.jump_cooldown = 400
+
+                        elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
+                            if random.randint(1, 1000) <= 5: 
+                                self.current_state = 'jumping_arc'
+                                self.jump_target_y = self.default_floor_y
+                                self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0 
+                                self.jump_cooldown = 400
+                                self.anchored_hwnd = None
+                                self.anchored_rect = None
+
+                else:
+                    win_offset = 6 
+                    wall_offset = getattr(self, 'climb_offset_x', 0)
+                    ceil_offset = getattr(self, 'climb_offset_y', 0)
+
+                    if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
+                        if not getattr(self, 'anchored_hwnd', None):
                             self.current_state = 'jumping_arc'
                             self.jump_target_y = self.default_floor_y
-                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0 
-                            self.jump_cooldown = 400
-                            self.anchored_hwnd = None
-                            self.anchored_rect = None
+                            self.v_y_velocity = 0.0
+                            self.climbing_surface = 'floor'
+                            self.surface_angle = 0
+                            self.jump_cooldown = 60
+                    elif getattr(self, 'climbing_surface', 'floor') == 'floor':
+                        if not getattr(self, 'anchored_hwnd', None) and self.y < self.floor_y - 15:
+                            self.current_state = 'jumping_arc'
+                            self.jump_target_y = self.floor_y
+                            self.v_y_velocity = 0.0
+                            self.jump_cooldown = 60
 
-            else:
-                win_offset = 6 
-                wall_offset = getattr(self, 'climb_offset_x', 0)
-                ceil_offset = getattr(self, 'climb_offset_y', 0)
-
-                if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
                     if not getattr(self, 'anchored_hwnd', None):
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.default_floor_y
-                        self.v_y_velocity = 0.0
-                        self.climbing_surface = 'floor'
-                        self.surface_angle = 0
-                        self.jump_cooldown = 60
-                elif getattr(self, 'climbing_surface', 'floor') == 'floor':
-                    if not getattr(self, 'anchored_hwnd', None) and self.y < self.floor_y - 15:
-                        self.current_state = 'jumping_arc'
-                        self.jump_target_y = self.floor_y
-                        self.v_y_velocity = 0.0
-                        self.jump_cooldown = 60
+                        if self.climbing_surface == 'screen_l':
+                            self.x = self.v_x + wall_offset
+                            self.surface_angle = 270
+                        elif self.climbing_surface == 'screen_r':
+                            self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                            self.surface_angle = 90
+                        elif self.climbing_surface == 'screen_ceiling':
+                            self.y = self.v_y + ceil_offset
+                            self.surface_angle = 180
 
-                if not getattr(self, 'anchored_hwnd', None):
-                    if self.climbing_surface == 'screen_l':
-                        self.x = self.v_x + wall_offset
-                        self.surface_angle = 270
-                    elif self.climbing_surface == 'screen_r':
-                        self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                        self.surface_angle = 90
-                    elif self.climbing_surface == 'screen_ceiling':
-                        self.y = self.v_y + ceil_offset
-                        self.surface_angle = 180
-
-                if self.current_state == 'walking':
-                    if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
-                        rect = self.anchored_rect
-                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                            self.y = rect[1] - self.size_h - self.offset_y
-                            self.x += self.speed if self.is_facing_right else -self.speed
+                    if self.current_state == 'walking':
+                        if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
+                            rect = self.anchored_rect
+                            if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                                self.y = rect[1] - self.size_h - self.offset_y
+                                self.x += self.speed if self.is_facing_right else -self.speed
                             
-                            if self.x > rect[2] - self.size_w / 2 and self.is_facing_right:
-                                self.climbing_surface = 'wall_r'
-                                self.surface_angle = 270
-                                self.x = rect[2] - win_offset
-                                self.y = rect[1] - self.size_h / 2
-                            elif self.x < rect[0] - self.size_w / 2 and not self.is_facing_right:
-                                self.climbing_surface = 'wall_l'
-                                self.surface_angle = 90
-                                self.x = rect[0] - self.size_w + win_offset
-                                self.y = rect[1] - self.size_h / 2
-
-                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_r':
-                            self.x = rect[2] - win_offset
-                            self.y += self.speed if self.is_facing_right else -self.speed 
-                            if self.y > rect[3] - self.size_h / 2 and self.is_facing_right:
-                                self.climbing_surface = 'ceiling'
-                                self.surface_angle = 180
-                                self.y = rect[3] - win_offset
-                                self.x = rect[2] - self.size_w / 2
-                            elif self.y < rect[1] - self.size_h / 2 and not self.is_facing_right:
-                                self.climbing_surface = 'floor'
-                                self.surface_angle = 0
-                                self.y = rect[1] - self.size_h + win_offset
-                                self.x = rect[2] - self.size_w / 2
-                                
-                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_l':
-                            self.x = rect[0] - self.size_w + win_offset
-                            self.y -= self.speed if self.is_facing_right else -self.speed 
-                            if self.y < rect[1] - self.size_h / 2 and self.is_facing_right:
-                                self.climbing_surface = 'floor'
-                                self.surface_angle = 0
-                                self.y = rect[1] - self.size_h + win_offset
-                                self.x = rect[0] - self.size_w / 2
-                            elif self.y > rect[3] - self.size_h / 2 and not self.is_facing_right:
-                                self.climbing_surface = 'ceiling'
-                                self.surface_angle = 180
-                                self.y = rect[3] - win_offset
-                                self.x = rect[0] - self.size_w / 2
-                                
-                        elif getattr(self, 'climbing_surface', 'floor') == 'ceiling':
-                            self.y = rect[3] - win_offset
-                            self.x -= self.speed if self.is_facing_right else -self.speed 
-                            if self.x < rect[0] - self.size_w / 2 and self.is_facing_right:
-                                self.climbing_surface = 'wall_l'
-                                self.surface_angle = 90
-                                self.x = rect[0] - self.size_w + win_offset
-                                self.y = rect[3] - self.size_h / 2
-                            elif self.x > rect[2] - self.size_w / 2 and not self.is_facing_right:
-                                self.climbing_surface = 'wall_r'
-                                self.surface_angle = 270
-                                self.x = rect[2] - win_offset
-                                self.y = rect[3] - self.size_h / 2
-
-                    else: 
-                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                            self.y = self.default_floor_y
-                            self.x += self.speed if self.is_facing_right else -self.speed
-                            if self.x >= self.v_x + self.v_width - self.size_w and self.is_facing_right:
-                                self.climbing_surface = 'screen_r'
-                                self.surface_angle = 90
-                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                                self.is_facing_right = False 
-                            elif self.x <= self.v_x and not self.is_facing_right:
-                                self.climbing_surface = 'screen_l'
-                                self.surface_angle = 270
-                                self.x = self.v_x + wall_offset
-                                self.is_facing_right = True 
-                            elif ahead_physical_floor is not None and ahead_env['hwnd']:
-                                self.anchored_hwnd = ahead_env['hwnd']
-                                self.anchored_rect = ahead_env['rect']
-                                if self.is_facing_right:
-                                    self.climbing_surface = 'wall_l'
-                                    self.surface_angle = 90
-                                    self.x = self.anchored_rect[0] - self.size_w + win_offset
-                                else:
+                                if self.x > rect[2] - self.size_w / 2 and self.is_facing_right:
                                     self.climbing_surface = 'wall_r'
                                     self.surface_angle = 270
-                                    self.x = self.anchored_rect[2] - win_offset
+                                    self.x = rect[2] - win_offset
+                                    self.y = rect[1] - self.size_h / 2
+                                elif self.x < rect[0] - self.size_w / 2 and not self.is_facing_right:
+                                    self.climbing_surface = 'wall_l'
+                                    self.surface_angle = 90
+                                    self.x = rect[0] - self.size_w + win_offset
+                                    self.y = rect[1] - self.size_h / 2
+
+                            elif getattr(self, 'climbing_surface', 'floor') == 'wall_r':
+                                self.x = rect[2] - win_offset
+                                self.y += self.speed if self.is_facing_right else -self.speed 
+                                if self.y > rect[3] - self.size_h / 2 and self.is_facing_right:
+                                    self.climbing_surface = 'ceiling'
+                                    self.surface_angle = 180
+                                    self.y = rect[3] - win_offset
+                                    self.x = rect[2] - self.size_w / 2
+                                elif self.y < rect[1] - self.size_h / 2 and not self.is_facing_right:
+                                    self.climbing_surface = 'floor'
+                                    self.surface_angle = 0
+                                    self.y = rect[1] - self.size_h + win_offset
+                                    self.x = rect[2] - self.size_w / 2
+                                
+                            elif getattr(self, 'climbing_surface', 'floor') == 'wall_l':
+                                self.x = rect[0] - self.size_w + win_offset
+                                self.y -= self.speed if self.is_facing_right else -self.speed 
+                                if self.y < rect[1] - self.size_h / 2 and self.is_facing_right:
+                                    self.climbing_surface = 'floor'
+                                    self.surface_angle = 0
+                                    self.y = rect[1] - self.size_h + win_offset
+                                    self.x = rect[0] - self.size_w / 2
+                                elif self.y > rect[3] - self.size_h / 2 and not self.is_facing_right:
+                                    self.climbing_surface = 'ceiling'
+                                    self.surface_angle = 180
+                                    self.y = rect[3] - win_offset
+                                    self.x = rect[0] - self.size_w / 2
+                                
+                            elif getattr(self, 'climbing_surface', 'floor') == 'ceiling':
+                                self.y = rect[3] - win_offset
+                                self.x -= self.speed if self.is_facing_right else -self.speed 
+                                if self.x < rect[0] - self.size_w / 2 and self.is_facing_right:
+                                    self.climbing_surface = 'wall_l'
+                                    self.surface_angle = 90
+                                    self.x = rect[0] - self.size_w + win_offset
+                                    self.y = rect[3] - self.size_h / 2
+                                elif self.x > rect[2] - self.size_w / 2 and not self.is_facing_right:
+                                    self.climbing_surface = 'wall_r'
+                                    self.surface_angle = 270
+                                    self.x = rect[2] - win_offset
+                                    self.y = rect[3] - self.size_h / 2
+
+                        else: 
+                            if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                                self.y = self.default_floor_y
+                                self.x += self.speed if self.is_facing_right else -self.speed
+                                if self.x >= self.v_x + self.v_width - self.size_w and self.is_facing_right:
+                                    self.climbing_surface = 'screen_r'
+                                    self.surface_angle = 90
+                                    self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                    self.is_facing_right = False 
+                                elif self.x <= self.v_x and not self.is_facing_right:
+                                    self.climbing_surface = 'screen_l'
+                                    self.surface_angle = 270
+                                    self.x = self.v_x + wall_offset
+                                    self.is_facing_right = True 
+                                elif ahead_physical_floor is not None and ahead_env['hwnd']:
+                                    self.anchored_hwnd = ahead_env['hwnd']
+                                    self.anchored_rect = ahead_env['rect']
+                                    if self.is_facing_right:
+                                        self.climbing_surface = 'wall_l'
+                                        self.surface_angle = 90
+                                        self.x = self.anchored_rect[0] - self.size_w + win_offset
+                                    else:
+                                        self.climbing_surface = 'wall_r'
+                                        self.surface_angle = 270
+                                        self.x = self.anchored_rect[2] - win_offset
                                     
-                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_r':
-                            self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                            self.y += self.speed if self.is_facing_right else -self.speed
-                            if self.y <= self.v_y and not self.is_facing_right:
-                                self.climbing_surface = 'screen_ceiling'
-                                self.surface_angle = 180
-                                self.y = self.v_y + ceil_offset
-                                self.is_facing_right = True 
-                            elif self.y >= self.default_floor_y and self.is_facing_right:
-                                self.climbing_surface = 'floor'
-                                self.surface_angle = 0
-                                self.y = self.default_floor_y
-                                self.is_facing_right = False 
-                                
-                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_l':
-                            self.x = self.v_x + wall_offset
-                            self.y -= self.speed if self.is_facing_right else -self.speed
-                            if self.y <= self.v_y and self.is_facing_right:
-                                self.climbing_surface = 'screen_ceiling'
-                                self.surface_angle = 180
-                                self.y = self.v_y + ceil_offset
-                                self.is_facing_right = False 
-                            elif self.y >= self.default_floor_y and not self.is_facing_right:
-                                self.climbing_surface = 'floor'
-                                self.surface_angle = 0
-                                self.y = self.default_floor_y
-                                self.is_facing_right = True 
-                                
-                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_ceiling':
-                            self.y = self.v_y + ceil_offset
-                            self.x -= self.speed if self.is_facing_right else -self.speed
-                            if self.x <= self.v_x and self.is_facing_right:
-                                self.climbing_surface = 'screen_l'
-                                self.surface_angle = 270
-                                self.x = self.v_x + wall_offset
-                                self.is_facing_right = False 
-                            elif self.x >= self.v_x + self.v_width - self.size_w and not self.is_facing_right:
-                                self.climbing_surface = 'screen_r'
-                                self.surface_angle = 90
+                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_r':
                                 self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                                self.is_facing_right = True 
+                                self.y += self.speed if self.is_facing_right else -self.speed
+                                if self.y <= self.v_y and not self.is_facing_right:
+                                    self.climbing_surface = 'screen_ceiling'
+                                    self.surface_angle = 180
+                                    self.y = self.v_y + ceil_offset
+                                    self.is_facing_right = True 
+                                elif self.y >= self.default_floor_y and self.is_facing_right:
+                                    self.climbing_surface = 'floor'
+                                    self.surface_angle = 0
+                                    self.y = self.default_floor_y
+                                    self.is_facing_right = False 
+                                
+                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_l':
+                                self.x = self.v_x + wall_offset
+                                self.y -= self.speed if self.is_facing_right else -self.speed
+                                if self.y <= self.v_y and self.is_facing_right:
+                                    self.climbing_surface = 'screen_ceiling'
+                                    self.surface_angle = 180
+                                    self.y = self.v_y + ceil_offset
+                                    self.is_facing_right = False 
+                                elif self.y >= self.default_floor_y and not self.is_facing_right:
+                                    self.climbing_surface = 'floor'
+                                    self.surface_angle = 0
+                                    self.y = self.default_floor_y
+                                    self.is_facing_right = True 
+                                
+                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_ceiling':
+                                self.y = self.v_y + ceil_offset
+                                self.x -= self.speed if self.is_facing_right else -self.speed
+                                if self.x <= self.v_x and self.is_facing_right:
+                                    self.climbing_surface = 'screen_l'
+                                    self.surface_angle = 270
+                                    self.x = self.v_x + wall_offset
+                                    self.is_facing_right = False 
+                                elif self.x >= self.v_x + self.v_width - self.size_w and not self.is_facing_right:
+                                    self.climbing_surface = 'screen_r'
+                                    self.surface_angle = 90
+                                    self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                    self.is_facing_right = True 
 
-        else:
-            self.anchored_hwnd = None
-            self.climbing_surface = 'floor'
-            
-            # FLYERS FIX: Maintain 180 degree rotation if gravity is inverted
-            self.surface_angle = 180 if getattr(self, 'gravity_inverted', False) else 0
-            
-            target = getattr(self, 'target_floor_y', self.floor_y)
-            if self.floor_y > target:
-                self.floor_y -= 5
-                if self.floor_y < target: self.floor_y = target
-            elif self.floor_y < target:
-                self.floor_y += 5
-                if self.floor_y > target: self.floor_y = target
-                
-            self.y = self.floor_y
-
-        if self.current_state == 'idle':
-            if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
-                self.y = self.anchored_rect[1] - self.size_h - self.offset_y
-                
-            action_chance = random.randint(1, 100)
-            if action_chance <= 5: 
-                self.current_state = 'walking'
-                self.is_facing_right = random.choice([True, False])
-        
-        elif self.current_state == 'walking':
-            action_chance = random.randint(1, 100)
-            if action_chance <= 5: 
-                self.current_state = 'idle'
             else:
-                if not is_climber:
-                    self.x += self.speed if self.is_facing_right else -self.speed
+                self.anchored_hwnd = None
+                self.climbing_surface = 'floor'
+            
+                # FLYERS FIX: Maintain 180 degree rotation if gravity is inverted
+                self.surface_angle = 180 if getattr(self, 'gravity_inverted', False) else 0
+            
+                target = getattr(self, 'target_floor_y', self.floor_y)
+                if self.floor_y > target:
+                    self.floor_y -= 5
+                    if self.floor_y < target: self.floor_y = target
+                elif self.floor_y < target:
+                    self.floor_y += 5
+                    if self.floor_y > target: self.floor_y = target
+                
+                self.y = self.floor_y
+
+            if self.current_state == 'idle':
+                if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    self.y = self.anchored_rect[1] - self.size_h - self.offset_y
+                
+                action_chance = random.randint(1, 100)
+                if action_chance <= 5: 
+                    self.current_state = 'walking'
+                    self.is_facing_right = random.choice([True, False])
+        
+            elif self.current_state == 'walking':
+                action_chance = random.randint(1, 100)
+                if action_chance <= 5: 
+                    self.current_state = 'idle'
+                else:
+                    if not is_climber:
+                        self.x += self.speed if self.is_facing_right else -self.speed
                     
-                    if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                        if getattr(self, 'ghost_type', False):
-                            # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
-                            if self.x <= self.v_x - self.size_w:
-                                self.x = self.v_x + self.v_width
-                                if random.randint(1, 100) <= 25: self.is_facing_right = True 
-                            elif self.x >= self.v_x + self.v_width:
-                                self.x = self.v_x - self.size_w
-                                if random.randint(1, 100) <= 25: self.is_facing_right = False
-                        else:
-                            # NORMAL SOLID LIMIT
-                            if self.x <= self.v_x:
-                                self.x = self.v_x
-                                self.is_facing_right = True
-                            elif self.x >= (self.v_x + self.v_width) - self.size_w:
-                                self.x = (self.v_x + self.v_width) - self.size_w
-                                self.is_facing_right = False
+                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                            if getattr(self, 'ghost_type', False):
+                                # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
+                                if self.x <= self.v_x - self.size_w:
+                                    self.x = self.v_x + self.v_width
+                                    if random.randint(1, 100) <= 25: self.is_facing_right = True 
+                                elif self.x >= self.v_x + self.v_width:
+                                    self.x = self.v_x - self.size_w
+                                    if random.randint(1, 100) <= 25: self.is_facing_right = False
+                            else:
+                                # NORMAL SOLID LIMIT
+                                if self.x <= self.v_x:
+                                    self.x = self.v_x
+                                    self.is_facing_right = True
+                                elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                                    self.x = (self.v_x + self.v_width) - self.size_w
+                                    self.is_facing_right = False
 
         if self.current_state in ['idle', 'walking'] and getattr(self, 'get_all_pets', None) and not getattr(self, 'is_egg', False) and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if self.social_cooldown == 0 or self.attack_cooldown == 0:
@@ -4658,7 +4670,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
 
 
     def start_volcanion_mechanic(self):
-        self.volcanion_cooldown = 108000
+        self.volcanion_cooldown = self.get_legendary_cooldown(108000)
         import mechanics.legendaries.volcanion
         mechanics.legendaries.volcanion.init_volcanion_arts(self)
         self.cancel_volcanion_arts = lambda: mechanics.legendaries.volcanion.cancel_volcanion_arts(self)

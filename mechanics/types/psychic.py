@@ -128,7 +128,7 @@ class TelekinesisMechanics:
 
                 if self.tk_timer <= 0:
                     self.current_state = 'idle'
-                    self.tk_cooldown = 12000
+                    self.tk_cooldown = self.get_type_cooldown(12000)
                     if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                     target.current_state = 'thrown'
                     

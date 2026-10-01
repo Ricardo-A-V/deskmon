@@ -109,7 +109,7 @@ class LakeTrioMechanics:
             self.v_x_velocity = (dx/dist) * 15
             self.v_y_velocity = (dy/dist) * 15 - 10
             self.surface_angle = 0
-            self.lake_cooldown = 72000
+            self.lake_cooldown = self.get_legendary_cooldown(72000)
             
             # Cleanup later via the vfx loop which handles exiting particles
             self.schedule_loop(33, self.physics_loop)

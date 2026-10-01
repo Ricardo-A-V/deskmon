@@ -109,7 +109,7 @@ class YveltalMechanics:
             self.yveltal_timer -= 1
             if self.yveltal_timer <= 0:
                 self.cancel_yveltal_arts()
-                self.yveltal_cooldown = 72000 
+                self.yveltal_cooldown = self.get_legendary_cooldown(72000) 
 
         self.update_position()
         self.schedule_loop(50, self.physics_loop)

@@ -543,7 +543,7 @@ class DeoxysMechanics:
         
         if self.deoxys_timer <= 0:
             self.current_state = 'falling'
-            self.deoxys_cooldown = 72000
+            self.deoxys_cooldown = self.get_legendary_cooldown(72000)
             if hasattr(self, 'deoxys_vfx_win') and self.deoxys_vfx_win:
                 self.deoxys_vfx_win.destroy()
                 self.deoxys_vfx_win = None

@@ -13,7 +13,7 @@ class GenesectMechanics:
         if name != "genesect": return
 
         self.current_state = 'genesect_walk'
-        self.genesect_cooldown = 108000 # 1 hour
+        self.genesect_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.genesect_target_side = random.choice(["left", "right"])
         self.is_facing_right = (self.genesect_target_side == "right")
         

@@ -185,7 +185,7 @@ class ZamazentaMechanics:
             self.process_zam_particles()
             self.zam_timer -= 1
             if self.zam_timer <= 0:
-                self.zamazenta_cooldown = 72000
+                self.zamazenta_cooldown = self.get_legendary_cooldown(72000)
                 self.cancel_zamazenta_arts()
 
         self.update_position()

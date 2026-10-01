@@ -6,7 +6,7 @@ class DragonMechanics:
             return
 
         if getattr(self, 'dragon_cooldown', 0) == 0 and random.randint(1, 100) <= 10:
-            self.dragon_cooldown = 18000
+            self.dragon_cooldown = self.get_type_cooldown(18000)
             self._do_dragon_roar()
 
     def _do_dragon_roar(self):

@@ -90,7 +90,7 @@ class KyuremMechanics:
                     self.kyurem_win = None
                     
                 self.current_state = 'idle'
-                self.kyurem_cooldown = 108000 
+                self.kyurem_cooldown = self.get_legendary_cooldown(108000) 
                 delattr(self, 'kyurem_phase')
 
         self.update_position()

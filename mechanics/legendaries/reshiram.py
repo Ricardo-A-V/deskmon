@@ -186,7 +186,7 @@ class ReshiramMechanics:
                     self.res_win = None
                 
                 self.current_state = 'idle'
-                self.reshiram_cooldown = 72000 
+                self.reshiram_cooldown = self.get_legendary_cooldown(72000) 
                 for attr in ['res_phase', 'res_timer', 'res_vx', 'res_vy', 'res_pulse']:
                     if hasattr(self, attr): delattr(self, attr)
 

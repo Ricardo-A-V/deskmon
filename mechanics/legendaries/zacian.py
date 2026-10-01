@@ -106,7 +106,7 @@ class ZacianMechanics:
         elif self.zacian_phase == 2:
             self.zacian_timer -= 1
             if self.zacian_timer <= 0:
-                self.zacian_cooldown = 72000
+                self.zacian_cooldown = self.get_legendary_cooldown(72000)
                 
                 if self.pet_name.lower().replace("_", "").replace("-", "") == "zacian":
                     self.pet_name = "zacian_1"

@@ -14,7 +14,7 @@ class VictiniMechanics:
 
         self.current_state = 'victini_channeling'
         self.victini_timer = 90 # 3 seconds
-        self.victini_cooldown = 108000 # 1 hour
+        self.victini_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.vic_particles = []
         self.vic_angle = 0
         

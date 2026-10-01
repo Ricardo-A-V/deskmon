@@ -160,7 +160,7 @@ class GiratinaMechanics:
         if current_alpha < 1.0:
             self.window.attributes('-alpha', min(1.0, current_alpha + 0.05))
         else:
-            self.giratina_cooldown = 108000 
+            self.giratina_cooldown = self.get_legendary_cooldown(108000) 
             # GRAVITY FIX: Return levitation FSM to prevent crashing
             if getattr(self, 'is_flying', False):
                 self.current_state = 'ascending'

@@ -28,7 +28,7 @@ class SeaGuardiansMechanics:
         self.sg_timer = 60 # 2 seconds
         
         # 1 hour cooldown (3600 seconds * 30 frames/sec)
-        self.sg_cooldown = 108000 
+        self.sg_cooldown = self.get_legendary_cooldown(108000) 
 
     def _fsm_sea_guardian_absorb(self):
         if not hasattr(self, 'sg_timer'): return

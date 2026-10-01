@@ -355,7 +355,7 @@ class ShayminMechanics:
                 self.current_state = 'falling'
                 if hasattr(self, 'cancel_shaymin_arts'):
                     self.cancel_shaymin_arts()
-                self.shaymin_cooldown = 108000
+                self.shaymin_cooldown = self.get_legendary_cooldown(108000)
                 self.schedule_loop(33, self.physics_loop)
                 return
                 

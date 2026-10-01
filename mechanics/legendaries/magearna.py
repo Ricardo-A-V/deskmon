@@ -12,7 +12,7 @@ class MagearnaMechanics:
         if name != "magearna": return
 
         self.current_state = 'magearna_walk'
-        self.magearna_cooldown = 108000 # 1 hour
+        self.magearna_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.magearna_target_side = random.choice(["left", "right"])
         self.is_facing_right = (self.magearna_target_side == "right")
         self.magearna_victims = []

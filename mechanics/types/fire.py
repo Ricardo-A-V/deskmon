@@ -9,7 +9,7 @@ class FireMechanics:
             self.fire_trail_timer = 0
             
         if getattr(self, 'fire_cooldown', 0) == 0 and self.current_state in ['idle', 'walking', 'running'] and random.randint(1, 100) <= 10:
-            self.fire_cooldown = 18000
+            self.fire_cooldown = self.get_type_cooldown(18000)
             self.fire_trail_timer = 150 
             
         if self.fire_trail_timer > 0:

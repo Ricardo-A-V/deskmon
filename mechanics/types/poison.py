@@ -6,7 +6,7 @@ class PoisonMechanics:
             self.poison_puddles = []
             
         if getattr(self, 'poison_cooldown', 0) == 0 and random.randint(1, 100) <= 10:
-            self.poison_cooldown = 18000
+            self.poison_cooldown = self.get_type_cooldown(18000)
             
             if self.y >= getattr(self, "default_floor_y", self.y) - 10:
                 import tkinter as tk

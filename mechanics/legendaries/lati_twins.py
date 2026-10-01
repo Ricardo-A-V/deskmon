@@ -216,7 +216,7 @@ class LatiTwinsMechanics:
         
         if self.v_x_velocity < 2.0:
             self.current_state = 'idle'
-            self.lati_cooldown = 72000
+            self.lati_cooldown = self.get_legendary_cooldown(72000)
             self.v_x_velocity = 0
             
         self.update_position()

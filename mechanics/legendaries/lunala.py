@@ -97,7 +97,7 @@ class LunalaMechanics:
             if self.lunala_timer <= 0:
                 self.cancel_lunala_arts()
                 self.current_state = 'idle'
-                self.lunala_cooldown = 72000 
+                self.lunala_cooldown = self.get_legendary_cooldown(72000) 
 
         self.update_position()
         self.schedule_loop(50, self.physics_loop)

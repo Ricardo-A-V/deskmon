@@ -216,7 +216,7 @@ class HeatranMechanics:
                 self.trigger_landing_shake()
             self.trigger_heatran_dirt_particles(self.x + self.size_w/2, self.y + self.size_h, 30)
             self.current_state = 'idle'
-            self.heatran_cooldown = 72000 
+            self.heatran_cooldown = self.get_legendary_cooldown(72000) 
             for attr in ['hea_phase', 'hea_timer', 'hea_rocks', 'hea_rocks_dropped', 'hea_total_rocks', 'hea_rock_timer']:
                 if hasattr(self, attr): delattr(self, attr)
                 

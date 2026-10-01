@@ -11,7 +11,7 @@ class ZarudeMechanics:
         name = self.pet_name.lower().replace("_", "").replace("-", "")
         if name not in ["zarude"]: return
 
-        self.zarude_cooldown = 108000 # 1 hour
+        self.zarude_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.zarude_target = None
         self.zarude_timer = 90
         

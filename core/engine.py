@@ -29,7 +29,7 @@ class GameController:
         self.root.attributes('-topmost', True)
         
         # Increased height from 205 to 250 to accommodate the search bar without squeezing
-        w, h = 280, 250 
+        w, h = 280, 220 
         screen_w = self.root.winfo_screenwidth()
         self.root.geometry(f"{w}x{h}+{screen_w - w - 20}+20")
 
@@ -47,6 +47,7 @@ class GameController:
         def drag_start(event):
             self._drag_data["x"] = event.x
             self._drag_data["y"] = event.y
+            self.root.focus_force()
         def drag_motion(event):
             delta_x = event.x - self._drag_data["x"]
             delta_y = event.y - self._drag_data["y"]
@@ -67,11 +68,18 @@ class GameController:
         
         btn_hide = tk.Button(header_frame, text="—", font=("Segoe UI", 8, "bold"), bg="#7F8C8D", fg="white", bd=0, width=3, command=self.hide_pc_ui)
         btn_hide.pack(side=tk.RIGHT, padx=(0,2))
-
-        content_frame = tk.Frame(self.root, bg=bg_main)
-        content_frame.pack(fill=tk.BOTH, expand=True)
         
-        search_row = tk.Frame(content_frame, bg=bg_main)
+        btn_settings = tk.Button(header_frame, text="⚙", font=("Segoe UI", 8, "bold"), bg="#7F8C8D", fg="white", bd=0, width=3, command=self.open_settings_menu)
+        btn_settings.pack(side=tk.RIGHT, padx=(0,2))
+
+        self.empty_frame = tk.Frame(self.root, bg=bg_main)
+        btn_new_adv = tk.Button(self.empty_frame, text="Start New Adventure", font=("Segoe UI", 12, "bold"), bg="#E74C3C", fg="white", bd=0, pady=10, command=self.confirm_reset)
+        btn_new_adv.pack(expand=True, fill=tk.BOTH, padx=20, pady=40)
+
+        self.content_frame = tk.Frame(self.root, bg=bg_main)
+        self.content_frame.pack_propagate(False)
+        self.content_frame.pack(fill=tk.BOTH, expand=True)
+        search_row = tk.Frame(self.content_frame, bg=bg_main)
         search_row.pack(fill=tk.X, padx=10, pady=(8, 0))
         
         tk.Label(search_row, text="🔍", bg=bg_main, fg="#7F8C8D").pack(side=tk.LEFT)
@@ -79,34 +87,59 @@ class GameController:
         self.search_var.trace_add("write", self.filter_pc_list)
         self.entry_search = tk.Entry(search_row, textvariable=self.search_var, relief=tk.FLAT)
         self.entry_search.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+        
+        # FIX: Text editor bindings for overrideredirect window
+        def handle_ctrl_backspace(e):
+            idx = self.entry_search.index(tk.INSERT)
+            text = self.entry_search.get()[:idx]
+            if not text: return "break"
+            words = text.rstrip().split()
+            if words:
+                last_word_len = len(words[-1]) + (len(text) - len(text.rstrip()))
+                self.entry_search.delete(idx - last_word_len, idx)
+            else:
+                self.entry_search.delete(0, idx)
+            return "break"
+            
+        def handle_select_all(e):
+            self.entry_search.select_range(0, tk.END)
+            self.entry_search.icursor(tk.END)
+            return "break"
+            
+        self.entry_search.bind("<Control-BackSpace>", handle_ctrl_backspace)
+        self.entry_search.bind("<Control-a>", handle_select_all)
+        def handle_ctrl_delete(e):
+            idx = self.entry_search.index(tk.INSERT)
+            text = self.entry_search.get()[idx:]
+            if not text: return "break"
+            words = text.lstrip().split()
+            if words:
+                first_word_len = len(words[0]) + (len(text) - len(text.lstrip()))
+                self.entry_search.delete(idx, idx + first_word_len)
+            else:
+                self.entry_search.delete(idx, tk.END)
+            return "break"
+        self.entry_search.bind("<Control-Delete>", handle_ctrl_delete)
+        self.entry_search.bind("<Button-1>", lambda e: self.entry_search.focus_set())
 
-        top_row = tk.Frame(content_frame, bg=bg_main)
+        top_row = tk.Frame(self.content_frame, bg=bg_main)
         top_row.pack(fill=tk.X, padx=10, pady=(4, 4))
         
         self.combo_var = tk.StringVar()
         self.combo = ttk.Combobox(top_row, textvariable=self.combo_var, state="readonly", justify="center")
         self.combo.pack(fill=tk.X, expand=True)
 
-        mid_row = tk.Frame(content_frame, bg=bg_main)
+        mid_row = tk.Frame(self.content_frame, bg=bg_main)
         mid_row.pack(fill=tk.X, padx=10, pady=(0, 2))
         
         self.everstone_var = tk.BooleanVar()
         self.chk_everstone = tk.Checkbutton(mid_row, text="Everstone", font=("Segoe UI", 8), variable=self.everstone_var, bg=bg_main, command=self.on_everstone_toggle)
-        self.chk_everstone.pack(anchor=tk.CENTER)
+        self.chk_everstone.pack(side=tk.LEFT, padx=(20, 0))
+        
+        self.pet_preview_lbl = tk.Label(mid_row, bg=bg_main)
+        self.pet_preview_lbl.pack(side=tk.RIGHT, padx=(0, 20))
 
-        settings_row = tk.Frame(content_frame, bg=bg_main)
-        settings_row.pack(fill=tk.X, padx=10, pady=(0, 4))
-        
-        self.allow_wild_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_wild"])
-        self.allow_breed_var = tk.BooleanVar(value=self.save_mgr.data["settings"]["allow_breeding"])
-        
-        chk_wild = tk.Checkbutton(settings_row, text="Wild", font=("Segoe UI", 8), variable=self.allow_wild_var, bg=bg_main, command=self.sync_settings)
-        chk_wild.pack(side=tk.LEFT, expand=True)
-        
-        chk_breed = tk.Checkbutton(settings_row, text="Breeding", font=("Segoe UI", 8), variable=self.allow_breed_var, bg=bg_main, command=self.sync_settings)
-        chk_breed.pack(side=tk.RIGHT, expand=True)
-
-        self.fly_wrapper = tk.Frame(content_frame, bg=bg_main)
+        self.fly_wrapper = tk.Frame(self.content_frame, bg=bg_main)
         self.fly_wrapper.pack(fill=tk.X, padx=10, pady=(0, 4))
         
         self.fly_row = tk.Frame(self.fly_wrapper, bg=bg_main)
@@ -119,34 +152,26 @@ class GameController:
         btn_reset_fly = tk.Button(self.fly_row, text="R", font=("Segoe UI", 7, "bold"), bg="#95A5A6", fg="white", bd=0, width=2, command=self.reset_fly_height)
         btn_reset_fly.pack(side=tk.RIGHT)
 
-        toy_row = tk.Frame(content_frame, bg=bg_main)
-        toy_row.pack(fill=tk.X, padx=10, pady=(0, 5))
-        self.btn_toy = tk.Button(toy_row, text="Toy (Pokéball)", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
-        self.btn_toy.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 0))
+        bottom_row = tk.Frame(self.content_frame, bg=bg_main)
+        bottom_row.pack(fill=tk.X, padx=10, pady=(5, 5), side=tk.BOTTOM)
+        
+        btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
+        btn_spawn.pack(side=tk.TOP, fill=tk.X, expand=True, pady=(0, 2))
+        
+        bottom_subrow = tk.Frame(bottom_row, bg=bg_main)
+        bottom_subrow.pack(side=tk.TOP, fill=tk.X, expand=True)
 
-        trainer_row = tk.Frame(content_frame, bg=bg_main)
-        trainer_row.pack(fill=tk.X, padx=10, pady=(0, 5))
-        tk.Label(trainer_row, text="Trainer:", font=("Segoe UI", 8), bg=bg_main).pack(side=tk.LEFT)
+        btn_release = tk.Button(bottom_subrow, text="Release", font=("Segoe UI", 8, "bold"), bg="#8E44AD", fg="white", bd=0, pady=2, command=self.release_from_pc)
+        btn_release.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 1))
+        
+        self.btn_toy = tk.Button(bottom_subrow, text="Toy", font=("Segoe UI", 8, "bold"), bg="#E67E22", fg="white", bd=0, pady=2, command=self.toggle_toy_ball)
+        self.btn_toy.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(1, 0))
+
+        # Re-initialize trainer if selected previously
         saved_trainer = self.save_mgr.data.get("settings", {}).get("trainer_selection", "None")
-        self.trainer_var = tk.StringVar(value=saved_trainer)
-        self.trainer_combo = ttk.Combobox(trainer_row, textvariable=self.trainer_var, state="readonly", justify="center", values=["None", "Boy", "Girl"])
-        self.trainer_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
-        self.trainer_combo.bind("<<ComboboxSelected>>", self.on_trainer_select)
         self.trainer = None
         if saved_trainer != "None":
             self._spawn_new_trainer(saved_trainer, spawn_from_side=True)
-
-        bottom_row = tk.Frame(content_frame, bg=bg_main)
-        bottom_row.pack(fill=tk.X, padx=10, pady=(0, 5))
-        
-        btn_spawn = tk.Button(bottom_row, text="Spawn", font=("Segoe UI", 8, "bold"), bg="#27AE60", fg="white", bd=0, pady=2, command=self.spawn_from_pc)
-        btn_spawn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-
-        btn_release = tk.Button(bottom_row, text="Release", font=("Segoe UI", 8, "bold"), bg="#8E44AD", fg="white", bd=0, pady=2, command=self.release_from_pc)
-        btn_release.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
-
-        btn_reset = tk.Button(bottom_row, text="New Adventure", font=("Segoe UI", 8), bg="#E74C3C", fg="white", bd=0, pady=2, command=self.confirm_reset)
-        btn_reset.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
         self.discord_rpc = DiscordRPC("1517136709039685685") 
         self.discord_rpc.update_loop(self.root)
@@ -163,6 +188,9 @@ class GameController:
         self.root.mainloop()
 
     def berry_spawner_loop(self):
+        if not self.save_mgr.data.get("settings", {}).get("allow_berries", True):
+            self.root.after(random.randint(120000, 240000), self.berry_spawner_loop)
+            return
         self.active_berries = [b for b in self.active_berries if b.current_state != 'exiting']
         if random.randint(1, 100) <= 25: 
             base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -215,8 +243,20 @@ class GameController:
         return self.active_instances + self.wild_instances + self.overflow_instances
 
     def sync_settings(self):
-        self.save_mgr.data["settings"]["allow_wild"] = self.allow_wild_var.get()
-        self.save_mgr.data["settings"]["allow_breeding"] = self.allow_breed_var.get()
+        if "settings" not in self.save_mgr.data:
+            self.save_mgr.data["settings"] = {}
+        if hasattr(self, 'allow_wild_var'):
+            self.save_mgr.data["settings"]["allow_wild"] = self.allow_wild_var.get()
+        if hasattr(self, 'allow_breed_var'):
+            self.save_mgr.data["settings"]["allow_breeding"] = self.allow_breed_var.get()
+        if hasattr(self, 'allow_moves_var'):
+            self.save_mgr.data["settings"]["allow_moves"] = self.allow_moves_var.get()
+        if hasattr(self, 'allow_berries_var'):
+            self.save_mgr.data["settings"]["allow_berries"] = self.allow_berries_var.get()
+        if hasattr(self, 'leg_slider') and self.leg_slider.winfo_exists():
+            self.save_mgr.data["settings"]["legendary_cooldown"] = int(self.leg_slider.get())
+        if hasattr(self, 'type_slider') and self.type_slider.winfo_exists():
+            self.save_mgr.data["settings"]["type_cooldown"] = int(self.type_slider.get())
         self.save_mgr.save_data()
 
     def sync_fly_height(self, event=None):
@@ -323,6 +363,33 @@ class GameController:
             self.btn_alter = None
 
         if pet:
+            from PIL import Image, ImageTk
+            import os
+            pet_dir = os.path.join(self.pets_directory, pet["species"])
+            if pet.get("is_shiny", False):
+                img_path = os.path.join(pet_dir, "shiny", "idle_0.png")
+                if not os.path.exists(img_path):
+                    img_path = os.path.join(pet_dir, "idle_0.png")
+            else:
+                img_path = os.path.join(pet_dir, "idle_0.png")
+            
+            if os.path.exists(img_path):
+                try:
+                    raw_img = Image.open(img_path).convert("RGBA")
+                    # Clean alpha
+                    r, g, b, a = raw_img.split()
+                    a = a.point(lambda p: 255 if p > 127 else 0)
+                    raw_img = Image.merge("RGBA", (r, g, b, a))
+                    
+                    raw_img = raw_img.resize((48, 48), Image.Resampling.NEAREST)
+                    self.preview_img = ImageTk.PhotoImage(raw_img)
+                    self.pet_preview_lbl.config(image=self.preview_img)
+                except Exception as e:
+                    print("Error loading preview:", e)
+                    self.pet_preview_lbl.config(image="")
+            else:
+                self.pet_preview_lbl.config(image="")
+                
             self.everstone_var.set(pet.get("everstone", False))
             
             is_fly = self.species_flying_status.get(pet["species"], False)
@@ -333,6 +400,8 @@ class GameController:
                 self.fly_row.pack_forget()
 
         else:
+            if hasattr(self, 'pet_preview_lbl'):
+                self.pet_preview_lbl.config(image="")
             self.everstone_var.set(False)
             self.fly_row.pack_forget()
 
@@ -402,6 +471,16 @@ class GameController:
         self.show_pc_ui()
 
     def update_pc_ui(self):
+        if not self.save_mgr.data["inventory"]:
+            self.content_frame.pack_forget()
+            self.empty_frame.pack(fill=tk.BOTH, expand=True)
+            self.full_display_list = ["(Empty)"]
+            self.filter_pc_list()
+            return
+        else:
+            self.empty_frame.pack_forget()
+            self.content_frame.pack(fill=tk.BOTH, expand=True)
+            
         if not self.save_mgr.data["inventory"]:
             self.full_display_list = ["(Empty)"]
         else:
@@ -702,8 +781,122 @@ class GameController:
         self.save_mgr.data["active_pets"] = active_ids
         self.save_mgr.save_data()
 
+
+    def open_settings_menu(self):
+        if hasattr(self, 'settings_window') and self.settings_window.winfo_exists():
+            self.settings_window.focus()
+            return
+            
+        self.settings_window = tk.Toplevel(self.root)
+        self.settings_window.title("Settings")
+        self.settings_window.geometry("300x250")
+        self.settings_window.attributes('-topmost', True)
+        self.settings_window.config(bg="#ECF0F1")
+        
+        container = tk.Frame(self.settings_window, bg="#ECF0F1")
+        container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        
+        # Trainer Row
+        trainer_row = tk.Frame(container, bg="#ECF0F1")
+        trainer_row.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(trainer_row, text="Trainer:", font=("Segoe UI", 9), bg="#ECF0F1").pack(side=tk.LEFT)
+        saved_trainer = self.save_mgr.data.get("settings", {}).get("trainer_selection", "None")
+        self.trainer_var = tk.StringVar(value=saved_trainer)
+        trainer_combo = ttk.Combobox(trainer_row, textvariable=self.trainer_var, state="readonly", justify="center", values=["None", "Boy", "Girl"])
+        trainer_combo.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
+        trainer_combo.bind("<<ComboboxSelected>>", self.on_trainer_select)
+        
+        # Checkboxes Row
+        chk_row = tk.Frame(container, bg="#ECF0F1")
+        chk_row.pack(fill=tk.X, pady=(0, 10))
+        
+        self.allow_wild_var = tk.BooleanVar(value=self.save_mgr.data.get("settings", {}).get("allow_wild", True))
+        self.allow_breed_var = tk.BooleanVar(value=self.save_mgr.data.get("settings", {}).get("allow_breeding", True))
+        self.allow_moves_var = tk.BooleanVar(value=self.save_mgr.data.get("settings", {}).get("allow_moves", True))
+        self.allow_berries_var = tk.BooleanVar(value=self.save_mgr.data.get("settings", {}).get("allow_berries", True))
+        
+        chk_row2 = tk.Frame(container, bg="#ECF0F1")
+        chk_row2.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Checkbutton(chk_row, text="Wild", font=("Segoe UI", 9), variable=self.allow_wild_var, bg="#ECF0F1", command=self.sync_settings).pack(side=tk.LEFT, expand=True)
+        tk.Checkbutton(chk_row, text="Breeding", font=("Segoe UI", 9), variable=self.allow_breed_var, bg="#ECF0F1", command=self.sync_settings).pack(side=tk.LEFT, expand=True)
+        
+        tk.Checkbutton(chk_row2, text="Berries", font=("Segoe UI", 9), variable=self.allow_berries_var, bg="#ECF0F1", command=self.sync_settings).pack(side=tk.LEFT, expand=True)
+        moves_chk = tk.Checkbutton(chk_row2, text="Moves", font=("Segoe UI", 9), variable=self.allow_moves_var, bg="#ECF0F1", command=self.toggle_moves)
+        moves_chk.pack(side=tk.LEFT, expand=True)
+        
+        # Sliders container
+        self.sliders_frame = tk.Frame(container, bg="#ECF0F1")
+        self.sliders_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        def update_leg_entry(val):
+            self.leg_entry_var.set(str(int(float(val))))
+            self.sync_settings()
+        def update_leg_slider(*args):
+            try:
+                val = int(self.leg_entry_var.get())
+                if 1 <= val <= 120:
+                    self.leg_slider.set(val)
+                    self.sync_settings()
+            except ValueError: pass
+            
+        def update_type_entry(val):
+            self.type_entry_var.set(str(int(float(val))))
+            self.sync_settings()
+        def update_type_slider(*args):
+            try:
+                val = int(self.type_entry_var.get())
+                if 1 <= val <= 120:
+                    self.type_slider.set(val)
+                    self.sync_settings()
+            except ValueError: pass
+
+        # Legendary Cooldown
+        leg_row = tk.Frame(self.sliders_frame, bg="#ECF0F1")
+        leg_row.pack(fill=tk.X, pady=(0, 5))
+        tk.Label(leg_row, text="Legendary CD (m):", font=("Segoe UI", 9), bg="#ECF0F1").pack(side=tk.LEFT)
+        self.leg_entry_var = tk.StringVar(value=str(self.save_mgr.data.get("settings", {}).get("legendary_cooldown", 60)))
+        leg_entry = tk.Entry(leg_row, textvariable=self.leg_entry_var, width=5, justify="center")
+        leg_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.leg_entry_var.trace_add("write", update_leg_slider)
+        
+        self.leg_slider = ttk.Scale(leg_row, from_=1, to=120, orient=tk.HORIZONTAL, command=update_leg_entry)
+        self.leg_slider.set(self.save_mgr.data.get("settings", {}).get("legendary_cooldown", 60))
+        self.leg_slider.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        
+        # Type Cooldown
+        type_row = tk.Frame(self.sliders_frame, bg="#ECF0F1")
+        type_row.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(type_row, text="Type CD (m):", font=("Segoe UI", 9), bg="#ECF0F1").pack(side=tk.LEFT)
+        self.type_entry_var = tk.StringVar(value=str(self.save_mgr.data.get("settings", {}).get("type_cooldown", 10)))
+        type_entry = tk.Entry(type_row, textvariable=self.type_entry_var, width=5, justify="center")
+        type_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.type_entry_var.trace_add("write", update_type_slider)
+        
+        self.type_slider = ttk.Scale(type_row, from_=1, to=120, orient=tk.HORIZONTAL, command=update_type_entry)
+        self.type_slider.set(self.save_mgr.data.get("settings", {}).get("type_cooldown", 10))
+        self.type_slider.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        
+        self.toggle_moves() # Hide/show sliders on open
+        
+        # Reset Button
+        btn_reset = tk.Button(container, text="Start New Adventure", font=("Segoe UI", 9, "bold"), bg="#E74C3C", fg="white", bd=0, pady=5, command=self.confirm_reset)
+        btn_reset.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+
+    def toggle_moves(self):
+        self.sync_settings()
+        if self.allow_moves_var.get():
+            self.sliders_frame.pack(fill=tk.X, pady=(0, 10), )
+        else:
+            self.sliders_frame.pack_forget()
+
+
     def exit_game(self):
         if hasattr(self, 'active_toy') and self.active_toy:
             self.active_toy.destroy()
         self.sync_save_state()
         sys.exit()
+
+
+
+

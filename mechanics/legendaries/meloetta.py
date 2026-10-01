@@ -13,7 +13,7 @@ class MeloettaMechanics:
         name = self.pet_name.lower().replace("_", "").replace("-", "")
         if name not in ["meloetta", "meloetta1"]: return
 
-        self.meloetta_cooldown = 108000 # 1 hour
+        self.meloetta_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.meloetta_form = name
         
         if hasattr(self, 'is_climbing'): self.is_climbing = False

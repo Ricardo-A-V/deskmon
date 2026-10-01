@@ -85,7 +85,7 @@ class ZygardeMechanics:
             if self.zygarde_timer <= 0:
                 self.cancel_zygarde_arts()
                 self.current_state = 'idle'
-                self.zygarde_cooldown = 72000 
+                self.zygarde_cooldown = self.get_legendary_cooldown(72000) 
 
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
@@ -184,7 +184,7 @@ class ZygardeMechanics:
             if self.zygarde50_timer <= 0:
                 self.cancel_zygarde_arts()
                 self.current_state = 'idle'
-                self.zygarde_cooldown = 72000 
+                self.zygarde_cooldown = self.get_legendary_cooldown(72000) 
 
         self.update_position()
         self.schedule_loop(50, self.physics_loop)

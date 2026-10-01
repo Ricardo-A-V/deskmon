@@ -7,7 +7,7 @@ class FlyingMechanics:
             self.whirlwinds = []
             
         if getattr(self, 'flying_cooldown', 0) == 0 and random.randint(1, 100) <= 10:
-            self.flying_cooldown = 18000
+            self.flying_cooldown = self.get_type_cooldown(18000)
             wx = self.x + self.size_w/2
             wy = self.y + self.size_h
             

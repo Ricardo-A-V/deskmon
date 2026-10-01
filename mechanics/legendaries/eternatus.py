@@ -148,7 +148,7 @@ class EternatusMechanics:
                 self.etr_phase = 6
                 
         elif self.etr_phase == 6:
-            self.eternatus_cooldown = 72000
+            self.eternatus_cooldown = self.get_legendary_cooldown(72000)
             self.cancel_eternatus_arts()
             self.schedule_loop(50, self.physics_loop)
             return

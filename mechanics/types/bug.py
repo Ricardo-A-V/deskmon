@@ -18,7 +18,7 @@ class BugMechanics:
         
         if getattr(self, 'bug_cooldown', 0) == 0 and (is_left_edge or is_right_edge):
             if __import__('random').randint(1, 100) <= 10:
-                self.bug_cooldown = 18000
+                self.bug_cooldown = self.get_type_cooldown(18000)
                 
                 # Corner coordinates
                 corner_x = self.v_x if is_left_edge else self.v_x + self.v_width

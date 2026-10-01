@@ -15,7 +15,7 @@ class IceMechanics:
                     break
             
             if target:
-                self.ice_cooldown = 18000
+                self.ice_cooldown = self.get_type_cooldown(18000)
                 def shoot_ice(x, y, tx, ty, steps_left=15, win=None, canvas=None, step_anim=0):
                     if getattr(self, 'current_state', 'exiting') == 'exiting':
                         if win: win.destroy()

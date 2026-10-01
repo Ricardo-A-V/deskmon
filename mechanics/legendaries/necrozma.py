@@ -75,7 +75,7 @@ class NecrozmaMechanics:
         elif self.necrozma_phase == 2:
             self.necrozma_timer -= 1
             if not getattr(self, 'n_projectiles', []) or self.necrozma_timer <= 0:
-                self.necrozma_cooldown = 72000 
+                self.necrozma_cooldown = self.get_legendary_cooldown(72000) 
                 self.current_state = 'idle'
                 self.cancel_necrozma_arts()
                 

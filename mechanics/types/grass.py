@@ -14,7 +14,7 @@ class GrassMechanics:
                         break
                         
             if target_found:
-                self.grass_cooldown = 18000
+                self.grass_cooldown = self.get_type_cooldown(18000)
                 
                 import tkinter as tk
                 win = tk.Toplevel(self.window)

@@ -11,7 +11,7 @@ class ZeraoraMechanics:
         name = self.pet_name.lower().replace("_", "").replace("-", "")
         if name not in ["zeraora"]: return
 
-        self.zeraora_cooldown = 108000 # 1 hour
+        self.zeraora_cooldown = self.get_legendary_cooldown(108000) # 1 hour
         self.zeraora_target = None
         self.zeraora_hit_count = 0
         

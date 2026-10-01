@@ -42,6 +42,6 @@ class GhostMechanics:
             # End of phase
             self.is_glitching = False
             self.has_genesect_glitch = False
-            self.ghost_cooldown = 18000
+            self.ghost_cooldown = self.get_type_cooldown(18000)
             try: self.window.attributes('-alpha', 1.0)
             except: pass

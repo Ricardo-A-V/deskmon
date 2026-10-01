@@ -40,7 +40,7 @@ class XerneasMechanics:
         if self.xerneas_timer <= 0:
             self.cancel_xerneas_arts()
             self.current_state = 'idle'
-            self.xerneas_cooldown = 72000 # 1 hour cooldown lock
+            self.xerneas_cooldown = self.get_legendary_cooldown(72000) # 1 hour cooldown lock
 
         self.update_position()
         self.schedule_loop(50, self.physics_loop)
