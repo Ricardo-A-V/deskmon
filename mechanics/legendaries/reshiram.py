@@ -177,7 +177,18 @@ class ReshiramMechanics:
             self.res_y += self.res_vy
             
             sphere_feet_y = self.res_y + self.res_size - 50
+            
+            collided = False
             if sphere_feet_y >= self.default_floor_y:
+                collided = True
+            elif self.res_y <= self.v_y:
+                collided = True
+            elif self.res_x <= self.v_x:
+                collided = True
+            elif self.res_x >= self.v_x + self.v_width - self.res_size:
+                collided = True
+                
+            if collided:
                 self.trigger_landing_shake()
                 self.reshiram_explode()
                 
@@ -347,6 +358,6 @@ class ReshiramMechanics:
 
         if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
         target.current_state = 'burning'
-        target.burning_timer = 166 # 5 seconds at 30ms per tick
+        target.burning_timer = 250 # 5 seconds at 30ms per tick
         target.is_facing_right = random.choice([True, False])
 

@@ -55,11 +55,23 @@ class FireMechanics:
                     if dx < 50 and dy < 25:
                         if hasattr(other, 'interrupt_current_state'): other.interrupt_current_state()
                         other.current_state = 'burning'
-                        other.burning_timer = 150
+                        other.burning_timer = 250
                         break
 
     def _fsm_burning(self):
-        self.burning_timer -= 1
+        # Pause burning_timer at 1 to handle dissipation phase internally
+        if self.burning_timer > 1:
+            self.burning_timer -= 1
+            self.burn_dissipating = False
+        elif self.burning_timer == 1:
+            if not getattr(self, 'burn_dissipating', False):
+                self.burn_dissipating = True
+                self.burn_dissipate_timer = 250 # 5 seconds dissipation
+            
+            if self.burn_dissipate_timer > 0:
+                self.burn_dissipate_timer -= 1
+            else:
+                self.burning_timer = 0
         
         # Panic running
         if not hasattr(self, 'burn_direction'):
@@ -73,7 +85,13 @@ class FireMechanics:
             self.burn_dir_timer = random.randint(10, 30)
             self.is_facing_right = (self.burn_direction == 1)
             
-        self.x += self.burn_direction * self.speed * 2.0
+        speed_mult = 2.0
+        if getattr(self, 'burn_dissipating', False):
+            # Speed transitions from 2.0 (start of dissipation) to 1.0 (end of dissipation)
+            progress = self.burn_dissipate_timer / 250.0
+            speed_mult = 1.0 + progress
+            
+        self.x += self.burn_direction * self.speed * speed_mult
         
         if self.x <= self.v_x:
             self.x = self.v_x
@@ -110,12 +128,29 @@ class FireMechanics:
         # Fire particles floating UP
         if not hasattr(self, 'burn_particles'): self.burn_particles = []
         
-        if random.randint(1, 100) <= 40:
+        spawn_chance = 40
+        if getattr(self, 'burn_dissipating', False):
+            # Particle count decreases over 5 seconds
+            spawn_chance = int(40 * (self.burn_dissipate_timer / 250.0))
+            
+        if random.randint(1, 100) <= spawn_chance:
             cx = self.size_w / 2
             cy = self.size_h / 2
             rx = cx + random.randint(-15, 15)
             ry = cy + random.randint(-10, 20)
-            color = random.choice(["#FF4500", "#FFA500", "#FFD700"])
+            
+            if getattr(self, 'burn_dissipating', False):
+                progress = self.burn_dissipate_timer / 250.0
+                # Transition to mainly smoke
+                if random.random() > progress:
+                    # Smoke colors
+                    color = random.choice(["#555555", "#777777", "#999999", "#888888"])
+                else:
+                    # Fire colors
+                    color = random.choice(["#FF4500", "#FFA500", "#FFD700"])
+            else:
+                color = random.choice(["#FF4500", "#FFA500", "#FFD700"])
+                
             pid = self.canvas.create_rectangle(rx-3, ry-3, rx+3, ry+3, fill=color, outline="")
             self.burn_particles.append({'id': pid, 'x': rx, 'y': ry, 'life': 20, 'color': color})
             
@@ -134,6 +169,9 @@ class FireMechanics:
         
         if self.burning_timer <= 0:
             delattr(self, 'burn_direction')
+            if getattr(self, 'burn_dissipating', False):
+                self.burn_dissipating = False
+                
             for p in self.burn_particles:
                 self.canvas.delete(p['id'])
             self.burn_particles = []
@@ -145,3 +183,4 @@ class FireMechanics:
                 self.current_state = 'idle'
                 
         self.schedule_loop(20, self.physics_loop)
+

@@ -155,8 +155,21 @@ class ZekromMechanics:
             current_env, _ = self.get_window_environment()
             physical_floor = current_env['y'] if self.y <= current_env['y'] + 45 else self.default_floor_y
             
+            collided = False
             if self.y >= physical_floor:
                 self.y = physical_floor
+                collided = True
+            elif self.y <= self.v_y:
+                self.y = self.v_y
+                collided = True
+            elif self.x <= self.v_x:
+                self.x = self.v_x
+                collided = True
+            elif self.x >= self.v_x + self.v_width - self.size_w:
+                self.x = self.v_x + self.v_width - self.size_w
+                collided = True
+                
+            if collided:
                 self.trigger_landing_shake()
                 
                 self.canvas.itemconfig(self.canvas_image_id, state='normal')

@@ -20,6 +20,7 @@ Deskmon.exe
 temp_shortcut.vbs
 
 # Herramientas de desarrollo y procesamiento crudo
+scratch/
 dev_env/
 raw_shinys/
 dev_spawner.py
