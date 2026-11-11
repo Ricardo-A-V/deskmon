@@ -96,8 +96,9 @@ from mechanics.legendaries.zarude import ZarudeMechanics
 from mechanics.legendaries.melmetal import MelmetalMechanics
 from mechanics.legendaries.urshifu import UrshifuMechanics
 from mechanics.legendaries.terapagos import TerapagosMechanics
+from mechanics.legendaries.rayquaza_deoxys_duo import RayquazaDeoxysDuoMechanics
 
-class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
+class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
     def get_legendary_cooldown(self, default_ticks):
         if not getattr(self, 'game_controller', None): return default_ticks
         base_min = self.game_controller.save_mgr.data.get('settings', {}).get('legendary_cooldown', 60)
@@ -144,7 +145,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         
         LEGENDARY_MATRIX = {
             "articuno", "articuni1", "zapdos", "zapdos1", "moltres", "moltres1", "mewtwo", "mew", "raikou", "entei", "suicune", "lugia", "hooh", "celebi",
-            "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys",
+            "regirock", "regice", "registeel", "latias", "latios", "kyogre", "groudon", "rayquaza", "jirachi", "deoxys", "deoxys1", "deoxys2", "deoxys3",
             "uxie", "mesprit", "azelf", "dialga", "palkia", "heatran", "regigigas", "giratina", "giratina1", "cresselia", "manaphy", "phione", "darkrai", "shaymin", "shaymin1", "arceus",
             "victini", "cobalion", "terrakion", "virizion", "tornadus", "tornadus1", "thundurus", "thundurus1", "reshiram", "zekrom", "landorus", "landorus1", "kyurem", "kyurem1", "kyurem2", "keldeo", "meloetta", "meloetta1", "genesect",
             "xerneas", "yveltal", "zygarde", "diancie", "hoopa", "hoopa1", "volcanion",
@@ -178,6 +179,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             size_multiplier *= 1.5
         elif normalized_name == "hoopa1":
             size_multiplier *= 2.0
+        elif normalized_name == "rayquaza":
+            size_multiplier *= 1.5
 
         speed_multiplier = 2
         physics = self.config.get("physics", {})
@@ -526,6 +529,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
 
         elif self.current_state == 'rayquaza_channeling':
             self.cancel_rayquaza_arts()
+        elif self.current_state in self.DUO_STATES:
+            self.cancel_rayquaza_deoxys_duo()
 
         # Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
@@ -711,6 +716,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 elif hasattr(self, 'cancel_terapagos_arts') and (self.current_state.startswith('terapagos_') or self.current_state.startswith('tera_')):
                     self.cancel_terapagos_arts()
                     self.cancel_tera_victim_arts()
+                elif self.current_state in self.DUO_STATES:
+                    self.cancel_rayquaza_deoxys_duo()
                 
                 if self.current_state.startswith('marshadow_victim_'):
                     self.current_state = 'falling'
@@ -830,6 +837,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
 
         elif self.current_state == 'rayquaza_channeling':
             self.cancel_rayquaza_arts()
+        elif self.current_state in self.DUO_STATES:
+            self.cancel_rayquaza_deoxys_duo()
 
         # Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
@@ -1593,6 +1602,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             if hasattr(self, 'cancel_groudon_arts'): self.cancel_groudon_arts()
         elif self.current_state.startswith('diancie_'):
             if hasattr(self, 'cancel_diancie_arts'): self.cancel_diancie_arts()
+        elif self.current_state in self.DUO_STATES:
+            if hasattr(self, 'cancel_rayquaza_deoxys_duo'): self.cancel_rayquaza_deoxys_duo()
         elif self.current_state.startswith('rayquaza_'):
             if hasattr(self, 'cancel_rayquaza_arts'): self.cancel_rayquaza_arts()
         elif self.current_state.startswith('giratina_'):
@@ -1835,6 +1846,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 self.cancel_groudon_arts()
             elif self.current_state.startswith('diancie_') and hasattr(self, 'cancel_diancie_arts'):
                 self.cancel_diancie_arts()
+            elif self.current_state in self.DUO_STATES:
+                self.cancel_rayquaza_deoxys_duo()
             elif self.current_state.startswith('rayquaza_'):
                 self.cancel_rayquaza_arts()
             elif self.current_state.startswith('giratina_'):
@@ -2261,6 +2274,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             # DEOXYS FSM RENDER
             elif anim_state in ['deoxys_channeling', 'deoxys_ascend', 'deoxys_wait', 'deoxys_meteor', 'deoxys_emerge']:
                 anim_state = 'idle'
+            elif anim_state in ['rayquaza_deoxys_duo', 'rayquaza_deoxys_duo_partner']:
+                anim_state = 'walking'
                 
             # LAKE TRIO FSM RENDER
             elif anim_state in ['lake_channeling', 'lake_rotating']:
@@ -2357,6 +2372,12 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         return win
 
     def physics_loop(self):
+        if self.current_state in (
+            'duo_final_loss',
+            'duo_final_winner_rayquaza',
+            'duo_final_winner_deoxys',
+        ) or getattr(self, '_duo_final_returning', False):
+            return
         if not getattr(self, 'is_egg', False) and hasattr(self, 'canvas'):
             self.canvas.delete('effect')
             self.canvas.delete('vfx')
@@ -3125,6 +3146,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
         self.melmetal_cooldown = max(0, getattr(self, 'melmetal_cooldown', 0) - 1)
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
         self.rayquaza_cooldown = max(0, getattr(self, 'rayquaza_cooldown', 0) - 1)
+        self.rayquaza_deoxys_cooldown = max(0, getattr(self, 'rayquaza_deoxys_cooldown', 0) - 1)
         self.palkia_cooldown = max(0, getattr(self, 'palkia_cooldown', 0) - 1)
         self.giratina_cooldown = max(0, getattr(self, 'giratina_cooldown', 0) - 1)
         self.zekrom_cooldown = max(0, getattr(self, 'zekrom_cooldown', 0) - 1)
@@ -3608,6 +3630,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
            # --- EXCLUSIVE MECHANIC: RAYQUAZA'S EMERALD CYCLONE ---
             if self.pet_name.lower().replace("_", "").replace("-", "") == "rayquaza" and self.rayquaza_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
                 if random.randint(1, 1000) <= 8: 
+                    if getattr(self, 'rayquaza_deoxys_cooldown', 0) == 0 and self.start_rayquaza_deoxys_duo():
+                        return
                     if getattr(self, 'get_all_pets', None):
                         excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'deluge_float', 'rayquaza_cyclone_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
                         valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
@@ -4521,6 +4545,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             'groudon_channeling', 
             'lugia_channeling', 'lugia_dash',
             'rayquaza_channeling', 
+            'rayquaza_deoxys_duo',
+            'rayquaza_deoxys_duo_partner',
             'dialga_channeling', 
             'palkia_channeling',
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',
@@ -4592,6 +4618,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             'lati_dash',
             'lati_return',
             'deoxys_channeling',
+            'rayquaza_deoxys_duo',
+            'rayquaza_deoxys_duo_partner',
             'deoxys_ascend',
             'deoxys_wait',
             'deoxys_meteor',
