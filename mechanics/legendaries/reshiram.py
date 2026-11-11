@@ -272,7 +272,7 @@ class ReshiramMechanics:
         if getattr(self, 'get_all_pets', None):
             for target in self.get_all_pets():
                 # STRUCTURAL FIX: Always ignore eggs
-                if target != self and target.current_state != 'exiting' and not getattr(target, 'is_egg', False):
+                if target != self and target.current_state not in ['exiting', 'digging', 'digging_in', 'digging_out'] and not getattr(target, 'is_egg', False):
                     dist = math.sqrt((self.res_target_x - target.x)**2 + (self.res_target_y - target.y)**2)
                     if dist <= impact_radius:
                         self.apply_burn(target)

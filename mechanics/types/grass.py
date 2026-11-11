@@ -7,7 +7,7 @@ class GrassMechanics:
             target_found = False
             if getattr(self, 'get_all_pets', None):
                 for other in self.get_all_pets():
-                    if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'flying']: continue
+                    if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'flying', 'digging', 'digging_in', 'digging_out']: continue
                     dist = __import__('math').hypot((other.x + other.size_w/2) - (self.x + self.size_w/2), (other.y + other.size_h/2) - (self.y + self.size_h/2))
                     if dist < 1000:
                         target_found = True
@@ -76,7 +76,7 @@ class GrassMechanics:
                         
                         if getattr(self, 'get_all_pets', None):
                             for other in self.get_all_pets():
-                                if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'flying']: continue
+                                if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'flying', 'digging', 'digging_in', 'digging_out']: continue
                                 dx = other.x + other.size_w/2 - global_x
                                 dy = other.y + other.size_h/2 - global_y
                                 if __import__('math').hypot(dx, dy) < 40:

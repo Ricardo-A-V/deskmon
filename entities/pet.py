@@ -786,8 +786,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             self.current_state = 'falling'
 
         # FIX: Interrupt digging manually if you grab the target
-        if self.current_state == 'digging':
+        if self.current_state in ['digging', 'digging_in', 'digging_out']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
             self.current_state = 'falling'
 
         # FIX: Destroy Shadows interaction if you intervene
@@ -1551,8 +1552,9 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                 if hasattr(t_targ, 'tk_master'): t_targ.tk_master = None
             self.tk_target = None
 
-        elif self.current_state == 'digging':
+        elif self.current_state in ['digging', 'digging_in', 'digging_out']:
             self.canvas.itemconfig(self.canvas_image_id, state='normal')
+            self.canvas.coords(self.canvas_image_id, self.size_w//2, self.size_h//2)
         elif self.current_state.startswith('dark_'):
             if hasattr(self, 'cancel_dark_arts'): self.cancel_dark_arts()
         elif self.current_state.startswith('mewtwo_'):
@@ -3690,7 +3692,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
             if self.pet_name.lower().replace("_", "").replace("-", "") == "hooh" and self.hooh_cooldown == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
                 if random.randint(1, 1000) <= 8: 
                     if getattr(self, 'get_all_pets', None):
-                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'burning', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'digging', 'digging_in', 'digging_out']
                         valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                         if valid_targets:
@@ -3712,7 +3714,7 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     if getattr(self, 'get_all_pets', None):
                     
                         # FIX: Exclude critical transition states (spawns and evolutions) to avoid parallel loops
-                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']
+                        excluded_states = ['exiting', 'dragged', 'mewtwo_victim', 'evolving_start', 'evolving_finish', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'digging', 'digging_in', 'digging_out']
                         valid_targets = [p for p in self.get_all_pets() if p != self and p.current_state not in excluded_states and not getattr(p, 'is_egg', False)]
                     
                         if valid_targets:
@@ -3845,6 +3847,8 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                             # We fire the animated projectile from our geometric center
                             self.water_cooldown = self.get_type_cooldown(18000)
                             def on_bubble_hit(hit_target):
+                                if getattr(hit_target, 'current_state', '') in ['digging', 'digging_in', 'digging_out']:
+                                    return
                                 # STRUCTURAL FIX: Prevent FSM corruption if the bubble hits a Dark type
                                 if getattr(hit_target, 'current_state', '').startswith('dark_'):
                                     hit_target.cancel_dark_arts()
@@ -3925,294 +3929,294 @@ class DesktopPet(TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, Zarude
                     self.schedule_loop(50, self.physics_loop)
                     return
 
-            current_env, ahead_env = self.get_window_environment()
-            ahead_physical_floor = ahead_env['y'] if type(ahead_env) is dict else ahead_env
-        
-            is_climber = getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False)
-            if is_climber:
-                self.is_climbing = True
+        current_env, ahead_env = self.get_window_environment()
+        ahead_physical_floor = ahead_env['y'] if type(ahead_env) is dict else ahead_env
+    
+        is_climber = getattr(self, 'is_climbing', False) or self.config.get("physics", {}).get("is_climbing", False)
+        if is_climber:
+            self.is_climbing = True
 
-            if not getattr(self, 'is_flying', False):
-                if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
-                    if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                        if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
-                            self.anchored_hwnd = current_env['hwnd']
-                            self.anchored_rect = current_env['rect']
-                else:
-                    if not is_climber:
-                        self.anchored_hwnd = None
-
-                if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
-                    if getattr(self, 'gravity_inverted', False):
-                        # Inverted floor = Bottom edge of the window
-                        current_physical_floor = self.anchored_rect[3] + getattr(self, 'offset_y', 0)
-                    else:
-                        current_physical_floor = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
-                elif (self.y >= current_env['y'] - 15) if getattr(self, 'gravity_inverted', False) else (self.y <= current_env['y'] + 15):
-                    current_physical_floor = current_env['y']
-                else:
-                    current_physical_floor = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
-
-                self.floor_y = current_physical_floor
-
+        if not getattr(self, 'is_flying', False):
+            if self.current_state in ['idle', 'walking'] and current_env['hwnd']:
+                if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    if getattr(self, 'anchored_hwnd', None) != current_env['hwnd']:
+                        self.anchored_hwnd = current_env['hwnd']
+                        self.anchored_rect = current_env['rect']
+            else:
                 if not is_climber:
-                    if getattr(self, 'gravity_inverted', False):
-                        if self.current_state in ['idle', 'walking'] and self.y > self.floor_y + 15:
-                            self.current_state = 'jumping_arc'
-                            self.jump_target_y = self.floor_y
-                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0  
-                        
-                        elif self.current_state == 'walking' and ahead_physical_floor is not None:
-                            h = ahead_physical_floor - self.y
-                            if 30 < h < 750 and self.jump_cooldown == 0: 
-                                if random.randint(1, 1000) <= 30: 
-                                    self.current_state = 'jumping_arc'
-                                    self.jump_target_y = ahead_physical_floor
-                                    self.v_y_velocity = math.sqrt(2 * 1.5 * (h + 30))
-                                    self.jump_cooldown = 400
+                    self.anchored_hwnd = None
 
-                        elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
-                            if random.randint(1, 1000) <= 5: 
-                                self.current_state = 'jumping_arc'
-                                self.jump_target_y = self.v_y
-                                self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0 
-                                self.jump_cooldown = 400
-                                self.anchored_hwnd = None
-                                self.anchored_rect = None
-                    else:
-                        if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
-                            self.current_state = 'jumping_arc'
-                            self.jump_target_y = self.floor_y
-                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0  
-                        
-                        elif self.current_state == 'walking' and ahead_physical_floor is not None:
-                            h = self.y - ahead_physical_floor
-                            if 30 < h < 750 and self.jump_cooldown == 0: 
-                                if random.randint(1, 1000) <= 30: 
-                                    self.current_state = 'jumping_arc'
-                                    self.jump_target_y = ahead_physical_floor
-                                    self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
-                                    self.jump_cooldown = 400
-
-                        elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
-                            if random.randint(1, 1000) <= 5: 
-                                self.current_state = 'jumping_arc'
-                                self.jump_target_y = self.default_floor_y
-                                self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0 
-                                self.jump_cooldown = 400
-                                self.anchored_hwnd = None
-                                self.anchored_rect = None
-
+            if getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                if getattr(self, 'gravity_inverted', False):
+                    # Inverted floor = Bottom edge of the window
+                    current_physical_floor = self.anchored_rect[3] + getattr(self, 'offset_y', 0)
                 else:
-                    win_offset = 6 
-                    wall_offset = getattr(self, 'climb_offset_x', 0)
-                    ceil_offset = getattr(self, 'climb_offset_y', 0)
+                    current_physical_floor = self.anchored_rect[1] - self.size_h - getattr(self, 'offset_y', 0)
+            elif (self.y >= current_env['y'] - 15) if getattr(self, 'gravity_inverted', False) else (self.y <= current_env['y'] + 15):
+                current_physical_floor = current_env['y']
+            else:
+                current_physical_floor = self.v_y if getattr(self, 'gravity_inverted', False) else self.default_floor_y
 
-                    if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
-                        if not getattr(self, 'anchored_hwnd', None):
+            self.floor_y = current_physical_floor
+
+            if not is_climber:
+                if getattr(self, 'gravity_inverted', False):
+                    if self.current_state in ['idle', 'walking'] and self.y > self.floor_y + 15:
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0  
+                    
+                    elif self.current_state == 'walking' and ahead_physical_floor is not None:
+                        h = ahead_physical_floor - self.y
+                        if 30 < h < 750 and self.jump_cooldown == 0: 
+                            if random.randint(1, 1000) <= 30: 
+                                self.current_state = 'jumping_arc'
+                                self.jump_target_y = ahead_physical_floor
+                                self.v_y_velocity = math.sqrt(2 * 1.5 * (h + 30))
+                                self.jump_cooldown = 400
+
+                    elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
+                        if random.randint(1, 1000) <= 5: 
+                            self.current_state = 'jumping_arc'
+                            self.jump_target_y = self.v_y
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else 3.0 
+                            self.jump_cooldown = 400
+                            self.anchored_hwnd = None
+                            self.anchored_rect = None
+                else:
+                    if self.current_state in ['idle', 'walking'] and self.y < self.floor_y - 15:
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0  
+                    
+                    elif self.current_state == 'walking' and ahead_physical_floor is not None:
+                        h = self.y - ahead_physical_floor
+                        if 30 < h < 750 and self.jump_cooldown == 0: 
+                            if random.randint(1, 1000) <= 30: 
+                                self.current_state = 'jumping_arc'
+                                self.jump_target_y = ahead_physical_floor
+                                self.v_y_velocity = -math.sqrt(2 * 1.5 * (h + 30))
+                                self.jump_cooldown = 400
+
+                    elif self.current_state == 'walking' and getattr(self, 'anchored_hwnd', None) and self.jump_cooldown == 0:
+                        if random.randint(1, 1000) <= 5: 
                             self.current_state = 'jumping_arc'
                             self.jump_target_y = self.default_floor_y
-                            self.v_y_velocity = 0.0
-                            self.climbing_surface = 'floor'
-                            self.surface_angle = 0
-                            self.jump_cooldown = 60
-                    elif getattr(self, 'climbing_surface', 'floor') == 'floor':
-                        if not getattr(self, 'anchored_hwnd', None) and self.y < self.floor_y - 15:
-                            self.current_state = 'jumping_arc'
-                            self.jump_target_y = self.floor_y
-                            self.v_y_velocity = 0.0
-                            self.jump_cooldown = 60
-
-                    if not getattr(self, 'anchored_hwnd', None):
-                        if self.climbing_surface == 'screen_l':
-                            self.x = self.v_x + wall_offset
-                            self.surface_angle = 270
-                        elif self.climbing_surface == 'screen_r':
-                            self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                            self.surface_angle = 90
-                        elif self.climbing_surface == 'screen_ceiling':
-                            self.y = self.v_y + ceil_offset
-                            self.surface_angle = 180
-
-                    if self.current_state == 'walking':
-                        if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
-                            rect = self.anchored_rect
-                            if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                                self.y = rect[1] - self.size_h - self.offset_y
-                                self.x += self.speed if self.is_facing_right else -self.speed
-                            
-                                if self.x > rect[2] - self.size_w / 2 and self.is_facing_right:
-                                    self.climbing_surface = 'wall_r'
-                                    self.surface_angle = 270
-                                    self.x = rect[2] - win_offset
-                                    self.y = rect[1] - self.size_h / 2
-                                elif self.x < rect[0] - self.size_w / 2 and not self.is_facing_right:
-                                    self.climbing_surface = 'wall_l'
-                                    self.surface_angle = 90
-                                    self.x = rect[0] - self.size_w + win_offset
-                                    self.y = rect[1] - self.size_h / 2
-
-                            elif getattr(self, 'climbing_surface', 'floor') == 'wall_r':
-                                self.x = rect[2] - win_offset
-                                self.y += self.speed if self.is_facing_right else -self.speed 
-                                if self.y > rect[3] - self.size_h / 2 and self.is_facing_right:
-                                    self.climbing_surface = 'ceiling'
-                                    self.surface_angle = 180
-                                    self.y = rect[3] - win_offset
-                                    self.x = rect[2] - self.size_w / 2
-                                elif self.y < rect[1] - self.size_h / 2 and not self.is_facing_right:
-                                    self.climbing_surface = 'floor'
-                                    self.surface_angle = 0
-                                    self.y = rect[1] - self.size_h + win_offset
-                                    self.x = rect[2] - self.size_w / 2
-                                
-                            elif getattr(self, 'climbing_surface', 'floor') == 'wall_l':
-                                self.x = rect[0] - self.size_w + win_offset
-                                self.y -= self.speed if self.is_facing_right else -self.speed 
-                                if self.y < rect[1] - self.size_h / 2 and self.is_facing_right:
-                                    self.climbing_surface = 'floor'
-                                    self.surface_angle = 0
-                                    self.y = rect[1] - self.size_h + win_offset
-                                    self.x = rect[0] - self.size_w / 2
-                                elif self.y > rect[3] - self.size_h / 2 and not self.is_facing_right:
-                                    self.climbing_surface = 'ceiling'
-                                    self.surface_angle = 180
-                                    self.y = rect[3] - win_offset
-                                    self.x = rect[0] - self.size_w / 2
-                                
-                            elif getattr(self, 'climbing_surface', 'floor') == 'ceiling':
-                                self.y = rect[3] - win_offset
-                                self.x -= self.speed if self.is_facing_right else -self.speed 
-                                if self.x < rect[0] - self.size_w / 2 and self.is_facing_right:
-                                    self.climbing_surface = 'wall_l'
-                                    self.surface_angle = 90
-                                    self.x = rect[0] - self.size_w + win_offset
-                                    self.y = rect[3] - self.size_h / 2
-                                elif self.x > rect[2] - self.size_w / 2 and not self.is_facing_right:
-                                    self.climbing_surface = 'wall_r'
-                                    self.surface_angle = 270
-                                    self.x = rect[2] - win_offset
-                                    self.y = rect[3] - self.size_h / 2
-
-                        else: 
-                            if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                                self.y = self.default_floor_y
-                                self.x += self.speed if self.is_facing_right else -self.speed
-                                if self.x >= self.v_x + self.v_width - self.size_w and self.is_facing_right:
-                                    self.climbing_surface = 'screen_r'
-                                    self.surface_angle = 90
-                                    self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                                    self.is_facing_right = False 
-                                elif self.x <= self.v_x and not self.is_facing_right:
-                                    self.climbing_surface = 'screen_l'
-                                    self.surface_angle = 270
-                                    self.x = self.v_x + wall_offset
-                                    self.is_facing_right = True 
-                                elif ahead_physical_floor is not None and ahead_env['hwnd']:
-                                    self.anchored_hwnd = ahead_env['hwnd']
-                                    self.anchored_rect = ahead_env['rect']
-                                    if self.is_facing_right:
-                                        self.climbing_surface = 'wall_l'
-                                        self.surface_angle = 90
-                                        self.x = self.anchored_rect[0] - self.size_w + win_offset
-                                    else:
-                                        self.climbing_surface = 'wall_r'
-                                        self.surface_angle = 270
-                                        self.x = self.anchored_rect[2] - win_offset
-                                    
-                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_r':
-                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                                self.y += self.speed if self.is_facing_right else -self.speed
-                                if self.y <= self.v_y and not self.is_facing_right:
-                                    self.climbing_surface = 'screen_ceiling'
-                                    self.surface_angle = 180
-                                    self.y = self.v_y + ceil_offset
-                                    self.is_facing_right = True 
-                                elif self.y >= self.default_floor_y and self.is_facing_right:
-                                    self.climbing_surface = 'floor'
-                                    self.surface_angle = 0
-                                    self.y = self.default_floor_y
-                                    self.is_facing_right = False 
-                                
-                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_l':
-                                self.x = self.v_x + wall_offset
-                                self.y -= self.speed if self.is_facing_right else -self.speed
-                                if self.y <= self.v_y and self.is_facing_right:
-                                    self.climbing_surface = 'screen_ceiling'
-                                    self.surface_angle = 180
-                                    self.y = self.v_y + ceil_offset
-                                    self.is_facing_right = False 
-                                elif self.y >= self.default_floor_y and not self.is_facing_right:
-                                    self.climbing_surface = 'floor'
-                                    self.surface_angle = 0
-                                    self.y = self.default_floor_y
-                                    self.is_facing_right = True 
-                                
-                            elif getattr(self, 'climbing_surface', 'floor') == 'screen_ceiling':
-                                self.y = self.v_y + ceil_offset
-                                self.x -= self.speed if self.is_facing_right else -self.speed
-                                if self.x <= self.v_x and self.is_facing_right:
-                                    self.climbing_surface = 'screen_l'
-                                    self.surface_angle = 270
-                                    self.x = self.v_x + wall_offset
-                                    self.is_facing_right = False 
-                                elif self.x >= self.v_x + self.v_width - self.size_w and not self.is_facing_right:
-                                    self.climbing_surface = 'screen_r'
-                                    self.surface_angle = 90
-                                    self.x = self.v_x + self.v_width - self.size_w - wall_offset
-                                    self.is_facing_right = True 
+                            self.v_y_velocity = 0.0 if (self.rock_type or self.steel_type) else -3.0 
+                            self.jump_cooldown = 400
+                            self.anchored_hwnd = None
+                            self.anchored_rect = None
 
             else:
-                self.anchored_hwnd = None
-                self.climbing_surface = 'floor'
-            
-                # FLYERS FIX: Maintain 180 degree rotation if gravity is inverted
-                self.surface_angle = 180 if getattr(self, 'gravity_inverted', False) else 0
-            
-                target = getattr(self, 'target_floor_y', self.floor_y)
-                if self.floor_y > target:
-                    self.floor_y -= 5
-                    if self.floor_y < target: self.floor_y = target
-                elif self.floor_y < target:
-                    self.floor_y += 5
-                    if self.floor_y > target: self.floor_y = target
-                
-                self.y = self.floor_y
+                win_offset = 6 
+                wall_offset = getattr(self, 'climb_offset_x', 0)
+                ceil_offset = getattr(self, 'climb_offset_y', 0)
 
-            if self.current_state == 'idle':
-                if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
-                    self.y = self.anchored_rect[1] - self.size_h - self.offset_y
-                
-                action_chance = random.randint(1, 100)
-                if action_chance <= 5: 
-                    self.current_state = 'walking'
-                    self.is_facing_right = random.choice([True, False])
-        
-            elif self.current_state == 'walking':
-                action_chance = random.randint(1, 100)
-                if action_chance <= 5: 
-                    self.current_state = 'idle'
-                else:
-                    if not is_climber:
-                        self.x += self.speed if self.is_facing_right else -self.speed
-                    
+                if getattr(self, 'climbing_surface', 'floor') in ['wall_l', 'wall_r', 'ceiling']:
+                    if not getattr(self, 'anchored_hwnd', None):
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.default_floor_y
+                        self.v_y_velocity = 0.0
+                        self.climbing_surface = 'floor'
+                        self.surface_angle = 0
+                        self.jump_cooldown = 60
+                elif getattr(self, 'climbing_surface', 'floor') == 'floor':
+                    if not getattr(self, 'anchored_hwnd', None) and self.y < self.floor_y - 15:
+                        self.current_state = 'jumping_arc'
+                        self.jump_target_y = self.floor_y
+                        self.v_y_velocity = 0.0
+                        self.jump_cooldown = 60
+
+                if not getattr(self, 'anchored_hwnd', None):
+                    if self.climbing_surface == 'screen_l':
+                        self.x = self.v_x + wall_offset
+                        self.surface_angle = 270
+                    elif self.climbing_surface == 'screen_r':
+                        self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                        self.surface_angle = 90
+                    elif self.climbing_surface == 'screen_ceiling':
+                        self.y = self.v_y + ceil_offset
+                        self.surface_angle = 180
+
+                if self.current_state == 'walking':
+                    if getattr(self, 'anchored_rect', None) and getattr(self, 'anchored_hwnd', None):
+                        rect = self.anchored_rect
                         if getattr(self, 'climbing_surface', 'floor') == 'floor':
-                            if getattr(self, 'ghost_type', False):
-                                # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
-                                if self.x <= self.v_x - self.size_w:
-                                    self.x = self.v_x + self.v_width
-                                    if random.randint(1, 100) <= 25: self.is_facing_right = True 
-                                elif self.x >= self.v_x + self.v_width:
-                                    self.x = self.v_x - self.size_w
-                                    if random.randint(1, 100) <= 25: self.is_facing_right = False
-                            else:
-                                # NORMAL SOLID LIMIT
-                                if self.x <= self.v_x:
-                                    self.x = self.v_x
-                                    self.is_facing_right = True
-                                elif self.x >= (self.v_x + self.v_width) - self.size_w:
-                                    self.x = (self.v_x + self.v_width) - self.size_w
-                                    self.is_facing_right = False
+                            self.y = rect[1] - self.size_h - self.offset_y
+                            self.x += self.speed if self.is_facing_right else -self.speed
+                        
+                            if self.x > rect[2] - self.size_w / 2 and self.is_facing_right:
+                                self.climbing_surface = 'wall_r'
+                                self.surface_angle = 270
+                                self.x = rect[2] - win_offset
+                                self.y = rect[1] - self.size_h / 2
+                            elif self.x < rect[0] - self.size_w / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'wall_l'
+                                self.surface_angle = 90
+                                self.x = rect[0] - self.size_w + win_offset
+                                self.y = rect[1] - self.size_h / 2
+
+                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_r':
+                            self.x = rect[2] - win_offset
+                            self.y += self.speed if self.is_facing_right else -self.speed 
+                            if self.y > rect[3] - self.size_h / 2 and self.is_facing_right:
+                                self.climbing_surface = 'ceiling'
+                                self.surface_angle = 180
+                                self.y = rect[3] - win_offset
+                                self.x = rect[2] - self.size_w / 2
+                            elif self.y < rect[1] - self.size_h / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = rect[1] - self.size_h + win_offset
+                                self.x = rect[2] - self.size_w / 2
+                            
+                        elif getattr(self, 'climbing_surface', 'floor') == 'wall_l':
+                            self.x = rect[0] - self.size_w + win_offset
+                            self.y -= self.speed if self.is_facing_right else -self.speed 
+                            if self.y < rect[1] - self.size_h / 2 and self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = rect[1] - self.size_h + win_offset
+                                self.x = rect[0] - self.size_w / 2
+                            elif self.y > rect[3] - self.size_h / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'ceiling'
+                                self.surface_angle = 180
+                                self.y = rect[3] - win_offset
+                                self.x = rect[0] - self.size_w / 2
+                            
+                        elif getattr(self, 'climbing_surface', 'floor') == 'ceiling':
+                            self.y = rect[3] - win_offset
+                            self.x -= self.speed if self.is_facing_right else -self.speed 
+                            if self.x < rect[0] - self.size_w / 2 and self.is_facing_right:
+                                self.climbing_surface = 'wall_l'
+                                self.surface_angle = 90
+                                self.x = rect[0] - self.size_w + win_offset
+                                self.y = rect[3] - self.size_h / 2
+                            elif self.x > rect[2] - self.size_w / 2 and not self.is_facing_right:
+                                self.climbing_surface = 'wall_r'
+                                self.surface_angle = 270
+                                self.x = rect[2] - win_offset
+                                self.y = rect[3] - self.size_h / 2
+
+                    else: 
+                        if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                            self.y = self.default_floor_y
+                            self.x += self.speed if self.is_facing_right else -self.speed
+                            if self.x >= self.v_x + self.v_width - self.size_w and self.is_facing_right:
+                                self.climbing_surface = 'screen_r'
+                                self.surface_angle = 90
+                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                self.is_facing_right = False 
+                            elif self.x <= self.v_x and not self.is_facing_right:
+                                self.climbing_surface = 'screen_l'
+                                self.surface_angle = 270
+                                self.x = self.v_x + wall_offset
+                                self.is_facing_right = True 
+                            elif ahead_physical_floor is not None and ahead_env['hwnd']:
+                                self.anchored_hwnd = ahead_env['hwnd']
+                                self.anchored_rect = ahead_env['rect']
+                                if self.is_facing_right:
+                                    self.climbing_surface = 'wall_l'
+                                    self.surface_angle = 90
+                                    self.x = self.anchored_rect[0] - self.size_w + win_offset
+                                else:
+                                    self.climbing_surface = 'wall_r'
+                                    self.surface_angle = 270
+                                    self.x = self.anchored_rect[2] - win_offset
+                                
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_r':
+                            self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                            self.y += self.speed if self.is_facing_right else -self.speed
+                            if self.y <= self.v_y and not self.is_facing_right:
+                                self.climbing_surface = 'screen_ceiling'
+                                self.surface_angle = 180
+                                self.y = self.v_y + ceil_offset
+                                self.is_facing_right = True 
+                            elif self.y >= self.default_floor_y and self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = self.default_floor_y
+                                self.is_facing_right = False 
+                            
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_l':
+                            self.x = self.v_x + wall_offset
+                            self.y -= self.speed if self.is_facing_right else -self.speed
+                            if self.y <= self.v_y and self.is_facing_right:
+                                self.climbing_surface = 'screen_ceiling'
+                                self.surface_angle = 180
+                                self.y = self.v_y + ceil_offset
+                                self.is_facing_right = False 
+                            elif self.y >= self.default_floor_y and not self.is_facing_right:
+                                self.climbing_surface = 'floor'
+                                self.surface_angle = 0
+                                self.y = self.default_floor_y
+                                self.is_facing_right = True 
+                            
+                        elif getattr(self, 'climbing_surface', 'floor') == 'screen_ceiling':
+                            self.y = self.v_y + ceil_offset
+                            self.x -= self.speed if self.is_facing_right else -self.speed
+                            if self.x <= self.v_x and self.is_facing_right:
+                                self.climbing_surface = 'screen_l'
+                                self.surface_angle = 270
+                                self.x = self.v_x + wall_offset
+                                self.is_facing_right = False 
+                            elif self.x >= self.v_x + self.v_width - self.size_w and not self.is_facing_right:
+                                self.climbing_surface = 'screen_r'
+                                self.surface_angle = 90
+                                self.x = self.v_x + self.v_width - self.size_w - wall_offset
+                                self.is_facing_right = True 
+
+        else:
+            self.anchored_hwnd = None
+            self.climbing_surface = 'floor'
+        
+            # FLYERS FIX: Maintain 180 degree rotation if gravity is inverted
+            self.surface_angle = 180 if getattr(self, 'gravity_inverted', False) else 0
+        
+            target = getattr(self, 'target_floor_y', self.floor_y)
+            if self.floor_y > target:
+                self.floor_y -= 5
+                if self.floor_y < target: self.floor_y = target
+            elif self.floor_y < target:
+                self.floor_y += 5
+                if self.floor_y > target: self.floor_y = target
+            
+            self.y = self.floor_y
+
+        if self.current_state == 'idle':
+            if is_climber and getattr(self, 'anchored_hwnd', None) and getattr(self, 'anchored_rect', None) and getattr(self, 'climbing_surface', 'floor') == 'floor':
+                self.y = self.anchored_rect[1] - self.size_h - self.offset_y
+            
+            action_chance = random.randint(1, 100)
+            if action_chance <= 5: 
+                self.current_state = 'walking'
+                self.is_facing_right = random.choice([True, False])
+    
+        elif self.current_state == 'walking':
+            action_chance = random.randint(1, 100)
+            if action_chance <= 5: 
+                self.current_state = 'idle'
+            else:
+                if not is_climber:
+                    self.x += self.speed if self.is_facing_right else -self.speed
+                
+                    if getattr(self, 'climbing_surface', 'floor') == 'floor':
+                        if getattr(self, 'ghost_type', False):
+                            # OVERFLOW MARGIN (The Pokemon exits completely before teleporting)
+                            if self.x <= self.v_x - self.size_w:
+                                self.x = self.v_x + self.v_width
+                                if random.randint(1, 100) <= 25: self.is_facing_right = True 
+                            elif self.x >= self.v_x + self.v_width:
+                                self.x = self.v_x - self.size_w
+                                if random.randint(1, 100) <= 25: self.is_facing_right = False
+                        else:
+                            # NORMAL SOLID LIMIT
+                            if self.x <= self.v_x:
+                                self.x = self.v_x
+                                self.is_facing_right = True
+                            elif self.x >= (self.v_x + self.v_width) - self.size_w:
+                                self.x = (self.v_x + self.v_width) - self.size_w
+                                self.is_facing_right = False
 
         if self.current_state in ['idle', 'walking'] and getattr(self, 'get_all_pets', None) and not getattr(self, 'is_egg', False) and getattr(self, 'climbing_surface', 'floor') == 'floor':
             if self.social_cooldown == 0 or self.attack_cooldown == 0:

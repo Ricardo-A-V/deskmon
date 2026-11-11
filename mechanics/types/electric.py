@@ -71,7 +71,7 @@ class ElectricMechanics:
             if random.randint(1, 100) <= 10 and getattr(self, 'get_all_pets', None):
                 targets = []
                 for other in self.get_all_pets():
-                    if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee']: continue
+                    if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'digging', 'digging_in', 'digging_out']: continue
                     dist = ((other.x - self.x)**2 + (other.y - self.y)**2)**0.5
                     if dist < 1500: 
                         targets.append(other)

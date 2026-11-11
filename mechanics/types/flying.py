@@ -83,7 +83,7 @@ class FlyingMechanics:
                     
                 if getattr(self, 'get_all_pets', None):
                     for other in self.get_all_pets():
-                        if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee']: continue
+                        if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'digging', 'digging_in', 'digging_out']: continue
                         
                         dx = abs((other.x + other.size_w/2) - w['x'])
                         dy = abs((other.y + other.size_h/2) - (w['y'] - height/2))

@@ -188,7 +188,7 @@ class HoOhMechanics:
                 active_targets = []
                 for target in getattr(self, 'hooh_targets', []):
                     # Re-validate in case they were caught/deleted during Ho-Oh's flight
-                    if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg']:
+                    if target and target.window.winfo_exists() and target.current_state not in ['exiting', 'dragged', 'spawning_wild', 'despawning_wild', 'falling_pokeball', 'falling_egg', 'digging', 'digging_in', 'digging_out']:
                         
                         if target.current_state.startswith('dark_'):
                             target.cancel_dark_arts()

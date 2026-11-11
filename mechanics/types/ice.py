@@ -8,7 +8,7 @@ class IceMechanics:
         if getattr(self, 'ice_cooldown', 0) == 0 and getattr(self, 'get_all_pets', None) and random.randint(1, 100) <= 10:
             target = None
             for other in self.get_all_pets():
-                if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee']: continue
+                if other == self or getattr(other, 'is_egg', False) or other.current_state in ['exiting', 'dragged', 'poisoned', 'burning', 'frozen', 'asleep', 'paralyzed', 'webbed', 'bubbled', 'tk_lifted', 'dragon_fear', 'dragon_flee', 'digging', 'digging_in', 'digging_out']: continue
                 dist = math.hypot((other.x + other.size_w/2) - (self.x + self.size_w/2), (other.y + other.size_h/2) - (self.y + self.size_h/2))
                 if dist < 600: 
                     target = other
@@ -33,7 +33,7 @@ class IceMechanics:
                     
                     if steps_left <= 0:
                         if win: win.destroy()
-                        if getattr(target, 'current_state', 'exiting') not in ['exiting', 'dragged']:
+                        if getattr(target, 'current_state', 'exiting') not in ['exiting', 'dragged', 'digging', 'digging_in', 'digging_out']:
                             if hasattr(target, 'interrupt_current_state'): target.interrupt_current_state()
                             target.current_state = 'frozen'
                             target.frozen_timer = 150
