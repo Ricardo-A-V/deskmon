@@ -97,8 +97,9 @@ from mechanics.legendaries.melmetal import MelmetalMechanics
 from mechanics.legendaries.urshifu import UrshifuMechanics
 from mechanics.legendaries.terapagos import TerapagosMechanics
 from mechanics.legendaries.rayquaza_deoxys_duo import RayquazaDeoxysDuoMechanics
+from mechanics.legendaries.kyogre_groudon_duo import KyogreGroudonDuoMechanics
 
-class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, LakeTrioMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
+class DesktopPet(RayquazaDeoxysDuoMechanics, KyogreGroudonDuoMechanics, TerapagosMechanics, UrshifuMechanics, MelmetalMechanics, ZarudeMechanics, ZeraoraMechanics, MagearnaMechanics, UltraBeastsMechanics, MarshadowMechanics, DiancieMechanics, HoopaMechanics, LegendaryGeniesMechanics, MeloettaMechanics, GenesectMechanics, VictiniMechanics, SeaGuardiansMechanics, TapusMechanics, ShayminMechanics, DeoxysMechanics, LatiTwinsMechanics, CresseliaMechanics, DarkraiMechanics, JirachiMechanics, LegendaryRegisMechanics, CelebiMechanics, LegendaryBeastsMechanics, MewMechanics, LegendaryBirdsMechanics, MiraidonMechanics, KoraidonMechanics, EternatusMechanics, MewtwoMechanics, HoOhMechanics, LugiaMechanics, KyogreMechanics, GroudonMechanics, RayquazaMechanics, DialgaMechanics, PalkiaMechanics, GiratinaMechanics, ReshiramMechanics, ZekromMechanics, KyuremMechanics, XerneasMechanics, YveltalMechanics, ZygardeMechanics, SolgaleoMechanics, LunalaMechanics, NecrozmaMechanics, ZacianMechanics, ZamazentaMechanics, HeatranMechanics, TelekinesisMechanics, DarkArtsMechanics, SharedVFX, ExcavationMechanics, BubbleMechanics, RockMechanics, SteelMechanics, NormalMechanics, FairyMechanics, FightingMechanics, GhostMechanics, FireMechanics, ElectricMechanics, IceMechanics, FlyingMechanics, DragonMechanics, BugMechanics, GrassMechanics, PoisonMechanics):
     def get_legendary_cooldown(self, default_ticks):
         if not getattr(self, 'game_controller', None): return default_ticks
         base_min = self.game_controller.save_mgr.data.get('settings', {}).get('legendary_cooldown', 60)
@@ -503,9 +504,16 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
 
         # Only cancel Kyogre if you grab the Master (Kyogre). 
         # Victims can be dragged and will still be affected by the flood when released.
+        elif self.current_state in ('kyogre_channeling', 'kyogre_groudon_duo', 'kyogre_groudon_duo_partner', 'kyogre_groudon_final_loss', 'kyogre_groudon_final_return'):
+            if self.current_state.startswith('kyogre_groudon_'):
+                self.cancel_kyogre_groudon_duo()
+            else:
+                self.cancel_kyogre_arts()
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
+        elif self.current_state in ('groudon_channeling', 'kyogre_groudon_duo_partner', 'kyogre_groudon_final_loss', 'kyogre_groudon_final_return'):
+            self.cancel_kyogre_groudon_duo()
         elif self.current_state == 'groudon_channeling':
             self.cancel_groudon_arts()
         elif self.current_state in ['diancie_charging', 'diancie_flying_up', 'diancie_crystallizing', 'diancie_shooting'] and hasattr(self, 'cancel_diancie_arts'):
@@ -531,6 +539,8 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
             self.cancel_rayquaza_arts()
         elif self.current_state in self.DUO_STATES:
             self.cancel_rayquaza_deoxys_duo()
+        elif self.current_state in self.KYOGRE_GROUDON_DUO_STATES:
+            self.cancel_kyogre_groudon_duo()
 
         # Cancel vortex and restore opacity if you grab Giratina
         elif self.current_state.startswith('giratina_') and hasattr(self, 'cancel_giratina_arts'):
@@ -703,6 +713,8 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
                 
                 if hasattr(self, 'cancel_dialga_arts') and self.current_state == 'dialga_channeling': self.cancel_dialga_arts()
                 elif hasattr(self, 'cancel_palkia_arts') and self.current_state == 'palkia_channeling': self.cancel_palkia_arts()
+                elif self.current_state in self.KYOGRE_GROUDON_DUO_STATES:
+                    self.cancel_kyogre_groudon_duo()
                 elif hasattr(self, 'cancel_groudon_arts') and self.current_state == 'groudon_channeling': self.cancel_groudon_arts()
                 elif hasattr(self, 'cancel_kyogre_arts') and self.current_state == 'kyogre_channeling': self.cancel_kyogre_arts()
                 elif hasattr(self, 'cancel_lugia_arts') and self.current_state == 'lugia_channeling': self.cancel_lugia_arts()
@@ -829,9 +841,16 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
 
         # Only cancel Kyogre if you grab the Master (Kyogre). 
         # Victims can be dragged and will still be affected by the flood when released.
+        elif self.current_state in ('kyogre_channeling', 'kyogre_groudon_duo', 'kyogre_groudon_duo_partner', 'kyogre_groudon_final_loss', 'kyogre_groudon_final_return'):
+            if self.current_state.startswith('kyogre_groudon_'):
+                self.cancel_kyogre_groudon_duo()
+            else:
+                self.cancel_kyogre_arts()
         elif self.current_state == 'kyogre_channeling':
             self.cancel_kyogre_arts()
 
+        elif self.current_state in ('groudon_channeling', 'kyogre_groudon_duo_partner', 'kyogre_groudon_final_loss', 'kyogre_groudon_final_return'):
+            self.cancel_kyogre_groudon_duo()
         elif self.current_state == 'groudon_channeling':
             self.cancel_groudon_arts()
 
@@ -1840,6 +1859,8 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
                 self.cancel_hooh_arts()
             elif self.current_state in ['lugia_channeling', 'lugia_dash']:
                 self.cancel_lugia_arts()
+            elif self.current_state in self.KYOGRE_GROUDON_DUO_STATES or self.current_state in ('kyogre_groudon_final_loss', 'kyogre_groudon_final_return'):
+                self.cancel_kyogre_groudon_duo()
             elif self.current_state.startswith('kyogre_'):
                 self.cancel_kyogre_arts()
             elif self.current_state.startswith('groudon_'):
@@ -2061,7 +2082,7 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
                 self.canvas.itemconfig(self.canvas_image_id, image=self.egg_tk)
         else:
             # --- FRAME RATE EVALUATION ---
-            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'burning', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling', 'lati_channeling', 'deoxys_channeling', 'lake_rotating', 'shaymin_sky_jump', 'joy_jump'] else self.frame_rate_idle
+            target_ms = self.frame_rate_active if self.current_state in ['walking', 'falling', 'walking_away', 'jumping_arc', 'climbing', 'attacking', 'eating', 'dark_dash', 'hooh_channeling', 'burning', 'kyogre_channeling', 'deluge_float', 'groudon_channeling', 'lugia_channeling', 'lugia_dash', 'rayquaza_channeling', 'rayquaza_cyclone_victim', 'dialga_channeling', 'lati_channeling', 'deoxys_channeling', 'lake_rotating', 'shaymin_sky_jump', 'joy_jump', 'kyogre_groudon_duo', 'kyogre_groudon_duo_partner'] else self.frame_rate_idle
             if getattr(self, 'time_distorted', False):
                 target_ms = int(target_ms * 4.0)
             
@@ -2276,6 +2297,8 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
                 anim_state = 'idle'
             elif anim_state in ['rayquaza_deoxys_duo', 'rayquaza_deoxys_duo_partner']:
                 anim_state = 'walking'
+            elif anim_state in ['kyogre_groudon_duo', 'kyogre_groudon_duo_partner']:
+                anim_state = 'walking'
                 
             # LAKE TRIO FSM RENDER
             elif anim_state in ['lake_channeling', 'lake_rotating']:
@@ -2376,7 +2399,9 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
             'duo_final_loss',
             'duo_final_winner_rayquaza',
             'duo_final_winner_deoxys',
-        ) or getattr(self, '_duo_final_returning', False):
+            'kyogre_groudon_final_loss',
+            'kyogre_groudon_final_return',
+        ) or getattr(self, '_duo_final_returning', False) or getattr(self, '_kg_final_returning', False):
             return
         if not getattr(self, 'is_egg', False) and hasattr(self, 'canvas'):
             self.canvas.delete('effect')
@@ -3142,6 +3167,7 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
         self.hooh_cooldown = max(0, getattr(self, 'hooh_cooldown', 0) - 1) 
         self.kyogre_cooldown = max(0, getattr(self, 'kyogre_cooldown', 0) - 1)
         self.groudon_cooldown = max(0, getattr(self, 'groudon_cooldown', 0) - 1)
+        self.kyogre_groudon_cooldown = max(0, getattr(self, 'kyogre_groudon_cooldown', 0) - 1)
         self.terapagos_cooldown = max(0, getattr(self, 'terapagos_cooldown', 0) - 1)
         self.melmetal_cooldown = max(0, getattr(self, 'melmetal_cooldown', 0) - 1)
         self.lugia_cooldown = max(0, getattr(self, 'lugia_cooldown', 0) - 1)
@@ -3674,6 +3700,11 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
                     if hasattr(self, 'animator'):
                         self.animator.current_frame_index = 0
                     self.schedule_loop(50, self.physics_loop)
+                    return
+
+            # --- EXCLUSIVE MECHANIC: KYOGRE/GROUDON PRIMAL DUEL ---
+            if self.pet_name.lower().replace("_", "").replace("-", "") in ("kyogre", "groudon") and getattr(self, 'kyogre_groudon_cooldown', 0) == 0 and self.current_state in ['idle', 'walking'] and not self.is_global_mechanic_active():
+                if random.randint(1, 1000) <= 8 and self.start_kyogre_groudon_duo():
                     return
 
             # --- EXCLUSIVE MECHANIC: GROUDON'S EARTHQUAKE ---
@@ -4547,6 +4578,8 @@ class DesktopPet(RayquazaDeoxysDuoMechanics, TerapagosMechanics, UrshifuMechanic
             'rayquaza_channeling', 
             'rayquaza_deoxys_duo',
             'rayquaza_deoxys_duo_partner',
+            'kyogre_groudon_duo',
+            'kyogre_groudon_duo_partner',
             'dialga_channeling', 
             'palkia_channeling',
             'giratina_channeling', 'giratina_dash_prep', 'giratina_dash', 'giratina_wait_reappear',

@@ -78,6 +78,7 @@ class FloodOverlay:
 
     def animate_environment(self):
         if not self.active: return
+        self.window.lift()
         t = time.time() * 3.0
 
         if getattr(self, 'is_draining', False):
